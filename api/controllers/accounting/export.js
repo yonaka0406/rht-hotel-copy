@@ -202,10 +202,12 @@ const getDetailedDiscrepancyAnalysis = async (req, res) => {
         };
 
         const analysis = await accountingModel.accountingRead.getDetailedDiscrepancyAnalysis(requestId, filters);
+        const hotelTotals = await accountingModel.accountingRead.getHotelTotalsForIntegrityAnalysis(requestId, filters);
 
         res.json({
             period: selectedMonth,
             analysis,
+            hotelTotals,
             summary: {
                 totalDiscrepancies: analysis.length,
                 missingRatesCount: analysis.filter(a => a.issue_type === 'missing_rates').length,

@@ -66,295 +66,25 @@
             <!-- Analysis Results -->
             <div v-else-if="analysisData">
                 <!-- Summary Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
-                                <i class="pi pi-list text-slate-600 dark:text-slate-400"></i>
-                            </div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">総差異件数</span>
-                        </div>
-                        <p class="text-2xl font-bold text-slate-900 dark:text-white">
-                            {{ summaryTotals.totalDiscrepancies }}
-                        </p>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">プラン・ホテル組み合わせ</p>
-                    </div>
-
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg">
-                                <i class="pi pi-exclamation-triangle text-red-600 dark:text-red-400"></i>
-                            </div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">料金明細なし</span>
-                        </div>
-                        <p class="text-2xl font-bold text-red-600 dark:text-red-400">
-                            {{ summaryTotals.missingRatesCount }}
-                        </p>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">税区分判定不可</p>
-                    </div>
-
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-lg">
-                                <i class="pi pi-link text-amber-600 dark:text-amber-400"></i>
-                            </div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">マッピングなし</span>
-                        </div>
-                        <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                            {{ summaryTotals.noMappingCount }}
-                        </p>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">会計科目未設定</p>
-                    </div>
-
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                                <i class="pi pi-search text-blue-600 dark:text-blue-400"></i>
-                            </div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">類似名称マッチ</span>
-                        </div>
-                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            {{ summaryTotals.fuzzyMatchCount }}
-                        </p>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">自動推定マッチング</p>
-                    </div>
-
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg">
-                                <i class="pi pi-calculator text-violet-600 dark:text-violet-400"></i>
-                            </div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">総差額</span>
-                        </div>
-                        <p class="text-2xl font-bold" 
-                           :class="summaryTotals.totalDifference >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                            {{ summaryTotals.totalDifference >= 0 ? '+' : '' }}¥{{ Math.abs(summaryTotals.totalDifference).toLocaleString() }}
-                        </p>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">PMS - 弥生</p>
-                    </div>
-                </div>
+                <AnalysisSummaryCards :summaryTotals="summaryTotals" />
 
                 <!-- Results Section -->
                 <div v-if="!selectedHotelId">
                     <!-- Hotel Summary Table -->
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <div class="p-6 border-b border-slate-200 dark:border-slate-700">
-                            <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <i class="pi pi-building text-violet-600 dark:text-violet-400"></i>
-                                ホテル別概要
-                            </h2>
-                            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                各ホテルのPMS売上と弥生データの比較概要
-                            </p>
-                        </div>
-
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead class="bg-slate-50 dark:bg-slate-900/50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            ホテル名
-                                        </th>
-                                        <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            PMS売上合計
-                                        </th>
-                                        <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            弥生データ合計
-                                        </th>
-                                        <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            差額
-                                        </th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            問題件数
-                                        </th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            操作
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                                    <tr v-for="hotel in hotelSummary" :key="hotel.hotel_id"
-                                        class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                        <td class="px-6 py-4">
-                                            <div class="font-medium text-slate-900 dark:text-white">{{ hotel.hotel_name }}</div>
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="text-sm font-medium text-slate-900 dark:text-white">
-                                                ¥{{ new Intl.NumberFormat('ja-JP').format(hotel.total_pms_amount) }}
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="text-sm font-medium text-slate-900 dark:text-white">
-                                                ¥{{ new Intl.NumberFormat('ja-JP').format(hotel.total_yayoi_amount) }}
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="text-sm font-medium"
-                                                 :class="hotel.total_difference >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                                                {{ hotel.total_difference >= 0 ? '+' : '' }}¥{{ new Intl.NumberFormat('ja-JP').format(Math.abs(hotel.total_difference)) }}
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-center">
-                                            <div class="flex items-center justify-center gap-2">
-                                                <span v-if="hotel.issue_count > 0" 
-                                                      class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300">
-                                                    {{ hotel.issue_count }}件
-                                                </span>
-                                                <span v-else 
-                                                      class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
-                                                    正常
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-center">
-                                            <button @click="viewHotelDetails(hotel.hotel_id, hotel.hotel_name)"
-                                                    class="inline-flex items-center px-3 py-1 bg-violet-100 hover:bg-violet-200 dark:bg-violet-900/30 dark:hover:bg-violet-900/50 text-violet-700 dark:text-violet-300 text-xs font-medium rounded-lg transition-colors">
-                                                <i class="pi pi-eye mr-1"></i>
-                                                詳細表示
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <HotelSummaryTable 
+                        :hotelSummary="hotelSummary" 
+                        @viewHotelDetails="viewHotelDetails" 
+                    />
                 </div>
 
                 <!-- Hotel Details View -->
                 <div v-else>
-                    <!-- Back Button and Hotel Header -->
-                    <div class="mb-6">
-                        <button @click="selectedHotelId = null; selectedHotelName = ''"
-                                class="inline-flex items-center px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-lg transition-colors mb-4">
-                            <i class="pi pi-arrow-left mr-2"></i>
-                            ホテル一覧に戻る
-                        </button>
-                        
-                        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                                {{ selectedHotelName }} - プラン別詳細分析 ({{ getSelectedMonthLabel() }})
-                            </h3>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">
-                                PMS売上計算と弥生会計データのプラン別比較
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Plan Details Table -->
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <div class="p-6 border-b border-slate-200 dark:border-slate-700">
-                            <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <i class="pi pi-table text-violet-600 dark:text-violet-400"></i>
-                                プラン別詳細分析
-                            </h2>
-                            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                {{ hotelAnalysisForSelectedHotel.length }} 件の差異を表示中
-                            </p>
-                        </div>
-
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead class="bg-slate-50 dark:bg-slate-900/50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            プラン名
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            税率
-                                        </th>
-                                        <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            PMS売上
-                                        </th>
-                                        <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            弥生データ
-                                        </th>
-                                        <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            差額
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            問題種別
-                                        </th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            詳細情報
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                                    <tr v-for="item in hotelAnalysisForSelectedHotel" :key="`${item.hotel_id}-${item.plan_name}-${item.tax_rate}`"
-                                        :class="[
-                                            'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors',
-                                            item.item_type === 'account_total' ? 'bg-violet-50 dark:bg-violet-900/10 border-l-4 border-violet-500' : ''
-                                        ]">
-                                        <td class="px-6 py-4">
-                                            <div>
-                                                <div class="flex items-center gap-2">
-                                                    <div v-if="item.item_type === 'account_total'" class="flex items-center gap-2">
-                                                        <i class="pi pi-building text-violet-600 dark:text-violet-400 text-sm"></i>
-                                                        <span class="font-bold text-slate-900 dark:text-white">{{ item.plan_name }}</span>
-                                                        <span class="text-xs bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-2 py-1 rounded">
-                                                            主勘定
-                                                        </span>
-                                                    </div>
-                                                    <div v-else class="flex items-center gap-2">
-                                                        <i class="pi pi-angle-right text-slate-400 text-sm ml-4"></i>
-                                                        <span class="font-medium text-slate-900 dark:text-white">{{ item.plan_name }}</span>
-                                                        <span v-if="item.subaccount_name" class="text-xs bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 px-2 py-1 rounded">
-                                                            {{ item.subaccount_name }}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div v-if="item.category_name" class="text-xs text-slate-400 ml-6">{{ item.category_name }}</div>
-                                                <div v-if="item.match_type === 'fuzzy'" class="text-xs text-amber-600 dark:text-amber-400 mt-1 ml-6">
-                                                    <i class="pi pi-search text-xs mr-1"></i>類似名称でマッチング
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-slate-900 dark:text-white">
-                                            {{ (item.tax_rate * 100).toFixed(1) }}%
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="text-sm font-medium text-slate-900 dark:text-white">
-                                                ¥{{ new Intl.NumberFormat('ja-JP').format(item.pms_amount) }}
-                                            </div>
-                                            <div v-if="item.reservation_count > 0" class="text-xs text-slate-500 dark:text-slate-400">
-                                                {{ item.reservation_count }}件の予約
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="text-sm font-medium text-slate-900 dark:text-white">
-                                                ¥{{ new Intl.NumberFormat('ja-JP').format(item.yayoi_amount) }}
-                                            </div>
-                                            <div v-if="item.yayoi_transaction_count > 0" class="text-xs text-slate-500 dark:text-slate-400">
-                                                {{ item.yayoi_transaction_count }}件の取引
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="text-sm font-medium"
-                                                 :class="item.difference >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                                                {{ item.difference >= 0 ? '+' : '' }}¥{{ new Intl.NumberFormat('ja-JP').format(Math.abs(item.difference)) }}
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span :class="getIssueTypeClass(item.issue_type)"
-                                                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium">
-                                                {{ getIssueTypeLabel(item.issue_type) }}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 text-center">
-                                            <div class="text-xs text-slate-500 dark:text-slate-400">
-                                                <div v-if="item.missing_rates_count > 0">
-                                                    料金明細なし: {{ item.missing_rates_count }}件
-                                                </div>
-                                                <div v-if="item.mapping_type">
-                                                    マッピング: {{ item.mapping_type }}
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <HotelDetailsTable 
+                        :selectedHotelName="selectedHotelName"
+                        :selectedMonthLabel="getSelectedMonthLabel()"
+                        :hotelAnalysisData="hotelAnalysisForSelectedHotel"
+                        @backToSummary="selectedHotelId = null; selectedHotelName = ''"
+                    />
                 </div>
             </div>
         </div>
@@ -365,6 +95,9 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAccountingStore } from '@/composables/useAccountingStore';
+import AnalysisSummaryCards from './components/AnalysisSummaryCards.vue';
+import HotelSummaryTable from './components/HotelSummaryTable.vue';
+import HotelDetailsTable from './components/HotelDetailsTable.vue';
 
 const router = useRouter();
 const accountingStore = useAccountingStore();
@@ -389,35 +122,17 @@ const availableMonths = computed(() => {
 
 // Hotel summary for overview table
 const hotelSummary = computed(() => {
-    if (!analysisData.value || !analysisData.value.analysis) return [];
+    if (!analysisData.value || !analysisData.value.hotelTotals) return [];
     
-    const hotelMap = new Map();
-    
-    analysisData.value.analysis.forEach(item => {
-        const hotelId = item.hotel_id;
-        if (!hotelMap.has(hotelId)) {
-            hotelMap.set(hotelId, {
-                hotel_id: hotelId,
-                hotel_name: item.hotel_name,
-                total_pms_amount: 0,
-                total_yayoi_amount: 0,
-                total_difference: 0,
-                issue_count: 0
-            });
-        }
-        
-        const hotel = hotelMap.get(hotelId);
-        // Ensure proper numeric conversion
-        hotel.total_pms_amount += parseFloat(item.pms_amount) || 0;
-        hotel.total_yayoi_amount += parseFloat(item.yayoi_amount) || 0;
-        hotel.total_difference += parseFloat(item.difference) || 0;
-        
-        if (item.issue_type && item.issue_type !== 'ok') {
-            hotel.issue_count++;
-        }
-    });
-    
-    return Array.from(hotelMap.values()).sort((a, b) => a.hotel_name.localeCompare(b.hotel_name));
+    // Use the hotelTotals data directly from the API
+    return analysisData.value.hotelTotals.map(hotel => ({
+        hotel_id: hotel.hotel_id,
+        hotel_name: hotel.hotel_name,
+        total_pms_amount: parseFloat(hotel.total_pms_amount) || 0,
+        total_yayoi_amount: parseFloat(hotel.total_yayoi_amount) || 0,
+        total_difference: parseFloat(hotel.total_difference) || 0,
+        issue_count: hotel.missing_rates_count || 0 // Use missing rates as issue count for now
+    })).sort((a, b) => a.hotel_name.localeCompare(b.hotel_name));
 });
 
 // Calculate summary totals from hotel summary instead of raw analysis data
@@ -456,18 +171,6 @@ const hotelAnalysisForSelectedHotel = computed(() => {
     return analysisData.value.analysis.filter(item => {
         return item.hotel_id === selectedHotelId.value;
     });
-});
-
-// Get unique hotels from analysis data
-const uniqueHotels = computed(() => {
-    if (!analysisData.value || !analysisData.value.analysis) return [];
-    const hotels = new Map();
-    analysisData.value.analysis.forEach(item => {
-        if (!hotels.has(item.hotel_id)) {
-            hotels.set(item.hotel_id, { id: item.hotel_id, name: item.hotel_name });
-        }
-    });
-    return Array.from(hotels.values()).sort((a, b) => a.name.localeCompare(b.name));
 });
 
 const getSelectedMonthLabel = () => {
@@ -516,37 +219,6 @@ const fetchAnalysisData = async () => {
 const viewHotelDetails = (hotelId, hotelName) => {
     selectedHotelId.value = hotelId;
     selectedHotelName.value = hotelName;
-};
-
-const getIssueTypeClass = (issueType) => {
-    switch (issueType) {
-        case 'missing_rates':
-            return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
-        case 'no_mapping':
-            return 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300';
-        case 'amount_mismatch':
-            return 'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-300';
-        default:
-            return 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300';
-    }
-};
-
-const getIssueTypeLabel = (issueType) => {
-    switch (issueType) {
-        case 'missing_rates':
-            return '料金明細なし';
-        case 'no_mapping':
-            return 'マッピングなし';
-        case 'amount_mismatch':
-            return '金額不一致';
-        default:
-            return '正常';
-    }
-};
-
-const showItemDetails = (item) => {
-    // TODO: Implement detailed view modal or navigation
-    console.log('Show details for:', item);
 };
 
 onMounted(async () => {

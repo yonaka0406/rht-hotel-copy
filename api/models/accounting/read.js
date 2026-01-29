@@ -714,7 +714,9 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
                 yayoi_transaction_count,
                 missing_rates_count,
                 mapping_type,
-                match_type
+                match_type,
+                item_type,
+                subaccount_name
             FROM fuzzy_matched_comparison
             ORDER BY hotel_id, plan_name, tax_rate, 
                      CASE WHEN match_type = 'exact' THEN 1 ELSE 2 END -- Prioritize exact matches
@@ -743,7 +745,7 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
                 ELSE 'ok'
             END as issue_type
         FROM comparison
-        WHERE status != 'matched' OR missing_rates_count > 0 OR ABS(difference) > 1000
+        WHERE item_type = 'account_total' OR (item_type = 'subaccount' AND (status != 'matched' OR missing_rates_count > 0 OR ABS(difference) > 1000))
         ORDER BY 
             hotel_id, 
             CASE WHEN item_type = 'account_total' THEN 1 ELSE 2 END,  -- Show account totals first
@@ -786,6 +788,96 @@ const getHotelsWithDepartments = async (requestId, dbClient = null) => {
         return result.rows;
     } catch (err) {
         logger.error('Error getting hotels with departments:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+/**
+ * Get hotel totals for summary table in data integrity analysis
+ * @param {string} requestId 
+ * @param {object} filters { startDate, endDate, hotelIds }
+ * @param {object} dbClient Optional database client for transactions
+ */
+const getHotelTotalsForIntegrityAnalysis = async (requestId, filters, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const { startDate, endDate, hotelIds } = filters;
+
+    const query = `
+        WITH pms_hotel_totals AS (
+            -- Get PMS totals by hotel
+            SELECT 
+                rd.hotel_id,
+                h.name as hotel_name,
+                SUM(
+                    CASE 
+                        WHEN rd.plan_type = 'per_room' THEN COALESCE(rr.price, rd.price)
+                        ELSE COALESCE(rr.price, rd.price) * rd.number_of_people 
+                    END
+                )::numeric as total_pms_amount,
+                COUNT(DISTINCT rd.id) as total_reservations,
+                COUNT(CASE WHEN rr.id IS NULL THEN 1 END) as missing_rates_count
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            JOIN hotels h ON rd.hotel_id = h.id
+            LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+            WHERE rd.date BETWEEN $1 AND $2
+            AND rd.hotel_id = ANY($3::int[])
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
+            GROUP BY rd.hotel_id, h.name
+        ),
+        yayoi_hotel_totals AS (
+            -- Get Yayoi totals by hotel
+            SELECT 
+                d.hotel_id,
+                h.name as hotel_name,
+                SUM(yd.credit_amount)::numeric as total_yayoi_amount,
+                COUNT(*) as total_transactions
+            FROM acc_yayoi_data yd
+            JOIN acc_departments d ON yd.credit_department = d.name
+            JOIN hotels h ON d.hotel_id = h.id
+            JOIN acc_account_codes ac ON yd.credit_account_code = ac.name
+            WHERE yd.transaction_date BETWEEN $1 AND $2
+            AND d.hotel_id = ANY($3::int[])
+            AND ac.management_group_id = 1  -- Sales accounts only
+            AND yd.credit_amount > 0
+            -- Use the most current department mapping for each department name
+            AND d.id = (
+                SELECT d2.id 
+                FROM acc_departments d2 
+                WHERE d2.name = d.name 
+                ORDER BY d2.is_current DESC, d2.id DESC 
+                LIMIT 1
+            )
+            GROUP BY d.hotel_id, h.name
+        )
+        SELECT 
+            COALESCE(p.hotel_id, y.hotel_id) as hotel_id,
+            COALESCE(p.hotel_name, y.hotel_name) as hotel_name,
+            COALESCE(p.total_pms_amount, 0) as total_pms_amount,
+            COALESCE(y.total_yayoi_amount, 0) as total_yayoi_amount,
+            (COALESCE(p.total_pms_amount, 0) - COALESCE(y.total_yayoi_amount, 0))::numeric as total_difference,
+            COALESCE(p.total_reservations, 0) as total_reservations,
+            COALESCE(y.total_transactions, 0) as total_transactions,
+            COALESCE(p.missing_rates_count, 0) as missing_rates_count
+        FROM pms_hotel_totals p
+        FULL OUTER JOIN yayoi_hotel_totals y ON p.hotel_id = y.hotel_id
+        ORDER BY COALESCE(p.hotel_name, y.hotel_name)
+    `;
+
+    const values = [startDate, endDate, hotelIds];
+
+    try {
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error getting hotel totals for integrity analysis:', err);
         throw new Error('Database error');
     } finally {
         if (shouldRelease) client.release();
@@ -1749,6 +1841,7 @@ module.exports = {
     getAvailableYayoiYears,
     getAvailableYayoiMonths,
     getDetailedDiscrepancyAnalysis,
+    getHotelTotalsForIntegrityAnalysis,
     getManagementGroups,
     getTaxClasses,
     getDepartments,
