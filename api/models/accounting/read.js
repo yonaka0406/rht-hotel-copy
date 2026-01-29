@@ -545,7 +545,7 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
     const values = [startDate, endDate, hotelIds];
 
     try {
-        const result = await client.query(query);
+        const result = await client.query(query, values);
         return result.rows;
     } catch (err) {
         logger.error('Error getting detailed discrepancy analysis:', err);
