@@ -232,33 +232,11 @@
                         
                         <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                             <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                                {{ selectedHotelName }} - プラン別詳細分析
+                                {{ selectedHotelName }} - プラン別詳細分析 ({{ getSelectedMonthLabel() }})
                             </h3>
                             <p class="text-sm text-slate-500 dark:text-slate-400">
                                 PMS売上計算と弥生会計データのプラン別比較
                             </p>
-                        </div>
-                    </div>
-
-                    <!-- Filters for Details View -->
-                    <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6">
-                        <div class="flex flex-wrap items-center gap-4">
-                            <div class="flex items-center gap-2">
-                                <label class="text-sm font-medium text-slate-700 dark:text-slate-300">問題種別:</label>
-                                <select v-model="selectedIssueType" @change="applyFilters"
-                                    class="px-3 py-1 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded text-sm">
-                                    <option value="">すべて</option>
-                                    <option value="missing_rates">料金明細なし</option>
-                                    <option value="no_mapping">マッピングなし</option>
-                                    <option value="amount_mismatch">金額不一致</option>
-                                </select>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <label class="text-sm font-medium text-slate-700 dark:text-slate-300">最小差額:</label>
-                                <input v-model.number="minDifference" @input="applyFilters" type="number" step="1000"
-                                    class="px-3 py-1 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded text-sm w-24"
-                                    placeholder="0">
-                            </div>
                         </div>
                     </div>
 
@@ -270,7 +248,7 @@
                                 プラン別詳細分析
                             </h2>
                             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                {{ filteredHotelAnalysis.length }} 件の差異を表示中
+                                {{ hotelAnalysisForSelectedHotel.length }} 件の差異を表示中
                             </p>
                         </div>
 
@@ -302,7 +280,7 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                                    <tr v-for="item in filteredHotelAnalysis" :key="`${item.hotel_id}-${item.plan_name}-${item.tax_rate}`"
+                                    <tr v-for="item in hotelAnalysisForSelectedHotel" :key="`${item.hotel_id}-${item.plan_name}-${item.tax_rate}`"
                                         :class="[
                                             'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors',
                                             item.item_type === 'account_total' ? 'bg-violet-50 dark:bg-violet-900/10 border-l-4 border-violet-500' : ''
@@ -397,11 +375,6 @@ const isLoading = ref(false);
 const hasError = ref(false);
 const availableMonthsData = ref([]);
 
-// Filters
-const selectedIssueType = ref('');
-const selectedHotel = ref('');
-const minDifference = ref(0);
-
 // Hotel drill-down state
 const selectedHotelId = ref(null);
 const selectedHotelName = ref('');
@@ -477,14 +450,11 @@ const summaryTotals = computed(() => {
 });
 
 // Filtered analysis for selected hotel details
-const filteredHotelAnalysis = computed(() => {
+const hotelAnalysisForSelectedHotel = computed(() => {
     if (!analysisData.value || !analysisData.value.analysis || !selectedHotelId.value) return [];
     
     return analysisData.value.analysis.filter(item => {
-        if (item.hotel_id !== selectedHotelId.value) return false;
-        if (selectedIssueType.value && item.issue_type !== selectedIssueType.value) return false;
-        if (minDifference.value && Math.abs(item.difference) < minDifference.value) return false;
-        return true;
+        return item.hotel_id === selectedHotelId.value;
     });
 });
 
@@ -500,17 +470,11 @@ const uniqueHotels = computed(() => {
     return Array.from(hotels.values()).sort((a, b) => a.name.localeCompare(b.name));
 });
 
-// Filtered analysis results
-const filteredAnalysis = computed(() => {
-    if (!analysisData.value || !analysisData.value.analysis) return [];
-    
-    return analysisData.value.analysis.filter(item => {
-        if (selectedIssueType.value && item.issue_type !== selectedIssueType.value) return false;
-        if (selectedHotel.value && item.hotel_id !== parseInt(selectedHotel.value)) return false;
-        if (minDifference.value && Math.abs(item.difference) < minDifference.value) return false;
-        return true;
-    });
-});
+const getSelectedMonthLabel = () => {
+    if (!selectedMonth.value) return '';
+    const monthData = availableMonths.value.find(m => m.value === selectedMonth.value);
+    return monthData ? monthData.label : selectedMonth.value;
+};
 
 const fetchAvailableMonths = async () => {
     try {
@@ -549,8 +513,9 @@ const fetchAnalysisData = async () => {
     }
 };
 
-const applyFilters = () => {
-    // Filters are applied automatically via computed property
+const viewHotelDetails = (hotelId, hotelName) => {
+    selectedHotelId.value = hotelId;
+    selectedHotelName.value = hotelName;
 };
 
 const getIssueTypeClass = (issueType) => {
@@ -577,14 +542,6 @@ const getIssueTypeLabel = (issueType) => {
         default:
             return '正常';
     }
-};
-
-const viewHotelDetails = (hotelId, hotelName) => {
-    selectedHotelId.value = hotelId;
-    selectedHotelName.value = hotelName;
-    // Reset filters when viewing hotel details
-    selectedIssueType.value = '';
-    minDifference.value = 0;
 };
 
 const showItemDetails = (item) => {
