@@ -372,6 +372,11 @@ const loadData = async () => {
                 combinations.add(`${tc.id}_${pc.id}`);
             });
         });
+        
+        // Ensure we include the 0_0 combination for unset categories
+        combinations.add('0_0');
+        
+        console.log('Generated combinations:', Array.from(combinations));
 
         combinations.forEach(combo => {
             const [typeId, pkgId] = combo.split('_');
@@ -391,7 +396,7 @@ const loadData = async () => {
                     is_global: false,
                     metric_key: m.key,
                     plan_type_category_id: parseInt(typeId),
-                    plan_package_category_id: pkgId === 'null' ? null : parseInt(pkgId),
+                    plan_package_category_id: pkgId === 'null' ? 0 : parseInt(pkgId),
                     ...months.value.reduce((acc, mo) => ({ ...acc, [mo.value]: 0 }), {})
                 };
             });
@@ -447,18 +452,68 @@ const loadData = async () => {
         tableRecords.forEach(tr => {
             const mDate = tr.forecast_month || tr.accounting_month;
             const mKey = formatDate(mDate);
+            
+            console.log(`Processing record: plan_type_category_id=${tr.plan_type_category_id}, plan_package_category_id=${tr.plan_package_category_id}, accommodation_revenue=${tr.accommodation_revenue}, non_accommodation_revenue=${tr.non_accommodation_revenue}, month=${mKey}`);
 
             if (tr.plan_type_category_id === null && tr.plan_package_category_id === null) {
+                console.log('Processing as global metrics (null/null) - excluding non_accommodation_revenue');
                 globalMetrics.forEach(m => {
+                    // Skip non_accommodation_revenue for null/null records - it should be handled by 0/0 records
+                    if (m.key === 'non_accommodation_revenue') return;
+                    
                     const rowKey = `global_${m.key}`;
-                    if (dataMap[rowKey]) dataMap[rowKey][mKey] = parseFloat(tr[m.key] || 0);
+                    if (dataMap[rowKey]) {
+                        const oldValue = dataMap[rowKey][mKey] || 0;
+                        const newValue = parseFloat(tr[m.key] || 0);
+                        dataMap[rowKey][mKey] = oldValue + newValue;
+                        if (newValue > 0) {
+                            console.log(`Global ${m.key}: ${oldValue} + ${newValue} = ${dataMap[rowKey][mKey]}`);
+                        }
+                    }
                 });
-            } else if (tr.plan_type_category_id !== null) {
-                const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id || 'null'}`;
+            } else if (tr.plan_type_category_id !== null && tr.plan_type_category_id !== 0) {
+                const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
                 categorizedMetrics.forEach(m => {
                     const rowKey = `categorized_${combo}_${m.key}`;
                     if (dataMap[rowKey]) dataMap[rowKey][mKey] = parseFloat(tr[m.key] || 0);
                 });
+            } else {
+                // Handle plan_type_category_id: 0 or null case - aggregate non_accommodation_revenue to global, accommodation_revenue to categorized
+                console.log('Processing as unset category (0 or null)');
+                
+                // Always aggregate non_accommodation_revenue to global for both 0 and null records
+                if (tr.non_accommodation_revenue !== undefined && tr.non_accommodation_revenue !== null) {
+                    const globalRowKey = 'global_non_accommodation_revenue';
+                    if (dataMap[globalRowKey]) {
+                        const oldValue = dataMap[globalRowKey][mKey] || 0;
+                        const newValue = parseFloat(tr.non_accommodation_revenue || 0);
+                        dataMap[globalRowKey][mKey] = oldValue + newValue;
+                        if (newValue > 0) {
+                            console.log(`Adding ${newValue} to global non_accommodation_revenue: ${oldValue} + ${newValue} = ${dataMap[globalRowKey][mKey]}`);
+                        }
+                    }
+                }
+                
+                // Only process accommodation_revenue and other metrics for plan_type_category_id: 0 (not null)
+                if (tr.plan_type_category_id === 0) {
+                    if (tr.accommodation_revenue && tr.accommodation_revenue > 0) {
+                        const combo = `${tr.plan_type_category_id || 0}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
+                        const rowKey = `categorized_${combo}_accommodation_revenue`;
+                        if (dataMap[rowKey]) {
+                            console.log(`Adding ${tr.accommodation_revenue} to categorized accommodation_revenue for combo ${combo}`);
+                            dataMap[rowKey][mKey] = parseFloat(tr.accommodation_revenue || 0);
+                        }
+                    }
+                    
+                    // Handle other metrics for categorized section
+                    const combo = `${tr.plan_type_category_id || 0}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
+                    ['rooms_sold_nights'].forEach(metricKey => {
+                        const rowKey = `categorized_${combo}_${metricKey}`;
+                        if (dataMap[rowKey]) {
+                            dataMap[rowKey][mKey] = parseFloat(tr[metricKey] || 0);
+                        }
+                    });
+                }
             }
         });
 
@@ -494,18 +549,35 @@ const saveData = async () => {
             months.value.forEach(m => {
                 const amount = row[m.value];
                 if (row.is_operational) {
-                    const combo = row.is_global ? 'global' : `${row.plan_type_category_id || 'null'}_${row.plan_package_category_id || 'null'}`;
+                    let combo, planTypeId, planPackageId;
+                    
+                    if (row.is_global) {
+                        // All global metrics now save to 0_0 record
+                        combo = '0_0';
+                        planTypeId = 0;
+                        planPackageId = 0;
+                    } else {
+                        combo = `${row.plan_type_category_id || 0}_${row.plan_package_category_id || 0}`;
+                        planTypeId = row.plan_type_category_id || 0;
+                        planPackageId = row.plan_package_category_id || 0;
+                    }
+                    
                     const mapKey = `${m.value}_${combo}`;
 
                     if (!tableDataMap[mapKey]) {
                         tableDataMap[mapKey] = {
                             hotel_id: selectedHotel.value.id,
                             [props.type === 'forecast' ? 'forecast_month' : 'accounting_month']: m.value,
-                            plan_type_category_id: row.is_global ? null : row.plan_type_category_id,
-                            plan_package_category_id: row.is_global ? null : row.plan_package_category_id
+                            plan_type_category_id: planTypeId,
+                            plan_package_category_id: planPackageId
                         };
                     }
                     tableDataMap[mapKey][row.metric_key] = amount;
+                    
+                    // Debug logging for operational metrics
+                    if (amount > 0) {
+                        console.log(`Saving ${row.metric_key}: ${amount} to combo ${combo} (plan_type_category_id: ${planTypeId}, plan_package_category_id: ${planPackageId})`);
+                    }
                 } else if (amount !== 0) {
                     entries.push({
                         hotel_id: selectedHotel.value.id,
