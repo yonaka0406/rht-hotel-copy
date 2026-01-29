@@ -373,6 +373,9 @@ const loadData = async () => {
             });
         });
 
+        // Ensure we include the 0_0 combination for unset categories
+        combinations.add('0_0');
+
         combinations.forEach(combo => {
             const [typeId, pkgId] = combo.split('_');
             if (typeId === 'null') return;
@@ -391,7 +394,7 @@ const loadData = async () => {
                     is_global: false,
                     metric_key: m.key,
                     plan_type_category_id: parseInt(typeId),
-                    plan_package_category_id: pkgId === 'null' ? null : parseInt(pkgId),
+                    plan_package_category_id: pkgId ? parseInt(pkgId) : 0,
                     ...months.value.reduce((acc, mo) => ({ ...acc, [mo.value]: 0 }), {})
                 };
             });
@@ -450,15 +453,73 @@ const loadData = async () => {
 
             if (tr.plan_type_category_id === null && tr.plan_package_category_id === null) {
                 globalMetrics.forEach(m => {
+                    if (m.key === 'non_accommodation_revenue') return;
+
                     const rowKey = `global_${m.key}`;
-                    if (dataMap[rowKey]) dataMap[rowKey][mKey] = parseFloat(tr[m.key] || 0);
+                    if (dataMap[rowKey]) {
+                        const oldValue = dataMap[rowKey][mKey] || 0;
+                        const newValue = parseFloat(tr[m.key] || 0);
+
+                        if (m.key === 'operating_days' || m.key === 'available_room_nights') {
+                            dataMap[rowKey][mKey] = Math.max(oldValue, newValue);
+                        } else {
+                            dataMap[rowKey][mKey] = oldValue + newValue;
+                        }
+                    }
                 });
-            } else if (tr.plan_type_category_id !== null) {
-                const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id || 'null'}`;
+            } else if (tr.plan_type_category_id !== null && tr.plan_type_category_id !== 0) {
+                const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
                 categorizedMetrics.forEach(m => {
                     const rowKey = `categorized_${combo}_${m.key}`;
                     if (dataMap[rowKey]) dataMap[rowKey][mKey] = parseFloat(tr[m.key] || 0);
                 });
+            } else {
+                // For plan_type_category_id: 0 - process accommodation_revenue and other metrics to categorized
+                if (tr.plan_type_category_id === 0) {
+                    if (tr.accommodation_revenue && tr.accommodation_revenue > 0) {
+                        const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
+                        const rowKey = `categorized_${combo}_accommodation_revenue`;
+                        if (dataMap[rowKey]) {
+                            dataMap[rowKey][mKey] = parseFloat(tr.accommodation_revenue || 0);
+                        }
+                    }
+
+                    // Handle other metrics for categorized section
+                    const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
+                    ['rooms_sold_nights'].forEach(metricKey => {
+                        const rowKey = `categorized_${combo}_${metricKey}`;
+                        if (dataMap[rowKey]) {
+                            dataMap[rowKey][mKey] = parseFloat(tr[metricKey] || 0);
+                        }
+                    });
+
+                    // Handle other global metrics (operating_days, available_room_nights, non_accommodation_sold_rooms)
+                    globalMetrics.forEach(m => {
+                        if (m.key === 'non_accommodation_revenue') return; // Already handled below
+
+                        const rowKey = `global_${m.key}`;
+                        if (dataMap[rowKey]) {
+                            const newValue = parseFloat(tr[m.key] || 0);
+                            const oldValue = dataMap[rowKey][mKey] || 0;
+
+                            if (m.key === 'operating_days' || m.key === 'available_room_nights') {
+                                dataMap[rowKey][mKey] = Math.max(oldValue, newValue);
+                            } else {
+                                dataMap[rowKey][mKey] = oldValue + newValue;
+                            }
+                        }
+                    });
+
+                    // Also aggregate non_accommodation_revenue from 0/0 records to global
+                    if (tr.non_accommodation_revenue !== undefined && tr.non_accommodation_revenue !== null) {
+                        const globalRowKey = 'global_non_accommodation_revenue';
+                        if (dataMap[globalRowKey]) {
+                            const oldValue = dataMap[globalRowKey][mKey] || 0;
+                            const newValue = parseFloat(tr.non_accommodation_revenue || 0);
+                            dataMap[globalRowKey][mKey] = oldValue + newValue;
+                        }
+                    }
+                }
             }
         });
 
@@ -494,18 +555,32 @@ const saveData = async () => {
             months.value.forEach(m => {
                 const amount = row[m.value];
                 if (row.is_operational) {
-                    const combo = row.is_global ? 'global' : `${row.plan_type_category_id || 'null'}_${row.plan_package_category_id || 'null'}`;
+                    let combo, planTypeId, planPackageId;
+
+                    if (row.is_global) {
+                        // Global metrics save to 0/0 record
+                        combo = '0_0';
+                        planTypeId = 0;
+                        planPackageId = 0;
+                    } else {
+                        // Categorized metrics use 0 for unset values
+                        combo = `${row.plan_type_category_id || 0}_${row.plan_package_category_id || 0}`;
+                        planTypeId = row.plan_type_category_id || 0;
+                        planPackageId = row.plan_package_category_id || 0;
+                    }
+
                     const mapKey = `${m.value}_${combo}`;
 
                     if (!tableDataMap[mapKey]) {
                         tableDataMap[mapKey] = {
                             hotel_id: selectedHotel.value.id,
                             [props.type === 'forecast' ? 'forecast_month' : 'accounting_month']: m.value,
-                            plan_type_category_id: row.is_global ? null : row.plan_type_category_id,
-                            plan_package_category_id: row.is_global ? null : row.plan_package_category_id
+                            plan_type_category_id: planTypeId,
+                            plan_package_category_id: planPackageId
                         };
                     }
                     tableDataMap[mapKey][row.metric_key] = amount;
+
                 } else if (amount !== 0) {
                     entries.push({
                         hotel_id: selectedHotel.value.id,
@@ -519,6 +594,7 @@ const saveData = async () => {
         });
 
         await importStore.upsertFinancesData(props.type, entries, Object.values(tableDataMap));
+
         toast.add({ severity: 'success', summary: '成功', detail: 'データを保存しました。', life: 5000 });
         hasChanges.value = false;
     } catch (error) {
@@ -586,8 +662,8 @@ const applyManualMapping = () => {
             if (row) {
                 item.values.forEach((val, idx) => {
                     if (months.value[idx]) {
-                        // Sum the values in case multiple Excel rows are mapped to the same account
-                        row[months.value[idx].value] = (row[months.value[idx].value] || 0) + val;
+                        // Replace the values instead of summing
+                        row[months.value[idx].value] = val;
                     }
                 });
                 appliedCount++;
@@ -649,7 +725,7 @@ const processPaste = () => {
             matchedCount++;
             values.forEach((val, idx) => {
                 if (months.value[idx]) {
-                    row[months.value[idx].value] = (row[months.value[idx].value] || 0) + val;
+                    row[months.value[idx].value] = val; // Replace instead of add
                     dataUpdated = true;
                 }
             });
