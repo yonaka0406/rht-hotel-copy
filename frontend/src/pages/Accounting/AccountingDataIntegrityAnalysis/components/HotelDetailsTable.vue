@@ -103,6 +103,15 @@
                                     <div v-if="item.category_name" class="text-xs text-slate-400 ml-6">{{ item.category_name }}</div>
                                     <div v-if="item.match_type === 'fuzzy'" class="text-xs text-amber-600 dark:text-amber-400 mt-1 ml-6">
                                         <i class="pi pi-search text-xs mr-1"></i>類似名称でマッチング
+                                        <span v-if="item.match_score" class="ml-1 text-xs opacity-75">({{ (item.match_score * 100).toFixed(1) }}%)</span>
+                                    </div>
+                                    <!-- Show PMS plan name in secondary severity -->
+                                    <div v-if="item.item_type === 'subaccount' && item.plan_name" class="text-xs text-slate-500 dark:text-slate-400 mt-1 ml-6">
+                                        <i class="pi pi-tag text-xs mr-1"></i>PMS: {{ item.plan_name }}
+                                    </div>
+                                    <!-- Show Yayoi subaccount name in info severity for all subaccount items -->
+                                    <div v-if="item.item_type === 'subaccount' && item.subaccount_name" class="text-xs text-blue-600 dark:text-blue-400 mt-1 ml-6">
+                                        <i class="pi pi-info-circle text-xs mr-1"></i>弥生: {{ item.subaccount_name }}
                                     </div>
                                 </div>
                             </td>
@@ -141,9 +150,6 @@
                                 <div class="text-xs text-slate-500 dark:text-slate-400">
                                     <div v-if="item.missing_rates_count > 0">
                                         料金明細なし: {{ item.missing_rates_count }}件
-                                    </div>
-                                    <div v-if="item.mapping_type">
-                                        マッピング: {{ item.mapping_type }}
                                     </div>
                                 </div>
                             </td>
