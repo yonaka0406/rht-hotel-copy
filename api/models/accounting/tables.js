@@ -81,10 +81,8 @@ const upsertForecastTable = async (requestId, data, userId, dbClient = null) => 
             const month = first.forecast_month;
 
             // Recognize both null/null and 0/0 as global rows, but prefer 0/0
-            const globalRow = groupData.find(d => 
-                (d.plan_type_category_id === 0 && d.plan_package_category_id === 0) ||
-                (d.plan_type_category_id === null && d.plan_package_category_id === null)
-            );
+            const globalRow = groupData.find(d => d.plan_type_category_id === 0 && d.plan_package_category_id === 0) || 
+                             groupData.find(d => d.plan_type_category_id === null && d.plan_package_category_id === null);
 
             let opDays, availRooms;
 
@@ -204,10 +202,8 @@ const upsertAccountingTable = async (requestId, data, userId, dbClient = null) =
             const month = first.accounting_month;
 
             // Recognize both null/null and 0/0 as global rows, but prefer 0/0
-            const globalRow = groupData.find(d => 
-                (d.plan_type_category_id === 0 && d.plan_package_category_id === 0) ||
-                (d.plan_type_category_id === null && d.plan_package_category_id === null)
-            );
+            const globalRow = groupData.find(d => d.plan_type_category_id === 0 && d.plan_package_category_id === 0) || 
+                             groupData.find(d => d.plan_type_category_id === null && d.plan_package_category_id === null);
 
             let opDays, availRooms;
 
