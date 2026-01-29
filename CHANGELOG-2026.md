@@ -12,6 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix: Unified reservation creation timestamp formatting in `ReservationPanel.vue` by using standard `formatDateTime` utility, resolving timezone discrepancies between environments.
 - Bug Fix: Financial data import was improved with global financial metric detection and aggregation to handle both zero and null values correctly.
 - Improvement: Financial data import was updated paste and manual mapping behavior to replace values instead of accumulating them.
+- Bug Fix: Prevented the resurrection of cancelled reservations or individual room nights when the room for that period has already been booked by another guest.
+- New Feature: Added a pre-emptive availability check in the reservation panel UI to warn users of conflicts before attempting to recover cancelled bookings.
+- Improvement: Enhanced booking conflict error messages to specify conflicting room numbers and sorted dates for better clarity.
+- UI/UX: Improved the display of conflict error messages by supporting multi-line formatting in the reservation panel and daily room detail views.
+- Improvement: Strengthened database integrity by adding transactional overlap checks when changing reservation statuses from 'cancelled'.
+- Refactor: Unified booking conflict detection logic across multiple reservation update paths into a shared internal utility.
+- Refactor: Improved date sorting logic for conflict reports to present information chronologically.
+- Improvement: Refined error handling in the reservations controller to ensure database resources are correctly released even when conflict exceptions occur.
+- Improvement: Updated parking recovery logic to ensure consistent state transitions when resurrecting reservations with accompanying parking.
 
 ---
 
