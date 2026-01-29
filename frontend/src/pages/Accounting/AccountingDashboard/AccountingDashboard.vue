@@ -116,8 +116,8 @@ const chartOption = computed(() => {
 
     const data = monthlyChartData.value.monthlyData;
     const months = data.map(d => d.month_label);
-    const pmsData = data.map(d => Math.round(d.pms_amount / 1000)); // Convert to thousands
-    const yayoiData = data.map(d => Math.round(d.yayoi_amount / 1000)); // Convert to thousands
+    const pmsData = data.map(d => Math.round((d.pms_amount || 0) / 1000)); // Convert to thousands, handle null
+    const yayoiData = data.map(d => Math.round((d.yayoi_amount || 0) / 1000)); // Convert to thousands, handle null
 
     return {
         title: {
@@ -133,8 +133,10 @@ const chartOption = computed(() => {
             formatter: (params) => {
                 let result = `${params[0].axisValue}<br/>`;
                 params.forEach(param => {
-                    const value = param.value * 1000; // Convert back from thousands
-                    result += `${param.seriesName}: ¥${value.toLocaleString()}<br/>`;
+                    const rawValue = param.value;
+                    const value = (rawValue && !isNaN(rawValue)) ? rawValue * 1000 : 0; // Convert back from thousands, handle NaN
+                    const formattedValue = new Intl.NumberFormat('ja-JP').format(value);
+                    result += `${param.seriesName}: ¥${formattedValue}<br/>`;
                 });
                 return result;
             }
