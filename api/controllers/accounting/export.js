@@ -161,8 +161,191 @@ const exportLedger = async (req, res) => {
     }
 };
 
+/**
+ * Get detailed discrepancy analysis by plan and hotel
+ */
+const getDetailedDiscrepancyAnalysis = async (req, res) => {
+    const requestId = req.requestId;
+
+    try {
+        const { selectedMonth, hotelIds } = req.body;
+
+        // Validation
+        if (!selectedMonth || !/^\d{4}-\d{2}$/.test(selectedMonth)) {
+            return res.status(400).json({ message: 'Invalid format for selectedMonth. Expected YYYY-MM' });
+        }
+
+        let hotelIdsArray;
+        if (hotelIds && Array.isArray(hotelIds) && hotelIds.length > 0) {
+            hotelIdsArray = hotelIds;
+        } else {
+            // If no hotel IDs provided, get all hotels that have department mappings
+            const hotelsWithDepts = await accountingModel.accountingRead.getHotelsWithDepartments(requestId);
+            hotelIdsArray = hotelsWithDepts.map(h => h.hotel_id);
+            logger.debug(`[${requestId}] Using hotels with department mappings for analysis: ${hotelIdsArray}`);
+        }
+
+        if (hotelIdsArray.length === 0) {
+            return res.status(400).json({ message: 'No hotels with department mappings found' });
+        }
+
+        // Calculate startDate and endDate from selectedMonth (YYYY-MM)
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+        const filters = {
+            startDate,
+            endDate,
+            hotelIds: hotelIdsArray
+        };
+
+        const analysis = await accountingModel.accountingRead.getDetailedDiscrepancyAnalysis(requestId, filters);
+
+        res.json({
+            period: selectedMonth,
+            analysis,
+            summary: {
+                totalDiscrepancies: analysis.length,
+                missingRatesCount: analysis.filter(a => a.issue_type === 'missing_rates').length,
+                noMappingCount: analysis.filter(a => a.issue_type === 'no_mapping').length,
+                amountMismatchCount: analysis.filter(a => a.issue_type === 'amount_mismatch').length,
+                totalDifference: analysis.reduce((sum, a) => sum + (a.difference || 0), 0)
+            }
+        });
+    } catch (error) {
+        logger.error(`[${requestId}] Error in getDetailedDiscrepancyAnalysis:`, error);
+        res.status(500).json({ message: 'Error fetching detailed discrepancy analysis' });
+    }
+};
+
+/**
+ * Get available years from Yayoi data for chart navigation
+ */
+const getAvailableYayoiYears = async (req, res) => {
+    const requestId = req.requestId;
+
+    try {
+        const years = await accountingModel.accountingRead.getAvailableYayoiYears(requestId);
+        
+        const response = {
+            years: years.map(y => ({
+                ...y,
+                year: parseInt(y.year) // Ensure year is a number
+            })),
+            latestYear: years.length > 0 ? parseInt(years[0].year) : new Date().getFullYear(),
+            hasData: years.length > 0
+        };
+        
+        res.json(response);
+    } catch (error) {
+        logger.error(`[${requestId}] Error in getAvailableYayoiYears:`, error);
+        res.status(500).json({ message: 'Error fetching available Yayoi years' });
+    }
+};
+
+/**
+ * Get monthly sales comparison data for chart display
+ */
+const getMonthlySalesComparison = async (req, res) => {
+    const requestId = req.requestId;
+
+    try {
+        const { year, hotelIds } = req.query;
+
+        // Validation
+        const yearNum = parseInt(year);
+        if (!year || isNaN(yearNum) || yearNum < 2020 || yearNum > 2030) {
+            return res.status(400).json({ message: 'Invalid year parameter. Expected 2020-2030' });
+        }
+
+        let hotelIdsArray;
+        if (hotelIds) {
+            hotelIdsArray = Array.isArray(hotelIds) ? hotelIds.map(Number) : hotelIds.split(',').map(Number);
+        } else {
+            // If no hotel IDs provided, get all hotels that have department mappings
+            const hotelsWithDepts = await accountingModel.accountingRead.getHotelsWithDepartments(requestId);
+            hotelIdsArray = hotelsWithDepts.map(h => h.hotel_id);
+            logger.debug(`[${requestId}] Using hotels with department mappings: ${hotelIdsArray}`);
+        }
+
+        const filters = {
+            year: yearNum,
+            hotelIds: hotelIdsArray
+        };
+
+        const monthlyData = await accountingModel.accountingRead.getMonthlySalesComparison(requestId, filters);
+
+        res.json({
+            year: yearNum,
+            monthlyData
+        });
+    } catch (error) {
+        logger.error(`[${requestId}] Error in getMonthlySalesComparison:`, error);
+        res.status(500).json({ message: 'Error fetching monthly sales comparison' });
+    }
+};
+
+/**
+ * Compare PMS calculated sales vs imported Yayoi data for the same period
+ */
+const comparePmsVsYayoi = async (req, res) => {
+    const requestId = req.requestId;
+
+    try {
+        const { selectedMonth, hotelIds } = req.body;
+
+        // Validation
+        if (!selectedMonth || !/^\d{4}-\d{2}$/.test(selectedMonth)) {
+            return res.status(400).json({ message: 'Invalid format for selectedMonth. Expected YYYY-MM' });
+        }
+
+        let hotelIdsArray;
+        if (hotelIds && Array.isArray(hotelIds) && hotelIds.length > 0) {
+            hotelIdsArray = hotelIds;
+        } else {
+            // If no hotel IDs provided, get all hotels that have department mappings
+            const hotelsWithDepts = await accountingModel.accountingRead.getHotelsWithDepartments(requestId);
+            hotelIdsArray = hotelsWithDepts.map(h => h.hotel_id);
+            logger.debug(`[${requestId}] Using hotels with department mappings for comparison: ${hotelIdsArray}`);
+        }
+
+        if (hotelIdsArray.length === 0) {
+            return res.status(400).json({ message: 'No hotels with department mappings found' });
+        }
+
+        // Calculate startDate and endDate from selectedMonth (YYYY-MM)
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+        const filters = {
+            startDate,
+            endDate,
+            hotelIds: hotelIdsArray
+        };
+
+        const comparison = await accountingModel.accountingRead.comparePmsVsYayoiData(requestId, filters);
+
+        res.json({
+            period: selectedMonth,
+            comparison,
+            hasDiscrepancies: comparison.length > 0
+        });
+    } catch (error) {
+        logger.error(`[${requestId}] Error in comparePmsVsYayoi:`, error);
+        res.status(500).json({ message: 'Error comparing PMS vs Yayoi data' });
+    }
+};
+
 module.exports = {
     getExportOptions,
     getLedgerPreview,
-    exportLedger
+    exportLedger,
+    comparePmsVsYayoi,
+    getMonthlySalesComparison,
+    getAvailableYayoiYears,
+    getDetailedDiscrepancyAnalysis
 };

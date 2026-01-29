@@ -238,7 +238,7 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
             ms.display_name as display_category_name
         FROM mapped_sales ms
         JOIN hotels h ON ms.hotel_id = h.id
-        LEFT JOIN acc_departments ad ON h.id = ad.hotel_id
+        LEFT JOIN acc_departments ad ON h.id = ad.hotel_id AND ad.is_current = true
         LEFT JOIN acc_account_codes ac ON ms.account_code_id = ac.id
         LEFT JOIN acc_tax_classes atc ON ms.tax_rate = atc.tax_rate AND atc.yayoi_name LIKE '課税売上%'
         GROUP BY h.id, h.name, ad.name, ms.account_code_id, ac.code, ac.name, ms.tax_rate, atc.yayoi_name, ms.display_name, ms.mapping_target
@@ -389,6 +389,398 @@ const getManagementGroups = async (requestId, dbClient = null) => {
         return result.rows;
     } catch (err) {
         logger.error('Error retrieving management groups:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+/**
+ * Get detailed discrepancy analysis by plan and hotel
+ * @param {string} requestId 
+ * @param {object} filters { startDate, endDate, hotelIds }
+ * @param {object} dbClient Optional database client for transactions
+ */
+const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const { startDate, endDate, hotelIds } = filters;
+
+    const query = `
+        WITH pms_plan_sales AS (
+            -- Get PMS calculated sales by hotel, plan, and tax rate
+            SELECT 
+                rd.hotel_id,
+                h.name as hotel_name,
+                COALESCE(ph.name, pg.name, '未設定') as plan_name,
+                ph.plan_type_category_id,
+                ptc.name as category_name,
+                COALESCE(rr.tax_rate, 0.10) as tax_rate,
+                COUNT(DISTINCT rd.id) as reservation_count,
+                SUM(
+                    CASE 
+                        WHEN rd.plan_type = 'per_room' THEN COALESCE(rr.price, rd.price)
+                        ELSE COALESCE(rr.price, rd.price) * rd.number_of_people 
+                    END
+                ) as pms_amount,
+                COUNT(CASE WHEN rr.id IS NULL THEN 1 END) as missing_rates_count
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            JOIN hotels h ON rd.hotel_id = h.id
+            LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
+            LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
+            LEFT JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id
+            LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+            WHERE rd.date BETWEEN $1 AND $2
+            AND rd.hotel_id = ANY($3::int[])
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
+            GROUP BY rd.hotel_id, h.name, COALESCE(ph.name, pg.name, '未設定'), 
+                     ph.plan_type_category_id, ptc.name, COALESCE(rr.tax_rate, 0.10)
+        ),
+        yayoi_mapped_sales AS (
+            -- Get Yayoi sales mapped to plans via account mappings
+            SELECT 
+                d.hotel_id,
+                h.name as hotel_name,
+                COALESCE(
+                    CASE 
+                        WHEN am.target_type = 'plan_hotel' THEN ph.name
+                        WHEN am.target_type = 'plan_global' THEN pg.name
+                        WHEN am.target_type = 'plan_type_category' THEN ptc.name
+                        ELSE ac.name
+                    END, 
+                    ac.name
+                ) as mapped_name,
+                am.target_type,
+                tc.tax_rate,
+                COUNT(*) as transaction_count,
+                SUM(yd.credit_amount) as yayoi_amount
+            FROM acc_yayoi_data yd
+            LEFT JOIN LATERAL (
+                -- For each yayoi record, find the best matching department
+                -- Prefer current departments, but fall back to historical if needed
+                SELECT d.hotel_id, d.name, d.is_current
+                FROM acc_departments d
+                WHERE d.name = yd.credit_department
+                  AND d.hotel_id = ANY($3::int[])
+                ORDER BY d.is_current DESC, d.id DESC
+                LIMIT 1
+            ) d ON true
+            JOIN hotels h ON d.hotel_id = h.id
+            JOIN acc_account_codes ac ON yd.credit_account_code = ac.name
+            LEFT JOIN acc_tax_classes tc ON yd.credit_tax_class = tc.yayoi_name
+            LEFT JOIN acc_accounting_mappings am ON ac.id = am.account_code_id AND d.hotel_id = am.hotel_id
+            LEFT JOIN plans_hotel ph ON am.target_type = 'plan_hotel' AND am.target_id = ph.id
+            LEFT JOIN plans_global pg ON am.target_type = 'plan_global' AND am.target_id = pg.id
+            LEFT JOIN plan_type_categories ptc ON am.target_type = 'plan_type_category' AND am.target_id = ptc.id
+            WHERE yd.transaction_date BETWEEN $1 AND $2
+            AND d.hotel_id = ANY($3::int[])
+            AND ac.management_group_id = 1  -- Sales accounts only
+            AND yd.credit_amount > 0
+            GROUP BY d.hotel_id, h.name, 
+                     COALESCE(
+                         CASE 
+                             WHEN am.target_type = 'plan_hotel' THEN ph.name
+                             WHEN am.target_type = 'plan_global' THEN pg.name
+                             WHEN am.target_type = 'plan_type_category' THEN ptc.name
+                             ELSE ac.name
+                         END, 
+                         ac.name
+                     ), am.target_type, tc.tax_rate
+        ),
+        comparison AS (
+            SELECT 
+                COALESCE(p.hotel_id, y.hotel_id) as hotel_id,
+                COALESCE(p.hotel_name, y.hotel_name) as hotel_name,
+                COALESCE(p.plan_name, y.mapped_name) as plan_name,
+                p.category_name,
+                COALESCE(p.tax_rate, y.tax_rate) as tax_rate,
+                COALESCE(p.pms_amount, 0) as pms_amount,
+                COALESCE(y.yayoi_amount, 0) as yayoi_amount,
+                COALESCE(p.reservation_count, 0) as reservation_count,
+                COALESCE(y.transaction_count, 0) as yayoi_transaction_count,
+                COALESCE(p.missing_rates_count, 0) as missing_rates_count,
+                COALESCE(p.pms_amount, 0) - COALESCE(y.yayoi_amount, 0) as difference,
+                CASE 
+                    WHEN p.pms_amount IS NULL THEN 'yayoi_only'
+                    WHEN y.yayoi_amount IS NULL THEN 'pms_only'
+                    WHEN ABS(COALESCE(p.pms_amount, 0) - COALESCE(y.yayoi_amount, 0)) > 1000 THEN 'significant_diff'
+                    ELSE 'matched'
+                END as status,
+                y.target_type as mapping_type
+            FROM pms_plan_sales p
+            FULL OUTER JOIN yayoi_mapped_sales y ON p.hotel_id = y.hotel_id 
+                AND p.plan_name = y.mapped_name 
+                AND p.tax_rate = y.tax_rate
+        )
+        SELECT 
+            hotel_id,
+            hotel_name,
+            plan_name,
+            category_name,
+            tax_rate,
+            pms_amount,
+            yayoi_amount,
+            difference,
+            status,
+            reservation_count,
+            yayoi_transaction_count,
+            missing_rates_count,
+            mapping_type,
+            CASE 
+                WHEN missing_rates_count > 0 THEN 'missing_rates'
+                WHEN mapping_type IS NULL AND pms_amount > 0 THEN 'no_mapping'
+                WHEN status = 'significant_diff' THEN 'amount_mismatch'
+                ELSE 'ok'
+            END as issue_type
+        FROM comparison
+        WHERE status != 'matched' OR missing_rates_count > 0 OR ABS(difference) > 1000
+        ORDER BY ABS(difference) DESC, hotel_id, plan_name
+    `;
+
+    const values = [startDate, endDate, hotelIds];
+
+    try {
+        const result = await client.query(query);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error getting detailed discrepancy analysis:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+/**
+ * Get available years from Yayoi data for chart navigation
+ * @param {string} requestId 
+ * @param {object} dbClient Optional database client for transactions
+ */
+const getHotelsWithDepartments = async (requestId, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const query = `
+        SELECT DISTINCT d.hotel_id, h.name as hotel_name
+        FROM acc_departments d
+        JOIN hotels h ON d.hotel_id = h.id
+        ORDER BY d.hotel_id
+    `;
+
+    try {
+        const result = await client.query(query);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error getting hotels with departments:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+const getAvailableYayoiYears = async (requestId, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    // Include both current and historical department mappings for year detection
+    const query = `
+        SELECT 
+            EXTRACT(YEAR FROM yd.transaction_date) as year,
+            MIN(yd.transaction_date) as earliest_date,
+            MAX(yd.transaction_date) as latest_date,
+            COUNT(*) as transaction_count
+        FROM acc_yayoi_data yd
+        JOIN acc_departments d ON yd.credit_department = d.name  -- Remove is_current filter for year detection
+        JOIN acc_account_codes ac ON yd.credit_account_code = ac.name
+        WHERE ac.management_group_id = 1  -- Sales accounts only
+        AND yd.credit_amount > 0
+        GROUP BY EXTRACT(YEAR FROM yd.transaction_date)
+        ORDER BY year DESC
+    `;
+
+    try {
+        const result = await client.query(query);
+        logger.debug(`[${requestId}] Available Yayoi years (including historical departments):`, result.rows);
+        
+        return result.rows;
+    } catch (err) {
+        logger.error('Error getting available Yayoi years:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+/**
+ * Get monthly sales comparison data for chart display
+ * @param {string} requestId 
+ * @param {object} filters { year, hotelIds }
+ * @param {object} dbClient Optional database client for transactions
+ */
+const getMonthlySalesComparison = async (requestId, filters, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const { year, hotelIds } = filters;
+
+    const query = `
+        WITH months AS (
+            SELECT 
+                generate_series(1, 12) as month_num,
+                to_char(make_date($1, generate_series(1, 12), 1), 'YYYY-MM') as month_key,
+                to_char(make_date($1, generate_series(1, 12), 1), 'MM月') as month_label
+        ),
+        pms_monthly AS (
+            -- Get PMS calculated sales totals by month for hotels with department mappings
+            SELECT 
+                to_char(rd.date, 'YYYY-MM') as month_key,
+                SUM(
+                    CASE 
+                        WHEN rd.plan_type = 'per_room' THEN COALESCE(rr.price, rd.price)
+                        ELSE COALESCE(rr.price, rd.price) * rd.number_of_people 
+                    END
+                ) as pms_amount
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+            WHERE EXTRACT(YEAR FROM rd.date) = $1
+            AND rd.hotel_id IN (
+                -- Only include hotels that have department mappings
+                SELECT DISTINCT d.hotel_id 
+                FROM acc_departments d 
+                WHERE d.hotel_id = ANY($2::int[])
+            )
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
+            GROUP BY to_char(rd.date, 'YYYY-MM')
+        ),
+        yayoi_monthly AS (
+            -- Get Yayoi imported sales totals by month 
+            -- Use LEFT JOIN to get the best matching department for each record
+            SELECT 
+                to_char(yd.transaction_date, 'YYYY-MM') as month_key,
+                SUM(yd.credit_amount) as yayoi_amount,
+                COUNT(DISTINCT yd.batch_id) as import_batches,
+                COUNT(*) as transaction_count
+            FROM acc_yayoi_data yd
+            LEFT JOIN LATERAL (
+                -- For each yayoi record, find the best matching department
+                -- Prefer current departments, but fall back to historical if needed
+                SELECT d.hotel_id, d.name, d.is_current
+                FROM acc_departments d
+                WHERE d.name = yd.credit_department
+                  AND d.hotel_id = ANY($2::int[])
+                ORDER BY d.is_current DESC, d.id DESC
+                LIMIT 1
+            ) d ON true
+            JOIN acc_account_codes ac ON yd.credit_account_code = ac.name
+            WHERE EXTRACT(YEAR FROM yd.transaction_date) = $1
+            AND d.hotel_id IS NOT NULL  -- Only include records with valid department mapping
+            AND ac.management_group_id = 1  -- Sales accounts only
+            AND yd.credit_amount > 0
+            GROUP BY to_char(yd.transaction_date, 'YYYY-MM')
+        )
+        SELECT 
+            m.month_num,
+            m.month_key,
+            m.month_label,
+            COALESCE(p.pms_amount, 0) as pms_amount,
+            COALESCE(y.yayoi_amount, 0) as yayoi_amount,
+            COALESCE(y.import_batches, 0) as import_batches,
+            COALESCE(y.transaction_count, 0) as transaction_count,
+            COALESCE(p.pms_amount, 0) - COALESCE(y.yayoi_amount, 0) as difference,
+            CASE 
+                WHEN p.pms_amount IS NULL AND y.yayoi_amount IS NULL THEN 'no_data'
+                WHEN p.pms_amount IS NULL THEN 'yayoi_only'
+                WHEN y.yayoi_amount IS NULL THEN 'pms_only'
+                WHEN ABS(COALESCE(p.pms_amount, 0) - COALESCE(y.yayoi_amount, 0)) > 10000 THEN 'significant_diff'
+                ELSE 'matched'
+            END as status
+        FROM months m
+        LEFT JOIN pms_monthly p ON m.month_key = p.month_key
+        LEFT JOIN yayoi_monthly y ON m.month_key = y.month_key
+        ORDER BY m.month_num
+    `;
+
+    const values = [year, hotelIds];
+
+    try {
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error getting monthly sales comparison:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+/**
+ * Compare PMS calculated sales vs imported Yayoi data for the same period
+ * @param {string} requestId 
+ * @param {object} filters { startDate, endDate, hotelIds }
+ * @param {object} dbClient Optional database client for transactions
+ */
+const comparePmsVsYayoiData = async (requestId, filters, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const { startDate, endDate, hotelIds } = filters;
+
+    const query = `
+        SELECT 
+            rd.hotel_id,
+            h.name as hotel_name,
+            COUNT(*) as total_comparisons,
+            0 as matched_count,
+            0 as discrepancy_count,
+            COUNT(*) as pms_only_count,
+            0 as yayoi_only_count,
+            SUM(
+                CASE 
+                    WHEN rd.plan_type = 'per_room' THEN COALESCE(rr.price, rd.price)
+                    ELSE COALESCE(rr.price, rd.price) * rd.number_of_people 
+                END
+            ) as total_pms_amount,
+            0 as total_yayoi_amount,
+            SUM(
+                CASE 
+                    WHEN rd.plan_type = 'per_room' THEN COALESCE(rr.price, rd.price)
+                    ELSE COALESCE(rr.price, rd.price) * rd.number_of_people 
+                END
+            ) as total_difference,
+            0 as total_yayoi_transactions,
+            NULL as earliest_import,
+            NULL as latest_import
+        FROM reservation_details rd
+        JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+        JOIN hotels h ON rd.hotel_id = h.id
+        LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+        WHERE rd.date BETWEEN $1 AND $2
+        AND rd.hotel_id = ANY($3::int[])
+        AND rd.billable = TRUE
+        AND r.status NOT IN ('hold', 'block')
+        AND r.type <> 'employee'
+        GROUP BY rd.hotel_id, h.name
+        ORDER BY rd.hotel_id
+    `;
+
+    const values = [startDate, endDate, hotelIds];
+
+    try {
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error comparing PMS vs Yayoi data:', err);
         throw new Error('Database error');
     } finally {
         if (shouldRelease) client.release();
@@ -1092,6 +1484,10 @@ module.exports = {
     getMappings,
     getLedgerPreview,
     validateLedgerDataIntegrity,
+    comparePmsVsYayoiData,
+    getMonthlySalesComparison,
+    getAvailableYayoiYears,
+    getDetailedDiscrepancyAnalysis,
     getManagementGroups,
     getTaxClasses,
     getDepartments,
@@ -1100,6 +1496,7 @@ module.exports = {
     getReconciliationHotelDetails,
     getReconciliationClientDetails,
     getCostBreakdownData,
-    getSubAccounts
+    getSubAccounts,
+    getHotelsWithDepartments
 };
 
