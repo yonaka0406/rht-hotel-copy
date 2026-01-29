@@ -377,6 +377,7 @@ export const processRawDataIntoAnalysis = (rawData) => {
                 match_type: matchType,
                 yayoi_subaccount: yayoiMatch?.subaccount_name || 'No match',
                 total_matched_yayoi_items: matchedYayoiItems.size
+            });
             
             analysisItems.push({
                 hotel_id,
