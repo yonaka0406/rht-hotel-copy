@@ -162,9 +162,9 @@ const exportLedger = async (req, res) => {
 };
 
 /**
- * Get detailed discrepancy analysis by plan and hotel
+ * Get raw data for integrity analysis (PMS and Yayoi data)
  */
-const getDetailedDiscrepancyAnalysis = async (req, res) => {
+const getRawDataForIntegrityAnalysis = async (req, res) => {
     const requestId = req.requestId;
 
     try {
@@ -201,24 +201,17 @@ const getDetailedDiscrepancyAnalysis = async (req, res) => {
             hotelIds: hotelIdsArray
         };
 
-        const analysis = await accountingModel.accountingRead.getDetailedDiscrepancyAnalysis(requestId, filters);
+        const rawData = await accountingModel.accountingRead.getRawDataForIntegrityAnalysis(requestId, filters);
         const hotelTotals = await accountingModel.accountingRead.getHotelTotalsForIntegrityAnalysis(requestId, filters);
 
         res.json({
             period: selectedMonth,
-            analysis,
-            hotelTotals,
-            summary: {
-                totalDiscrepancies: analysis.length,
-                missingRatesCount: analysis.filter(a => a.issue_type === 'missing_rates').length,
-                noMappingCount: analysis.filter(a => a.issue_type === 'no_mapping').length,
-                amountMismatchCount: analysis.filter(a => a.issue_type === 'amount_mismatch').length,
-                totalDifference: analysis.reduce((sum, a) => sum + (parseFloat(a.difference) || 0), 0)
-            }
+            rawData,
+            hotelTotals
         });
     } catch (error) {
-        logger.error(`[${requestId}] Error in getDetailedDiscrepancyAnalysis:`, error);
-        res.status(500).json({ message: 'Error fetching detailed discrepancy analysis' });
+        logger.error(`[${requestId}] Error in getRawDataForIntegrityAnalysis:`, error);
+        res.status(500).json({ message: 'Error fetching raw data for integrity analysis' });
     }
 };
 
@@ -380,5 +373,5 @@ module.exports = {
     getMonthlySalesComparison,
     getAvailableYayoiYears,
     getAvailableYayoiMonths,
-    getDetailedDiscrepancyAnalysis
+    getRawDataForIntegrityAnalysis
 };

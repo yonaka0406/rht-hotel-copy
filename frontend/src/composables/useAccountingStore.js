@@ -76,8 +76,8 @@ export function useAccountingStore() {
         return await get(`/accounting/export/monthly-comparison?${params}`);
     };
 
-    const getDetailedDiscrepancyAnalysis = async (filters) => {
-        return await post('/accounting/export/detailed-discrepancy-analysis', filters);
+    const getRawDataForIntegrityAnalysis = async (filters) => {
+        return await post('/accounting/export/raw-data-integrity-analysis', filters);
     };
 
     const getAvailableYayoiYears = async () => {
@@ -231,7 +231,7 @@ export function useAccountingStore() {
         fetchReconciliationClientDetails,
         comparePmsVsYayoi,
         getMonthlySalesComparison,
-        getDetailedDiscrepancyAnalysis,
+        getRawDataForIntegrityAnalysis,
         getAvailableYayoiYears,
         getAvailableYayoiMonths
     };

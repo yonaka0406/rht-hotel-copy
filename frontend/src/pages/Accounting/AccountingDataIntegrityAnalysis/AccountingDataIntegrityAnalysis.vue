@@ -95,6 +95,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAccountingStore } from '@/composables/useAccountingStore';
+import { processRawDataIntoAnalysis } from './services/dataIntegrityService.js';
 import AnalysisSummaryCards from './components/AnalysisSummaryCards.vue';
 import HotelSummaryTable from './components/HotelSummaryTable.vue';
 import HotelDetailsTable from './components/HotelDetailsTable.vue';
@@ -124,14 +125,25 @@ const availableMonths = computed(() => {
 const hotelSummary = computed(() => {
     if (!analysisData.value || !analysisData.value.hotelTotals) return [];
     
-    // Use the hotelTotals data directly from the API
+    // Calculate issue counts per hotel from analysis data
+    const issueCountsByHotel = new Map();
+    if (analysisData.value.analysis) {
+        analysisData.value.analysis.forEach(item => {
+            if (item.issue_type && item.issue_type !== 'ok') {
+                const count = issueCountsByHotel.get(item.hotel_id) || 0;
+                issueCountsByHotel.set(item.hotel_id, count + 1);
+            }
+        });
+    }
+    
+    // Use the hotelTotals data directly from the API for accurate hotel summaries
     return analysisData.value.hotelTotals.map(hotel => ({
         hotel_id: hotel.hotel_id,
         hotel_name: hotel.hotel_name,
         total_pms_amount: parseFloat(hotel.total_pms_amount) || 0,
         total_yayoi_amount: parseFloat(hotel.total_yayoi_amount) || 0,
         total_difference: parseFloat(hotel.total_difference) || 0,
-        issue_count: hotel.missing_rates_count || 0 // Use missing rates as issue count for now
+        issue_count: issueCountsByHotel.get(hotel.hotel_id) || 0
     })).sort((a, b) => a.hotel_name.localeCompare(b.hotel_name));
 });
 
@@ -166,11 +178,26 @@ const summaryTotals = computed(() => {
 
 // Filtered analysis for selected hotel details
 const hotelAnalysisForSelectedHotel = computed(() => {
-    if (!analysisData.value || !analysisData.value.analysis || !selectedHotelId.value) return [];
+    if (!analysisData.value || !analysisData.value.analysis || !selectedHotelId.value) {
+        console.log('No data for hotel analysis:', {
+            hasAnalysisData: !!analysisData.value,
+            hasAnalysisArray: !!analysisData.value?.analysis,
+            selectedHotelId: selectedHotelId.value
+        });
+        return [];
+    }
     
-    return analysisData.value.analysis.filter(item => {
+    const filtered = analysisData.value.analysis.filter(item => {
         return item.hotel_id === selectedHotelId.value;
     });
+    
+    console.log('=== Hotel Analysis Computed ===');
+    console.log('Selected Hotel ID:', selectedHotelId.value);
+    console.log('Total analysis items:', analysisData.value.analysis.length);
+    console.log('Filtered items for selected hotel:', filtered.length);
+    console.log('Filtered data:', filtered);
+    
+    return filtered;
 });
 
 const getSelectedMonthLabel = () => {
@@ -202,12 +229,34 @@ const fetchAnalysisData = async () => {
         isLoading.value = true;
         hasError.value = false;
         
-        const result = await accountingStore.getDetailedDiscrepancyAnalysis({
+        console.log('=== Fetching Raw Data ===');
+        console.log('Selected month:', selectedMonth.value);
+        
+        const result = await accountingStore.getRawDataForIntegrityAnalysis({
             selectedMonth: selectedMonth.value,
             hotelIds: null // Let backend determine hotels with department mappings
         });
         
-        analysisData.value = result;
+        console.log('=== Raw Data Received ===');
+        console.log('Full result:', result);
+        console.log('PMS data:', result?.rawData?.pmsData?.length || 0);
+        console.log('Yayoi main accounts:', result?.rawData?.yayoiMainAccounts?.length || 0);
+        console.log('Yayoi subaccounts:', result?.rawData?.yayoiSubAccounts?.length || 0);
+        console.log('Hotel totals:', result?.hotelTotals?.length || 0);
+        
+        // Process the raw data into analysis format using the service
+        const processedAnalysis = processRawDataIntoAnalysis(result.rawData);
+        
+        analysisData.value = {
+            period: result.period,
+            analysis: processedAnalysis,
+            hotelTotals: result.hotelTotals,
+            rawData: result.rawData
+        };
+        
+        console.log('=== Processed Analysis ===');
+        console.log('Analysis items:', processedAnalysis.length);
+        
     } catch (error) {
         console.error('Failed to fetch analysis data:', error);
         hasError.value = true;
@@ -217,8 +266,50 @@ const fetchAnalysisData = async () => {
 };
 
 const viewHotelDetails = (hotelId, hotelName) => {
+    console.log('=== Hotel Details Clicked ===');
+    console.log('Hotel ID:', hotelId);
+    console.log('Hotel Name:', hotelName);
+    console.log('Full analysis data:', analysisData.value);
+    console.log('Analysis items count:', analysisData.value?.analysis?.length || 0);
+    
+    // Filter and log the data for this specific hotel
+    const hotelAnalysis = analysisData.value?.analysis?.filter(item => item.hotel_id === hotelId) || [];
+    console.log(`Analysis items for hotel ${hotelName} (ID: ${hotelId}):`, hotelAnalysis);
+    console.log(`Found ${hotelAnalysis.length} analysis items for this hotel`);
+    
+    // Log different item types
+    const accountTotals = hotelAnalysis.filter(item => item.item_type === 'account_total');
+    const subaccounts = hotelAnalysis.filter(item => item.item_type === 'subaccount');
+    const others = hotelAnalysis.filter(item => !item.item_type || (item.item_type !== 'account_total' && item.item_type !== 'subaccount'));
+    
+    console.log('Account totals:', accountTotals);
+    console.log('Subaccounts:', subaccounts);
+    console.log('Other items:', others);
+    
+    // Log detailed structure of first few items
+    if (subaccounts.length > 0) {
+        console.log('First subaccount item structure:', subaccounts[0]);
+        console.log('Subaccount item keys:', Object.keys(subaccounts[0]));
+    }
+    
+    // Check if any items have PMS amounts
+    const itemsWithPMS = hotelAnalysis.filter(item => item.pms_amount && item.pms_amount > 0);
+    const itemsWithYayoi = hotelAnalysis.filter(item => item.yayoi_amount && item.yayoi_amount > 0);
+    console.log('Items with PMS amounts:', itemsWithPMS.length);
+    console.log('Items with Yayoi amounts:', itemsWithYayoi.length);
+    
+    if (itemsWithPMS.length > 0) {
+        console.log('Sample PMS item:', itemsWithPMS[0]);
+    }
+    if (itemsWithYayoi.length > 0) {
+        console.log('Sample Yayoi item:', itemsWithYayoi[0]);
+    }
+    
     selectedHotelId.value = hotelId;
     selectedHotelName.value = hotelName;
+    
+    console.log('Updated selectedHotelId:', selectedHotelId.value);
+    console.log('Updated selectedHotelName:', selectedHotelName.value);
 };
 
 onMounted(async () => {
