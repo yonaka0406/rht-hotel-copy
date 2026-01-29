@@ -474,7 +474,7 @@ onMounted(async () => {
                                         <i class="pi pi-chart-bar text-xl text-violet-600 dark:text-violet-400"></i>
                                     </div>
                                     <span class="font-semibold text-slate-900 dark:text-white text-lg mb-2">損益計算書</span>
-                                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">P&L Statement</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">損益計算書</p>
                                     <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
                                         部門別・ホテル別の損益分析
                                     </p>
@@ -492,7 +492,7 @@ onMounted(async () => {
                                         <i class="pi pi-chart-pie text-xl text-violet-600 dark:text-violet-400"></i>
                                     </div>
                                     <span class="font-semibold text-slate-900 dark:text-white text-lg mb-2">コスト内訳</span>
-                                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">Cost Analysis</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">費用分析</p>
                                     <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
                                         主要経費の推移と施設別比較
                                     </p>
@@ -578,7 +578,7 @@ onMounted(async () => {
                                     <div class="flex items-center justify-center gap-2">
                                         <button @click="changeYear(-1)" 
                                             :disabled="!canGoPreviousYear"
-                                            class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                             <i class="pi pi-chevron-left text-slate-600 dark:text-slate-400 text-sm"></i>
                                         </button>
                                         <span class="text-sm font-medium text-slate-700 dark:text-slate-300 min-w-[4rem] text-center">
@@ -586,7 +586,7 @@ onMounted(async () => {
                                         </span>
                                         <button @click="changeYear(1)" 
                                             :disabled="!canGoNextYear"
-                                            class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                             <i class="pi pi-chevron-right text-slate-600 dark:text-slate-400 text-sm"></i>
                                         </button>
                                     </div>
