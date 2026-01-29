@@ -80,10 +80,10 @@ const upsertForecastTable = async (requestId, data, userId, dbClient = null) => 
             const hotelId = first.hotel_id;
             const month = first.forecast_month;
 
-            // Strict null check to identify the Global Row - also accept 0 as global
+            // Recognize both null/null and 0/0 as global rows, but prefer 0/0
             const globalRow = groupData.find(d => 
-                (d.plan_type_category_id === null && d.plan_package_category_id === null) ||
-                (d.plan_type_category_id === 0 && d.plan_package_category_id === 0)
+                (d.plan_type_category_id === 0 && d.plan_package_category_id === 0) ||
+                (d.plan_type_category_id === null && d.plan_package_category_id === null)
             );
 
             let opDays, availRooms;
@@ -102,14 +102,14 @@ const upsertForecastTable = async (requestId, data, userId, dbClient = null) => 
                 );
             } else {
                 // Case B: We are inserting/updating categorized rows but NO global row in this batch.
-                // We must fetch the existing Global Metrics from DB (check both null/null and 0/0).
+                // We must fetch the existing Global Metrics from DB (check both 0/0 and null/null).
                 const res = await client.query(
                     `SELECT operating_days, available_room_nights 
                      FROM du_forecast 
                      WHERE hotel_id = $1 AND forecast_month = $2 
-                     AND ((plan_type_category_id IS NULL AND plan_package_category_id IS NULL)
-                          OR (plan_type_category_id = 0 AND plan_package_category_id = 0))
-                     ORDER BY plan_type_category_id NULLS FIRST
+                     AND ((plan_type_category_id = 0 AND plan_package_category_id = 0)
+                          OR (plan_type_category_id IS NULL AND plan_package_category_id IS NULL))
+                     ORDER BY plan_type_category_id NULLS LAST
                      LIMIT 1`,
                     [hotelId, month]
                 );
@@ -132,8 +132,8 @@ const upsertForecastTable = async (requestId, data, userId, dbClient = null) => 
         const values = data.map(d => [
             d.hotel_id,
             d.forecast_month,
-            d.plan_type_category_id || null,
-            d.plan_package_category_id || null,
+            d.plan_type_category_id ?? null,
+            d.plan_package_category_id ?? null,
             d.accommodation_revenue || 0,
             d.non_accommodation_revenue || 0,
             d.operating_days || 0,
@@ -203,10 +203,10 @@ const upsertAccountingTable = async (requestId, data, userId, dbClient = null) =
             const hotelId = first.hotel_id;
             const month = first.accounting_month;
 
-            // Strict null check to identify the Global Row - also accept 0 as global
+            // Recognize both null/null and 0/0 as global rows, but prefer 0/0
             const globalRow = groupData.find(d => 
-                (d.plan_type_category_id === null && d.plan_package_category_id === null) ||
-                (d.plan_type_category_id === 0 && d.plan_package_category_id === 0)
+                (d.plan_type_category_id === 0 && d.plan_package_category_id === 0) ||
+                (d.plan_type_category_id === null && d.plan_package_category_id === null)
             );
 
             let opDays, availRooms;
@@ -226,9 +226,9 @@ const upsertAccountingTable = async (requestId, data, userId, dbClient = null) =
                     `SELECT operating_days, available_room_nights 
                      FROM du_accounting 
                      WHERE hotel_id = $1 AND accounting_month = $2 
-                     AND ((plan_type_category_id IS NULL AND plan_package_category_id IS NULL)
-                          OR (plan_type_category_id = 0 AND plan_package_category_id = 0))
-                     ORDER BY plan_type_category_id NULLS FIRST
+                     AND ((plan_type_category_id = 0 AND plan_package_category_id = 0)
+                          OR (plan_type_category_id IS NULL AND plan_package_category_id IS NULL))
+                     ORDER BY plan_type_category_id NULLS LAST
                      LIMIT 1`,
                     [hotelId, month]
                 );
@@ -250,8 +250,8 @@ const upsertAccountingTable = async (requestId, data, userId, dbClient = null) =
         const values = data.map(d => [
             d.hotel_id,
             d.accounting_month,
-            d.plan_type_category_id || null,
-            d.plan_package_category_id || null,
+            d.plan_type_category_id ?? null,
+            d.plan_package_category_id ?? null,
             d.accommodation_revenue || 0,
             d.non_accommodation_revenue || 0,
             d.operating_days || 0,

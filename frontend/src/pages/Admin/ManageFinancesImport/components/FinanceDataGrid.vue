@@ -478,26 +478,28 @@ const loadData = async () => {
                     if (dataMap[rowKey]) dataMap[rowKey][mKey] = parseFloat(tr[m.key] || 0);
                 });
             } else {
-                // Handle plan_type_category_id: 0 or null case - aggregate non_accommodation_revenue to global, accommodation_revenue to categorized
+                // Handle plan_type_category_id: 0 or null case
                 console.log('Processing as unset category (0 or null)');
                 
-                // Always aggregate non_accommodation_revenue to global for both 0 and null records
-                if (tr.non_accommodation_revenue !== undefined && tr.non_accommodation_revenue !== null) {
-                    const globalRowKey = 'global_non_accommodation_revenue';
-                    if (dataMap[globalRowKey]) {
-                        const oldValue = dataMap[globalRowKey][mKey] || 0;
-                        const newValue = parseFloat(tr.non_accommodation_revenue || 0);
-                        dataMap[globalRowKey][mKey] = oldValue + newValue;
-                        if (newValue > 0) {
-                            console.log(`Adding ${newValue} to global non_accommodation_revenue: ${oldValue} + ${newValue} = ${dataMap[globalRowKey][mKey]}`);
+                // For plan_type_category_id: null - only process non_accommodation_revenue to global
+                if (tr.plan_type_category_id === null && tr.plan_package_category_id === null) {
+                    if (tr.non_accommodation_revenue !== undefined && tr.non_accommodation_revenue !== null) {
+                        const globalRowKey = 'global_non_accommodation_revenue';
+                        if (dataMap[globalRowKey]) {
+                            const oldValue = dataMap[globalRowKey][mKey] || 0;
+                            const newValue = parseFloat(tr.non_accommodation_revenue || 0);
+                            dataMap[globalRowKey][mKey] = oldValue + newValue;
+                            if (newValue > 0) {
+                                console.log(`Adding ${newValue} to global non_accommodation_revenue from null/null record: ${oldValue} + ${newValue} = ${dataMap[globalRowKey][mKey]}`);
+                            }
                         }
                     }
                 }
                 
-                // Only process accommodation_revenue and other metrics for plan_type_category_id: 0 (not null)
+                // For plan_type_category_id: 0 - process accommodation_revenue and other metrics to categorized
                 if (tr.plan_type_category_id === 0) {
                     if (tr.accommodation_revenue && tr.accommodation_revenue > 0) {
-                        const combo = `${tr.plan_type_category_id || 0}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
+                        const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
                         const rowKey = `categorized_${combo}_accommodation_revenue`;
                         if (dataMap[rowKey]) {
                             console.log(`Adding ${tr.accommodation_revenue} to categorized accommodation_revenue for combo ${combo}`);
@@ -506,13 +508,26 @@ const loadData = async () => {
                     }
                     
                     // Handle other metrics for categorized section
-                    const combo = `${tr.plan_type_category_id || 0}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
+                    const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
                     ['rooms_sold_nights'].forEach(metricKey => {
                         const rowKey = `categorized_${combo}_${metricKey}`;
                         if (dataMap[rowKey]) {
                             dataMap[rowKey][mKey] = parseFloat(tr[metricKey] || 0);
                         }
                     });
+                    
+                    // Also aggregate non_accommodation_revenue from 0/0 records to global
+                    if (tr.non_accommodation_revenue !== undefined && tr.non_accommodation_revenue !== null) {
+                        const globalRowKey = 'global_non_accommodation_revenue';
+                        if (dataMap[globalRowKey]) {
+                            const oldValue = dataMap[globalRowKey][mKey] || 0;
+                            const newValue = parseFloat(tr.non_accommodation_revenue || 0);
+                            dataMap[globalRowKey][mKey] = oldValue + newValue;
+                            if (newValue > 0) {
+                                console.log(`Adding ${newValue} to global non_accommodation_revenue from 0/0 record: ${oldValue} + ${newValue} = ${dataMap[globalRowKey][mKey]}`);
+                            }
+                        }
+                    }
                 }
             }
         });
@@ -552,11 +567,12 @@ const saveData = async () => {
                     let combo, planTypeId, planPackageId;
                     
                     if (row.is_global) {
-                        // All global metrics now save to 0_0 record
+                        // Global metrics save to 0/0 record
                         combo = '0_0';
                         planTypeId = 0;
                         planPackageId = 0;
                     } else {
+                        // Categorized metrics use 0 for unset values
                         combo = `${row.plan_type_category_id || 0}_${row.plan_package_category_id || 0}`;
                         planTypeId = row.plan_type_category_id || 0;
                         planPackageId = row.plan_package_category_id || 0;
@@ -591,6 +607,10 @@ const saveData = async () => {
         });
 
         await importStore.upsertFinancesData(props.type, entries, Object.values(tableDataMap));
+        
+        // Debug: Log what we're sending to the backend
+        console.log('Sending tableData to backend:', Object.values(tableDataMap));
+        
         toast.add({ severity: 'success', summary: '成功', detail: 'データを保存しました。', life: 5000 });
         hasChanges.value = false;
     } catch (error) {
