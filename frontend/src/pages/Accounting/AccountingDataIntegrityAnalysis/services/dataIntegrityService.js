@@ -69,110 +69,15 @@ export const findBestMatch = (pmsItem, yayoiItems, threshold = 0.6) => {
  */
 export const processRawDataIntoAnalysis = (rawData) => {
     console.log('=== Processing Raw Data Into Analysis ===');
-    console.log('Raw data input:', rawData);
     
     const { pmsData, yayoiMainAccounts, yayoiSubAccounts } = rawData;
     const analysisItems = [];
     
-    console.log('Input data counts:', {
+    console.log('Input counts:', {
         pmsData: pmsData?.length || 0,
         yayoiMainAccounts: yayoiMainAccounts?.length || 0,
         yayoiSubAccounts: yayoiSubAccounts?.length || 0
     });
-    
-    // Detailed logging of input data
-    if (pmsData?.length > 0) {
-        console.log('=== PMS Data Analysis ===');
-        console.log('First PMS item structure:', pmsData[0]);
-        console.log('All PMS items:', pmsData);
-        
-        // Analyze PMS data by hotel and tax rate
-        const pmsAnalysis = pmsData.reduce((acc, item) => {
-            const key = `${item.hotel_id}-${item.tax_rate}`;
-            if (!acc[key]) {
-                acc[key] = {
-                    hotel_id: item.hotel_id,
-                    hotel_name: item.hotel_name,
-                    tax_rate: item.tax_rate,
-                    plans: [],
-                    total_amount: 0,
-                    total_reservations: 0
-                };
-            }
-            acc[key].plans.push({
-                plan_name: item.plan_name,
-                category_name: item.category_name,
-                pms_amount: parseFloat(item.pms_amount) || 0,
-                reservation_count: parseInt(item.reservation_count) || 0,
-                missing_rates_count: parseInt(item.missing_rates_count) || 0
-            });
-            acc[key].total_amount += parseFloat(item.pms_amount) || 0;
-            acc[key].total_reservations += parseInt(item.reservation_count) || 0;
-            return acc;
-        }, {});
-        console.log('PMS data analysis by hotel-tax rate:', pmsAnalysis);
-    }
-    
-    if (yayoiMainAccounts?.length > 0) {
-        console.log('=== Yayoi Main Accounts Analysis ===');
-        console.log('First Yayoi main item structure:', yayoiMainAccounts[0]);
-        console.log('All Yayoi main accounts:', yayoiMainAccounts);
-        
-        // Analyze Yayoi main accounts by hotel and tax rate
-        const yayoiMainAnalysis = yayoiMainAccounts.reduce((acc, item) => {
-            const key = `${item.hotel_id}-${item.tax_rate}`;
-            if (!acc[key]) {
-                acc[key] = {
-                    hotel_id: item.hotel_id,
-                    hotel_name: item.hotel_name,
-                    tax_rate: item.tax_rate,
-                    accounts: [],
-                    total_amount: 0,
-                    total_transactions: 0
-                };
-            }
-            acc[key].accounts.push({
-                account_name: item.account_name,
-                yayoi_amount: parseFloat(item.yayoi_amount) || 0,
-                transaction_count: parseInt(item.transaction_count) || 0
-            });
-            acc[key].total_amount += parseFloat(item.yayoi_amount) || 0;
-            acc[key].total_transactions += parseInt(item.transaction_count) || 0;
-            return acc;
-        }, {});
-        console.log('Yayoi main accounts analysis by hotel-tax rate:', yayoiMainAnalysis);
-    }
-    
-    if (yayoiSubAccounts?.length > 0) {
-        console.log('=== Yayoi Subaccounts Analysis ===');
-        console.log('First Yayoi sub item structure:', yayoiSubAccounts[0]);
-        console.log('All Yayoi subaccounts:', yayoiSubAccounts);
-        
-        // Analyze Yayoi subaccounts by hotel and tax rate
-        const yayoiSubAnalysis = yayoiSubAccounts.reduce((acc, item) => {
-            const key = `${item.hotel_id}-${item.tax_rate}`;
-            if (!acc[key]) {
-                acc[key] = {
-                    hotel_id: item.hotel_id,
-                    hotel_name: item.hotel_name,
-                    tax_rate: item.tax_rate,
-                    subaccounts: [],
-                    total_amount: 0,
-                    total_transactions: 0
-                };
-            }
-            acc[key].subaccounts.push({
-                account_name: item.account_name,
-                subaccount_name: item.subaccount_name,
-                yayoi_amount: parseFloat(item.yayoi_amount) || 0,
-                transaction_count: parseInt(item.transaction_count) || 0
-            });
-            acc[key].total_amount += parseFloat(item.yayoi_amount) || 0;
-            acc[key].total_transactions += parseInt(item.transaction_count) || 0;
-            return acc;
-        }, {});
-        console.log('Yayoi subaccounts analysis by hotel-tax rate:', yayoiSubAnalysis);
-    }
     
     // Group data by hotel
     const hotelGroups = new Map();
@@ -219,15 +124,7 @@ export const processRawDataIntoAnalysis = (rawData) => {
         hotelGroups.get(item.hotel_id).yayoiSubItems.push(item);
     });
     
-    console.log('=== Hotel Groups Created ===');
-    console.log('Hotel groups count:', hotelGroups.size);
-    hotelGroups.forEach((group, hotelId) => {
-        console.log(`Hotel ${group.hotel_name} (${hotelId}):`, {
-            pmsItems: group.pmsItems.length,
-            yayoiMainItems: group.yayoiMainItems.length,
-            yayoiSubItems: group.yayoiSubItems.length
-        });
-    });
+    console.log(`Processing ${hotelGroups.size} hotels`);
     
     // Process each hotel
     hotelGroups.forEach((hotelGroup, hotelId) => {
@@ -434,9 +331,66 @@ export const processRawDataIntoAnalysis = (rawData) => {
         return Math.abs(b.difference) - Math.abs(a.difference);
     });
     
+    // Validation: Check if subaccounts match the totals
+    console.log('=== Validation: Subaccounts vs Totals ===');
+    const hotelValidation = new Map();
+    
+    sortedItems.forEach(item => {
+        if (!hotelValidation.has(item.hotel_id)) {
+            hotelValidation.set(item.hotel_id, {
+                hotel_name: item.hotel_name,
+                totals: { pms: 0, yayoi: 0 },
+                subaccounts: { pms: 0, yayoi: 0 },
+                items: { total_items: [], subaccount_items: [] }
+            });
+        }
+        
+        const validation = hotelValidation.get(item.hotel_id);
+        
+        if (item.item_type === 'account_total') {
+            validation.totals.pms += item.pms_amount;
+            validation.totals.yayoi += item.yayoi_amount;
+            validation.items.total_items.push(item);
+        } else if (item.item_type === 'subaccount') {
+            validation.subaccounts.pms += item.pms_amount;
+            validation.subaccounts.yayoi += item.yayoi_amount;
+            validation.items.subaccount_items.push(item);
+        }
+    });
+    
+    // Report validation results
+    hotelValidation.forEach((validation, hotelId) => {
+        const pmsDiff = Math.abs(validation.totals.pms - validation.subaccounts.pms);
+        const yayoiDiff = Math.abs(validation.totals.yayoi - validation.subaccounts.yayoi);
+        
+        console.log(`Hotel ${validation.hotel_name} (${hotelId}) Validation:`, {
+            pms_total: validation.totals.pms,
+            pms_subaccounts_sum: validation.subaccounts.pms,
+            pms_difference: pmsDiff,
+            pms_matches: pmsDiff < 1,
+            yayoi_total: validation.totals.yayoi,
+            yayoi_subaccounts_sum: validation.subaccounts.yayoi,
+            yayoi_difference: yayoiDiff,
+            yayoi_matches: yayoiDiff < 1,
+            total_items_count: validation.items.total_items.length,
+            subaccount_items_count: validation.items.subaccount_items.length
+        });
+        
+        if (pmsDiff >= 1) {
+            console.warn(`❌ PMS validation failed for ${validation.hotel_name}: Total (¥${validation.totals.pms}) != Subaccounts sum (¥${validation.subaccounts.pms})`);
+        }
+        
+        if (yayoiDiff >= 1) {
+            console.warn(`❌ Yayoi validation failed for ${validation.hotel_name}: Total (¥${validation.totals.yayoi}) != Subaccounts sum (¥${validation.subaccounts.yayoi})`);
+        }
+        
+        if (pmsDiff < 1 && yayoiDiff < 1) {
+            console.log(`✅ Validation passed for ${validation.hotel_name}`);
+        }
+    });
+    
     console.log('=== Final Analysis Items ===');
     console.log('Total items:', sortedItems.length);
-    console.log('Sample items:', sortedItems.slice(0, 3));
     
     return sortedItems;
 };

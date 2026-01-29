@@ -15,6 +15,25 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     PMS売上計算と弥生会計データのプラン別比較
                 </p>
+                
+                <!-- Validation Status -->
+                <div v-if="validationResult" class="mt-4 p-3 rounded-lg" 
+                     :class="validationResult.isValid ? 'bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800'">
+                    <div class="flex items-center gap-2">
+                        <i :class="validationResult.isValid ? 'pi pi-check-circle text-green-600 dark:text-green-400' : 'pi pi-exclamation-triangle text-red-600 dark:text-red-400'"></i>
+                        <span class="text-sm font-medium" :class="validationResult.isValid ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'">
+                            {{ validationResult.isValid ? '合計値検証: 正常' : '合計値検証: 不一致あり' }}
+                        </span>
+                    </div>
+                    <div v-if="!validationResult.isValid" class="mt-2 text-xs" :class="'text-red-700 dark:text-red-300'">
+                        <div v-if="validationResult.pmsDiff >= 1">
+                            PMS: 合計 ¥{{ new Intl.NumberFormat('ja-JP').format(validationResult.pmsTotal) }} ≠ 明細合計 ¥{{ new Intl.NumberFormat('ja-JP').format(validationResult.pmsSubtotal) }}
+                        </div>
+                        <div v-if="validationResult.yayoiDiff >= 1">
+                            弥生: 合計 ¥{{ new Intl.NumberFormat('ja-JP').format(validationResult.yayoiTotal) }} ≠ 明細合計 ¥{{ new Intl.NumberFormat('ja-JP').format(validationResult.yayoiSubtotal) }}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -137,7 +156,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue';
+
+const props = defineProps({
     selectedHotelName: {
         type: String,
         required: true
@@ -153,6 +174,37 @@ defineProps({
 });
 
 defineEmits(['backToSummary']);
+
+// Validation: Check if subaccounts match totals
+const validationResult = computed(() => {
+    if (!props.hotelAnalysisData || props.hotelAnalysisData.length === 0) return null;
+    
+    const totals = { pms: 0, yayoi: 0 };
+    const subaccounts = { pms: 0, yayoi: 0 };
+    
+    props.hotelAnalysisData.forEach(item => {
+        if (item.item_type === 'account_total') {
+            totals.pms += item.pms_amount || 0;
+            totals.yayoi += item.yayoi_amount || 0;
+        } else if (item.item_type === 'subaccount') {
+            subaccounts.pms += item.pms_amount || 0;
+            subaccounts.yayoi += item.yayoi_amount || 0;
+        }
+    });
+    
+    const pmsDiff = Math.abs(totals.pms - subaccounts.pms);
+    const yayoiDiff = Math.abs(totals.yayoi - subaccounts.yayoi);
+    
+    return {
+        isValid: pmsDiff < 1 && yayoiDiff < 1,
+        pmsTotal: totals.pms,
+        pmsSubtotal: subaccounts.pms,
+        pmsDiff: pmsDiff,
+        yayoiTotal: totals.yayoi,
+        yayoiSubtotal: subaccounts.yayoi,
+        yayoiDiff: yayoiDiff
+    };
+});
 
 const getIssueTypeClass = (issueType) => {
     switch (issueType) {
