@@ -212,69 +212,72 @@ export const processRawDataIntoAnalysis = (rawData) => {
             });
         });
         
-        // 2. Create subaccount comparisons with proper matching priority
+        // 2. Create subaccount comparisons with strict one-to-one matching
         console.log(`--- Processing Subaccount Comparisons for ${hotel_name} ---`);
-        const matchedYayoiItems = new Set();
-        const pmsMatches = new Map(); // Store PMS item -> Yayoi match mapping
+        const usedYayoiItems = new Set(); // Track used Yayoi items by their unique identifier
+        const pmsMatches = []; // Store all PMS matches
         
-        // Step 1: Find all exact matches first and reserve them
-        console.log(`Step 1: Finding exact matches for ${hotel_name}`);
+        // Create unique identifier for Yayoi items to prevent duplicates
+        const createYayoiId = (item) => `${item.hotel_id}-${item.subaccount_name}-${item.tax_rate}-${item.yayoi_amount}`;
+        
+        console.log(`Available Yayoi subaccounts for ${hotel_name}:`, 
+            yayoiSubItems.map(y => ({ name: y.subaccount_name, amount: y.yayoi_amount, id: createYayoiId(y) }))
+        );
+        
+        // Step 1: Process exact matches first (highest priority)
+        console.log(`Step 1: Processing exact matches for ${hotel_name}`);
         pmsItems.forEach(pmsItem => {
+            if (pmsMatches.find(m => m.pmsItem === pmsItem)) return; // Already processed
+            
             const exactMatch = yayoiSubItems.find(y => {
                 const pmsRate = parseFloat(pmsItem.tax_rate) || 0.10;
                 const yayoiRate = parseFloat(y.tax_rate) || 0.10;
+                const yayoiId = createYayoiId(y);
+                
                 return Math.abs(pmsRate - yayoiRate) < 0.001 && 
                        normalizeString(y.subaccount_name) === normalizeString(pmsItem.plan_name) &&
-                       !matchedYayoiItems.has(y);
+                       !usedYayoiItems.has(yayoiId);
             });
             
             if (exactMatch) {
-                pmsMatches.set(pmsItem, { match: exactMatch, type: 'exact' });
-                matchedYayoiItems.add(exactMatch);
-                console.log(`Exact match reserved: ${pmsItem.plan_name} -> ${exactMatch.subaccount_name} (¥${exactMatch.yayoi_amount})`);
+                const yayoiId = createYayoiId(exactMatch);
+                usedYayoiItems.add(yayoiId);
+                pmsMatches.push({ pmsItem, yayoiItem: exactMatch, matchType: 'exact' });
+                console.log(`Exact match: ${pmsItem.plan_name} -> ${exactMatch.subaccount_name} (¥${exactMatch.yayoi_amount})`);
             }
         });
         
-        // Step 2: Find fuzzy matches for unmatched PMS items
-        console.log(`Step 2: Finding fuzzy matches for ${hotel_name}`);
+        // Step 2: Process fuzzy matches for remaining PMS items
+        console.log(`Step 2: Processing fuzzy matches for ${hotel_name}`);
         pmsItems.forEach(pmsItem => {
-            if (!pmsMatches.has(pmsItem)) { // Only process unmatched items
-                const availableYayoiItems = yayoiSubItems.filter(y => {
-                    const pmsRate = parseFloat(pmsItem.tax_rate) || 0.10;
-                    const yayoiRate = parseFloat(y.tax_rate) || 0.10;
-                    return Math.abs(pmsRate - yayoiRate) < 0.001 && !matchedYayoiItems.has(y);
-                });
+            if (pmsMatches.find(m => m.pmsItem === pmsItem)) return; // Already matched
+            
+            const availableYayoiItems = yayoiSubItems.filter(y => {
+                const pmsRate = parseFloat(pmsItem.tax_rate) || 0.10;
+                const yayoiRate = parseFloat(y.tax_rate) || 0.10;
+                const yayoiId = createYayoiId(y);
                 
-                const fuzzyMatch = findBestMatch(pmsItem, availableYayoiItems);
-                if (fuzzyMatch) {
-                    pmsMatches.set(pmsItem, { match: fuzzyMatch, type: 'fuzzy' });
-                    matchedYayoiItems.add(fuzzyMatch);
-                    console.log(`Fuzzy match found: ${pmsItem.plan_name} -> ${fuzzyMatch.subaccount_name} (¥${fuzzyMatch.yayoi_amount})`);
-                } else {
-                    console.log(`No match found for: ${pmsItem.plan_name}`);
-                }
+                return Math.abs(pmsRate - yayoiRate) < 0.001 && !usedYayoiItems.has(yayoiId);
+            });
+            
+            const fuzzyMatch = findBestMatch(pmsItem, availableYayoiItems);
+            if (fuzzyMatch) {
+                const yayoiId = createYayoiId(fuzzyMatch);
+                usedYayoiItems.add(yayoiId);
+                pmsMatches.push({ pmsItem, yayoiItem: fuzzyMatch, matchType: 'fuzzy' });
+                console.log(`Fuzzy match: ${pmsItem.plan_name} -> ${fuzzyMatch.subaccount_name} (¥${fuzzyMatch.yayoi_amount})`);
             }
         });
         
         // Step 3: Create analysis items from matches
         console.log(`Step 3: Creating analysis items for ${hotel_name}`);
-        pmsItems.forEach(pmsItem => {
-            const matchInfo = pmsMatches.get(pmsItem);
-            const yayoiMatch = matchInfo?.match;
-            const matchType = matchInfo?.type || 'none';
-            
-            const yayoiAmount = yayoiMatch ? parseFloat(yayoiMatch.yayoi_amount) || 0 : 0;
+        console.log(`Total matches created: ${pmsMatches.length}, Used Yayoi items: ${usedYayoiItems.size}`);
+        
+        // Process matched PMS items
+        pmsMatches.forEach(({ pmsItem, yayoiItem, matchType }) => {
+            const yayoiAmount = parseFloat(yayoiItem.yayoi_amount) || 0;
             const pmsAmount = parseFloat(pmsItem.pms_amount) || 0;
             const difference = pmsAmount - yayoiAmount;
-            
-            console.log(`Creating analysis item for ${hotel_name} - ${pmsItem.plan_name}:`, {
-                pms_amount: pmsAmount,
-                yayoi_amount: yayoiAmount,
-                difference: difference,
-                match_type: matchType,
-                yayoi_subaccount: yayoiMatch?.subaccount_name || 'No match',
-                total_matched_yayoi_items: matchedYayoiItems.size
-            });
             
             analysisItems.push({
                 hotel_id,
@@ -286,22 +289,52 @@ export const processRawDataIntoAnalysis = (rawData) => {
                 yayoi_amount: yayoiAmount,
                 difference,
                 reservation_count: pmsItem.reservation_count,
-                yayoi_transaction_count: yayoiMatch ? yayoiMatch.transaction_count : 0,
+                yayoi_transaction_count: yayoiItem.transaction_count,
                 missing_rates_count: pmsItem.missing_rates_count,
                 item_type: 'subaccount',
-                subaccount_name: yayoiMatch ? yayoiMatch.subaccount_name : null,
+                subaccount_name: yayoiItem.subaccount_name,
                 match_type: matchType,
-                mapping_type: yayoiMatch ? 'subaccount' : null,
+                mapping_type: 'subaccount',
                 status: yayoiAmount === 0 ? 'pms_only' : (Math.abs(difference) > 1000 ? 'significant_diff' : 'matched'),
                 issue_type: pmsItem.missing_rates_count > 0 ? 'missing_rates' : 
-                           (!yayoiMatch ? 'no_mapping' : 
-                           (Math.abs(difference) > 1000 ? 'amount_mismatch' : 'ok'))
+                           (Math.abs(difference) > 1000 ? 'amount_mismatch' : 'ok')
+            });
+        });
+        
+        // Process unmatched PMS items
+        pmsItems.forEach(pmsItem => {
+            if (pmsMatches.find(m => m.pmsItem === pmsItem)) return; // Already matched
+            
+            const pmsAmount = parseFloat(pmsItem.pms_amount) || 0;
+            
+            analysisItems.push({
+                hotel_id,
+                hotel_name,
+                plan_name: pmsItem.plan_name,
+                category_name: pmsItem.category_name,
+                tax_rate: pmsItem.tax_rate,
+                pms_amount: pmsAmount,
+                yayoi_amount: 0,
+                difference: pmsAmount,
+                reservation_count: pmsItem.reservation_count,
+                yayoi_transaction_count: 0,
+                missing_rates_count: pmsItem.missing_rates_count,
+                item_type: 'subaccount',
+                subaccount_name: null,
+                match_type: 'none',
+                mapping_type: null,
+                status: 'pms_only',
+                issue_type: pmsItem.missing_rates_count > 0 ? 'missing_rates' : 'no_mapping'
             });
         });
         
         // 3. Add unmatched Yayoi subaccounts
+        console.log(`Step 4: Adding unmatched Yayoi subaccounts for ${hotel_name}`);
         yayoiSubItems.forEach(yayoiItem => {
-            if (!matchedYayoiItems.has(yayoiItem)) {
+            const yayoiId = createYayoiId(yayoiItem);
+            if (!usedYayoiItems.has(yayoiId)) {
+                console.log(`Unmatched Yayoi item: ${yayoiItem.subaccount_name} (¥${yayoiItem.yayoi_amount})`);
+                
                 analysisItems.push({
                     hotel_id,
                     hotel_name,
@@ -323,6 +356,8 @@ export const processRawDataIntoAnalysis = (rawData) => {
                 });
             }
         });
+        
+        console.log(`Completed processing ${hotel_name}: ${pmsMatches.length} PMS matches, ${usedYayoiItems.size} Yayoi items used`);
     });
     
     const sortedItems = analysisItems.sort((a, b) => {
