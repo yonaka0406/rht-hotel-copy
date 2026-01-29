@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improvement: Financial data import was updated paste and manual mapping behavior to replace values instead of accumulating them.
 - Bug Fix: Prevented the resurrection of cancelled reservations or individual room nights when the room for that period has already been booked by another guest.
 - New Feature: Added a pre-emptive availability check in the reservation panel UI to warn users of conflicts before attempting to recover cancelled bookings.
+- New Feature: Added Data Integrity Analysis page for detailed accounting reconciliation review with hotel-level drill-down capabilities
+- New Feature: Added Monthly Sales Comparison chart on Accounting Dashboard with year navigation controls
 
 ---
 
