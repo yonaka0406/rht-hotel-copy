@@ -364,6 +364,41 @@ const comparePmsVsYayoi = async (req, res) => {
     }
 };
 
+/**
+ * Get detailed reservation data for a specific plan
+ */
+const getPlanReservationDetails = async (req, res) => {
+    const requestId = req.requestId;
+
+    try {
+        const { hotelId, planName, selectedMonth, taxRate } = req.body;
+
+        if (!hotelId || !planName || !selectedMonth) {
+            return res.status(400).json({ 
+                message: 'Missing required parameters: hotelId, planName, selectedMonth' 
+            });
+        }
+
+        const filters = {
+            hotelId: parseInt(hotelId),
+            planName,
+            selectedMonth,
+            taxRate: parseFloat(taxRate) || 0.10
+        };
+
+        const result = await accountingModel.accountingRead.getPlanReservationDetails(requestId, filters);
+
+        res.json({
+            success: true,
+            data: result,
+            message: `Found ${result.length} reservation details for plan ${planName}`
+        });
+    } catch (error) {
+        logger.error(`[${requestId}] Error in getPlanReservationDetails:`, error);
+        res.status(500).json({ message: 'Error fetching plan reservation details' });
+    }
+};
+
 module.exports = {
     getExportOptions,
     getLedgerPreview,
@@ -372,5 +407,6 @@ module.exports = {
     getMonthlySalesComparison,
     getAvailableYayoiYears,
     getAvailableYayoiMonths,
-    getRawDataForIntegrityAnalysis
+    getRawDataForIntegrityAnalysis,
+    getPlanReservationDetails
 };

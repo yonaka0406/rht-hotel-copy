@@ -45,7 +45,7 @@
                     プラン別詳細分析
                 </h2>
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                    {{ hotelAnalysisData.length }} 件の差異を表示中
+                    {{ hotelAnalysisData.length }} 件の差異を表示中 | クリックして予約明細を表示
                 </p>
             </div>
 
@@ -79,9 +79,10 @@
                     <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                         <tr v-for="item in hotelAnalysisData" :key="`${item.hotel_id}-${item.plan_name}-${item.tax_rate}`"
                             :class="[
-                                'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors',
-                                item.item_type === 'account_total' ? 'bg-violet-50 dark:bg-violet-900/10 border-l-4 border-violet-500' : ''
-                            ]">
+                                'transition-colors',
+                                item.item_type === 'account_total' ? 'bg-violet-50 dark:bg-violet-900/10 border-l-4 border-violet-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer'
+                            ]"
+                            @click="item.item_type === 'subaccount' && item.reservation_count > 0 ? openReservationDialog(item) : null">
                             <td class="px-6 py-4">
                                 <div>
                                     <div class="flex items-center gap-2">
@@ -97,6 +98,9 @@
                                             <span class="font-medium text-slate-900 dark:text-white">{{ item.plan_name }}</span>
                                             <span v-if="item.subaccount_name" class="text-xs bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 px-2 py-1 rounded">
                                                 {{ item.subaccount_name }}
+                                            </span>
+                                            <span v-if="item.reservation_count > 0" class="text-xs bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded">
+                                                <i class="pi pi-eye text-xs mr-1"></i>詳細表示
                                             </span>
                                         </div>
                                     </div>
@@ -158,11 +162,20 @@
                 </table>
             </div>
         </div>
+
+        <!-- Plan Reservations Dialog -->
+        <PlanReservationsDialog 
+            :isVisible="showReservationDialog"
+            :planData="selectedPlanData"
+            :selectedMonth="selectedMonth"
+            :selectedMonthLabel="selectedMonthLabel"
+            @close="closeReservationDialog" />
     </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import PlanReservationsDialog from './PlanReservationsDialog.vue';
 
 const props = defineProps({
     selectedHotelName: {
@@ -173,6 +186,10 @@ const props = defineProps({
         type: String,
         required: true
     },
+    selectedMonth: {
+        type: String,
+        required: true
+    },
     hotelAnalysisData: {
         type: Array,
         required: true
@@ -180,6 +197,23 @@ const props = defineProps({
 });
 
 defineEmits(['backToSummary']);
+
+// Dialog state
+const showReservationDialog = ref(false);
+const selectedPlanData = ref(null);
+
+// Open reservation details dialog
+const openReservationDialog = (planItem) => {
+    console.log('Opening reservation dialog for plan:', planItem);
+    selectedPlanData.value = planItem;
+    showReservationDialog.value = true;
+};
+
+// Close reservation details dialog
+const closeReservationDialog = () => {
+    showReservationDialog.value = false;
+    selectedPlanData.value = null;
+};
 
 // Validation: Check if subaccounts match totals
 const validationResult = computed(() => {

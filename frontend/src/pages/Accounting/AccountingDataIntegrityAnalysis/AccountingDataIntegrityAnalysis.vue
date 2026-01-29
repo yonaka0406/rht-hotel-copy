@@ -82,6 +82,7 @@
                     <HotelDetailsTable 
                         :selectedHotelName="selectedHotelName"
                         :selectedMonthLabel="getSelectedMonthLabel()"
+                        :selectedMonth="selectedMonth"
                         :hotelAnalysisData="hotelAnalysisForSelectedHotel"
                         @backToSummary="selectedHotelId = null; selectedHotelName = ''"
                     />

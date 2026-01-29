@@ -80,6 +80,10 @@ export function useAccountingStore() {
         return await post('/accounting/export/raw-data-integrity-analysis', filters);
     };
 
+    const getPlanReservationDetails = async (filters) => {
+        return await post('/accounting/export/plan-reservation-details', filters);
+    };
+
     const getAvailableYayoiYears = async () => {
         return await get('/accounting/export/available-yayoi-years');
     };
@@ -232,6 +236,7 @@ export function useAccountingStore() {
         comparePmsVsYayoi,
         getMonthlySalesComparison,
         getRawDataForIntegrityAnalysis,
+        getPlanReservationDetails,
         getAvailableYayoiYears,
         getAvailableYayoiMonths
     };
