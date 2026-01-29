@@ -110,6 +110,28 @@ export const processRawDataIntoAnalysis = (rawData) => {
         yayoiSubAccounts: yayoiSubAccounts?.length || 0
     });
     
+    // Debug: Log sample PMS data to understand the structure
+    if (pmsData && pmsData.length > 0) {
+        console.log('Sample PMS data entries:', pmsData.slice(0, 3));
+        
+        // Check for duplicate plan names with different tax rates
+        const planGroups = new Map();
+        pmsData.forEach(item => {
+            const key = `${item.hotel_id}_${item.plan_name}`;
+            if (!planGroups.has(key)) {
+                planGroups.set(key, []);
+            }
+            planGroups.get(key).push(item);
+        });
+        
+        console.log('Plans with multiple tax rate entries:');
+        planGroups.forEach((items, key) => {
+            if (items.length > 1) {
+                console.log(`${key}:`, items.map(i => ({ tax_rate: i.tax_rate, amount: i.pms_amount })));
+            }
+        });
+    }
+    
     // Group data by hotel
     const hotelGroups = new Map();
     
@@ -179,68 +201,57 @@ export const processRawDataIntoAnalysis = (rawData) => {
         }
         
         // 1. Create account total comparison (PMS total vs Yayoi main account total)
-        const pmsTotalByTaxRate = new Map();
+        // Combine all tax rates into a single total
+        let combinedPmsTotal = {
+            pms_amount: 0,
+            reservation_count: 0,
+            missing_rates_count: 0
+        };
+        
         pmsItems.forEach(item => {
-            const key = item.tax_rate;
-            if (!pmsTotalByTaxRate.has(key)) {
-                pmsTotalByTaxRate.set(key, {
-                    pms_amount: 0,
-                    reservation_count: 0,
-                    missing_rates_count: 0
-                });
-            }
-            const total = pmsTotalByTaxRate.get(key);
-            total.pms_amount += parseFloat(item.pms_amount) || 0;
-            total.reservation_count += parseInt(item.reservation_count) || 0;
-            total.missing_rates_count += parseInt(item.missing_rates_count) || 0;
+            combinedPmsTotal.pms_amount += parseFloat(item.pms_amount) || 0;
+            combinedPmsTotal.reservation_count += parseInt(item.reservation_count) || 0;
+            combinedPmsTotal.missing_rates_count += parseInt(item.missing_rates_count) || 0;
         });
         
-        console.log(`PMS totals by tax rate for ${hotel_name}:`, pmsTotalByTaxRate);
+        // Sum all Yayoi main account amounts
+        const combinedYayoiTotal = yayoiMainItems.reduce((sum, item) => {
+            return sum + (parseFloat(item.yayoi_amount) || 0);
+        }, 0);
         
-        pmsTotalByTaxRate.forEach((pmsTotal, taxRate) => {
-            // Handle both null and numeric tax rates for matching
-            const yayoiMain = yayoiMainItems.find(y => {
-                const pmsRate = parseFloat(taxRate) || 0.10;
-                const yayoiRate = parseFloat(y.tax_rate) || 0.10;
-                return Math.abs(pmsRate - yayoiRate) < 0.001; // Allow for small floating point differences
-            });
-            
-            const yayoiAmount = yayoiMain ? parseFloat(yayoiMain.yayoi_amount) || 0 : 0;
-            const difference = pmsTotal.pms_amount - yayoiAmount;
-            
-            console.log(`Account total for ${hotel_name} tax rate ${taxRate}:`, {
-                pmsAmount: pmsTotal.pms_amount,
-                yayoiAmount,
-                difference,
-                yayoiMain,
-                available_yayoi_main_items: yayoiMainItems,
-                tax_rate_comparison: {
-                    pms_tax_rate: taxRate,
-                    normalized_pms_rate: parseFloat(taxRate) || 0.10,
-                    yayoi_rates: yayoiMainItems.map(y => ({ tax_rate: y.tax_rate, normalized: parseFloat(y.tax_rate) || 0.10 }))
-                }
-            });
-            
-            analysisItems.push({
-                hotel_id,
-                hotel_name,
-                plan_name: 'PMS合計',
-                category_name: null,
-                tax_rate: taxRate,
-                pms_amount: pmsTotal.pms_amount,
-                yayoi_amount: yayoiAmount,
-                difference,
-                reservation_count: pmsTotal.reservation_count,
-                yayoi_transaction_count: yayoiMain ? yayoiMain.transaction_count : 0,
-                missing_rates_count: pmsTotal.missing_rates_count,
-                item_type: 'account_total',
-                subaccount_name: null,
-                match_type: 'exact',
-                mapping_type: 'main_account',
-                status: yayoiAmount === 0 ? 'pms_only' : (Math.abs(difference) > 1000 ? 'significant_diff' : 'matched'),
-                issue_type: pmsTotal.missing_rates_count > 0 ? 'missing_rates' : 
-                           (Math.abs(difference) > 1000 ? 'amount_mismatch' : 'ok')
-            });
+        const combinedYayoiTransactionCount = yayoiMainItems.reduce((sum, item) => {
+            return sum + (parseInt(item.transaction_count) || 0);
+        }, 0);
+        
+        const difference = combinedPmsTotal.pms_amount - combinedYayoiTotal;
+        
+        console.log(`Combined account total for ${hotel_name}:`, {
+            pmsAmount: combinedPmsTotal.pms_amount,
+            yayoiAmount: combinedYayoiTotal,
+            difference,
+            yayoiMainItems: yayoiMainItems.length
+        });
+        
+        // Create single PMS合計 entry
+        analysisItems.push({
+            hotel_id,
+            hotel_name,
+            plan_name: 'PMS合計',
+            category_name: null,
+            tax_rate: 0.10, // Use standard tax rate for display
+            pms_amount: combinedPmsTotal.pms_amount,
+            yayoi_amount: combinedYayoiTotal,
+            difference,
+            reservation_count: combinedPmsTotal.reservation_count,
+            yayoi_transaction_count: combinedYayoiTransactionCount,
+            missing_rates_count: combinedPmsTotal.missing_rates_count,
+            item_type: 'account_total',
+            subaccount_name: null,
+            match_type: 'exact',
+            mapping_type: 'main_account',
+            status: combinedYayoiTotal === 0 ? 'pms_only' : (Math.abs(difference) > 1000 ? 'significant_diff' : 'matched'),
+            issue_type: combinedPmsTotal.missing_rates_count > 0 ? 'missing_rates' : 
+                       (Math.abs(difference) > 1000 ? 'amount_mismatch' : 'ok')
         });
         
         // 2. Create subaccount comparisons with direct flagging approach
