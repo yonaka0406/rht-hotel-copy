@@ -524,6 +524,25 @@ const loadData = async () => {
                             dataMap[rowKey][mKey] = parseFloat(tr[metricKey] || 0);
                         }
                     });
+
+                    // Handle other global metrics (operating_days, available_room_nights, non_accommodation_sold_rooms)
+                    // These fields are often populated in 0/0 rows if null/null rows don't exist
+                    globalMetrics.forEach(m => {
+                        if (m.key === 'non_accommodation_revenue') return; // Already handled below
+
+                        const rowKey = `global_${m.key}`;
+                        if (dataMap[rowKey]) {
+                            const newValue = parseFloat(tr[m.key] || 0);
+                            const oldValue = dataMap[rowKey][mKey] || 0;
+
+                            if (m.key === 'operating_days' || m.key === 'available_room_nights') {
+                                dataMap[rowKey][mKey] = Math.max(oldValue, newValue);
+                            } else {
+                                // non_accommodation_sold_rooms
+                                dataMap[rowKey][mKey] = oldValue + newValue;
+                            }
+                        }
+                    });
                     
                     // Also aggregate non_accommodation_revenue from 0/0 records to global
                     if (tr.non_accommodation_revenue !== undefined && tr.non_accommodation_revenue !== null) {
