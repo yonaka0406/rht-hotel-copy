@@ -115,9 +115,23 @@ const chartOption = computed(() => {
     }
 
     const data = monthlyChartData.value.monthlyData;
+    console.log('📊 Raw chart data:', data);
+    
     const months = data.map(d => d.month_label);
-    const pmsData = data.map(d => Math.round((d.pms_amount || 0) / 1000)); // Convert to thousands, handle null
-    const yayoiData = data.map(d => Math.round((d.yayoi_amount || 0) / 1000)); // Convert to thousands, handle null
+    const pmsData = data.map(d => {
+        const amount = parseFloat(d.pms_amount) || 0;
+        const result = Math.round(amount / 1000);
+        console.log(`PMS: ${d.pms_amount} (${typeof d.pms_amount}) -> ${amount} -> ${result}`);
+        return result;
+    });
+    const yayoiData = data.map(d => {
+        const amount = parseFloat(d.yayoi_amount) || 0;
+        const result = Math.round(amount / 1000);
+        console.log(`Yayoi: ${d.yayoi_amount} (${typeof d.yayoi_amount}) -> ${amount} -> ${result}`);
+        return result;
+    });
+
+    console.log('📊 Processed chart data:', { months, pmsData, yayoiData });
 
     return {
         title: {
@@ -133,9 +147,22 @@ const chartOption = computed(() => {
             formatter: (params) => {
                 let result = `${params[0].axisValue}<br/>`;
                 params.forEach(param => {
+                    console.log('Tooltip param:', param);
                     const rawValue = param.value;
-                    const value = (rawValue && !isNaN(rawValue)) ? rawValue * 1000 : 0; // Convert back from thousands, handle NaN
+                    console.log('Raw value:', rawValue, 'Type:', typeof rawValue);
+                    
+                    let value = 0;
+                    if (rawValue !== null && rawValue !== undefined) {
+                        const numValue = parseFloat(rawValue);
+                        if (!isNaN(numValue)) {
+                            value = numValue * 1000;
+                        }
+                    }
+                    
+                    console.log('Calculated value:', value);
                     const formattedValue = new Intl.NumberFormat('ja-JP').format(value);
+                    console.log('Formatted value:', formattedValue);
+                    
                     result += `${param.seriesName}: ¥${formattedValue}<br/>`;
                 });
                 return result;

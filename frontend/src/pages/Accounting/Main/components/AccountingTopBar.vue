@@ -46,13 +46,16 @@ const breadcrumbs = computed(() => {
         crumbs.push({ label: '弥生会計' });
     } else if (route.path === '/accounting/reconciliation') {
         crumbs.push({ label: '会計', to: '/accounting/dashboard' });
-        crumbs.push({ label: '入金照合' });
+        crumbs.push({ label: '入金照合・差異分析' });
     } else if (route.path === '/accounting/receivables') {
         crumbs.push({ label: '会計', to: '/accounting/dashboard' });
         crumbs.push({ label: '売掛金管理' });
     } else if (route.path === '/accounting/settings') {
         crumbs.push({ label: '会計', to: '/accounting/dashboard' });
         crumbs.push({ label: '設定' });
+    } else if (route.path === '/accounting/data-integrity-analysis') {
+        crumbs.push({ label: '会計', to: '/accounting/dashboard' });
+        crumbs.push({ label: 'データ整合性分析' });
     } else if (route.path.startsWith('/accounting')) {
         crumbs.push({ label: '会計' });
     }

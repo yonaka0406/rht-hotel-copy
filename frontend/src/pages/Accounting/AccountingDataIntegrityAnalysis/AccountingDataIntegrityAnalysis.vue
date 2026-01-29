@@ -2,31 +2,24 @@
     <div class="bg-slate-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300 min-h-screen">
         <div class="max-w-7xl mx-auto">
             <!-- Header -->
-            <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
-                    <button @click="$router.go(-1)" 
-                        class="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                        <i class="pi pi-arrow-left text-slate-600 dark:text-slate-400"></i>
+                    <button @click="$router.push({ name: 'AccountingDashboard' })" 
+                        class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer shadow-sm h-[46px]">
+                        <i class="pi pi-arrow-left text-sm"></i>
+                        <span>戻る</span>
                     </button>
-                    <div
-                        class="flex-shrink-0 inline-flex items-center justify-center p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl">
-                        <i class="pi pi-exclamation-triangle text-2xl text-amber-600 dark:text-amber-400"></i>
-                    </div>
                     <div>
-                        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                            データ整合性分析
-                        </h1>
-                        <p class="text-sm text-slate-600 dark:text-slate-400">
-                            PMS売上計算と弥生会計データの詳細比較 • プラン別・ホテル別分析
-                        </p>
+                        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">データ整合性分析</h1>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">PMS売上計算と弥生会計データの詳細比較を行います</p>
                     </div>
                 </div>
 
                 <!-- Period Selector -->
-                <div class="flex items-center gap-3">
-                    <label class="text-sm font-medium text-slate-700 dark:text-slate-300">対象期間:</label>
+                <div class="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 min-w-[240px]">
+                    <span class="text-sm font-medium text-slate-600 dark:text-slate-400 ml-2 whitespace-nowrap">対象期間:</span>
                     <select v-model="selectedMonth" @change="fetchAnalysisData"
-                        class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+                        class="flex-1 px-3 py-2 bg-transparent border-none text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent dark:text-slate-50">
                         <option v-for="month in availableMonths" :key="month.value" :value="month.value">
                             {{ month.label }}
                         </option>
@@ -57,7 +50,7 @@
             <!-- Analysis Results -->
             <div v-else-if="analysisData">
                 <!-- Summary Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                     <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                         <div class="flex items-center justify-between mb-4">
                             <div class="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
@@ -66,7 +59,7 @@
                             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">総差異件数</span>
                         </div>
                         <p class="text-2xl font-bold text-slate-900 dark:text-white">
-                            {{ analysisData.summary.totalDiscrepancies }}
+                            {{ summaryTotals.totalDiscrepancies }}
                         </p>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">プラン・ホテル組み合わせ</p>
                     </div>
@@ -79,7 +72,7 @@
                             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">料金明細なし</span>
                         </div>
                         <p class="text-2xl font-bold text-red-600 dark:text-red-400">
-                            {{ analysisData.summary.missingRatesCount }}
+                            {{ summaryTotals.missingRatesCount }}
                         </p>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">税区分判定不可</p>
                     </div>
@@ -92,9 +85,22 @@
                             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">マッピングなし</span>
                         </div>
                         <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                            {{ analysisData.summary.noMappingCount }}
+                            {{ summaryTotals.noMappingCount }}
                         </p>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">会計科目未設定</p>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                                <i class="pi pi-search text-blue-600 dark:text-blue-400"></i>
+                            </div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">類似名称マッチ</span>
+                        </div>
+                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                            {{ summaryTotals.fuzzyMatchCount }}
+                        </p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">自動推定マッチング</p>
                     </div>
 
                     <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
@@ -105,8 +111,8 @@
                             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">総差額</span>
                         </div>
                         <p class="text-2xl font-bold" 
-                           :class="analysisData.summary.totalDifference >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                            {{ analysisData.summary.totalDifference >= 0 ? '+' : '' }}¥{{ Math.abs(analysisData.summary.totalDifference).toLocaleString() }}
+                           :class="summaryTotals.totalDifference >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                            {{ summaryTotals.totalDifference >= 0 ? '+' : '' }}¥{{ Math.abs(summaryTotals.totalDifference).toLocaleString() }}
                         </p>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">PMS - 弥生</p>
                     </div>
@@ -286,6 +292,9 @@
                                             <div>
                                                 <div class="font-medium text-slate-900 dark:text-white">{{ item.plan_name }}</div>
                                                 <div v-if="item.category_name" class="text-xs text-slate-400">{{ item.category_name }}</div>
+                                                <div v-if="item.match_type === 'fuzzy'" class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                                    <i class="pi pi-search text-xs mr-1"></i>類似名称でマッチング
+                                                </div>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 text-sm text-slate-900 dark:text-white">
@@ -395,9 +404,10 @@ const hotelSummary = computed(() => {
         }
         
         const hotel = hotelMap.get(hotelId);
-        hotel.total_pms_amount += item.pms_amount || 0;
-        hotel.total_yayoi_amount += item.yayoi_amount || 0;
-        hotel.total_difference += item.difference || 0;
+        // Ensure proper numeric conversion
+        hotel.total_pms_amount += parseFloat(item.pms_amount) || 0;
+        hotel.total_yayoi_amount += parseFloat(item.yayoi_amount) || 0;
+        hotel.total_difference += parseFloat(item.difference) || 0;
         
         if (item.issue_type && item.issue_type !== 'ok') {
             hotel.issue_count++;
@@ -405,6 +415,35 @@ const hotelSummary = computed(() => {
     });
     
     return Array.from(hotelMap.values()).sort((a, b) => a.hotel_name.localeCompare(b.hotel_name));
+});
+
+// Calculate summary totals from hotel summary instead of raw analysis data
+const summaryTotals = computed(() => {
+    if (!hotelSummary.value.length) {
+        return {
+            totalDiscrepancies: 0,
+            missingRatesCount: 0,
+            noMappingCount: 0,
+            amountMismatchCount: 0,
+            fuzzyMatchCount: 0,
+            totalDifference: 0
+        };
+    }
+    
+    // Use hotel summary for total difference calculation
+    const totalDifference = hotelSummary.value.reduce((sum, hotel) => sum + hotel.total_difference, 0);
+    
+    // Use analysis data for issue counts
+    const analysis = analysisData.value?.analysis || [];
+    
+    return {
+        totalDiscrepancies: analysis.length,
+        missingRatesCount: analysis.filter(a => a.issue_type === 'missing_rates').length,
+        noMappingCount: analysis.filter(a => a.issue_type === 'no_mapping').length,
+        amountMismatchCount: analysis.filter(a => a.issue_type === 'amount_mismatch').length,
+        fuzzyMatchCount: analysis.filter(a => a.match_type === 'fuzzy').length,
+        totalDifference: totalDifference
+    };
 });
 
 // Filtered analysis for selected hotel details
@@ -517,5 +556,15 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Custom styles if needed */
+/* Select Dark Mode Fixes */
+.dark select {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+.dark select option {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+}
 </style>

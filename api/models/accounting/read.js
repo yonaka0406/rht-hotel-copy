@@ -424,7 +424,7 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
                         WHEN rd.plan_type = 'per_room' THEN COALESCE(rr.price, rd.price)
                         ELSE COALESCE(rr.price, rd.price) * rd.number_of_people 
                     END
-                ) as pms_amount,
+                )::numeric as pms_amount,
                 COUNT(CASE WHEN rr.id IS NULL THEN 1 END) as missing_rates_count
             FROM reservation_details rd
             JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
@@ -458,17 +458,9 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
                 am.target_type,
                 tc.tax_rate,
                 COUNT(*) as transaction_count,
-                SUM(yd.credit_amount) as yayoi_amount
+                SUM(yd.credit_amount)::numeric as yayoi_amount
             FROM acc_yayoi_data yd
-            LEFT JOIN LATERAL (
-                -- For each yayoi record, find the best matching department
-                -- Prefer current departments, but fall back to historical if needed
-                SELECT d.hotel_id, d.name, d.is_current
-                FROM acc_departments d
-                WHERE d.name = yd.credit_department
-                ORDER BY d.is_current DESC, d.id DESC
-                LIMIT 1
-            ) d ON true
+            JOIN acc_departments d ON yd.credit_department = d.name
             JOIN hotels h ON d.hotel_id = h.id
             JOIN acc_account_codes ac ON yd.credit_account_code = ac.name
             LEFT JOIN acc_tax_classes tc ON yd.credit_tax_class = tc.yayoi_name
@@ -477,10 +469,17 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
             LEFT JOIN plans_global pg ON am.target_type = 'plan_global' AND am.target_id = pg.id
             LEFT JOIN plan_type_categories ptc ON am.target_type = 'plan_type_category' AND am.target_id = ptc.id
             WHERE yd.transaction_date BETWEEN $1 AND $2
-            AND d.hotel_id IS NOT NULL  -- Only include records with valid department mapping
             AND d.hotel_id = ANY($3::int[])  -- Filter by hotel IDs
             AND ac.management_group_id = 1  -- Sales accounts only
             AND yd.credit_amount > 0
+            -- Use the most current department mapping for each department name
+            AND d.id = (
+                SELECT d2.id 
+                FROM acc_departments d2 
+                WHERE d2.name = d.name 
+                ORDER BY d2.is_current DESC, d2.id DESC 
+                LIMIT 1
+            )
             GROUP BY d.hotel_id, h.name, 
                      COALESCE(
                          CASE 
@@ -492,7 +491,8 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
                          ac.name
                      ), am.target_type, tc.tax_rate
         ),
-        comparison AS (
+        -- Add fuzzy matching for similar names
+        fuzzy_matched_comparison AS (
             SELECT 
                 COALESCE(p.hotel_id, y.hotel_id) as hotel_id,
                 COALESCE(p.hotel_name, y.hotel_name) as hotel_name,
@@ -504,18 +504,110 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
                 COALESCE(p.reservation_count, 0) as reservation_count,
                 COALESCE(y.transaction_count, 0) as yayoi_transaction_count,
                 COALESCE(p.missing_rates_count, 0) as missing_rates_count,
-                COALESCE(p.pms_amount, 0) - COALESCE(y.yayoi_amount, 0) as difference,
+                (COALESCE(p.pms_amount, 0) - COALESCE(y.yayoi_amount, 0))::numeric as difference,
                 CASE 
                     WHEN p.pms_amount IS NULL THEN 'yayoi_only'
                     WHEN y.yayoi_amount IS NULL THEN 'pms_only'
                     WHEN ABS(COALESCE(p.pms_amount, 0) - COALESCE(y.yayoi_amount, 0)) > 1000 THEN 'significant_diff'
                     ELSE 'matched'
                 END as status,
-                y.target_type as mapping_type
+                y.target_type as mapping_type,
+                'exact' as match_type
             FROM pms_plan_sales p
             FULL OUTER JOIN yayoi_mapped_sales y ON p.hotel_id = y.hotel_id 
                 AND p.plan_name = y.mapped_name 
                 AND p.tax_rate = y.tax_rate
+            
+            UNION ALL
+            
+            -- Add fuzzy matching for unmatched PMS plans
+            SELECT 
+                p.hotel_id,
+                p.hotel_name,
+                p.plan_name,
+                p.category_name,
+                p.tax_rate,
+                p.pms_amount,
+                COALESCE(y_fuzzy.yayoi_amount, 0) as yayoi_amount,
+                p.reservation_count,
+                COALESCE(y_fuzzy.transaction_count, 0) as yayoi_transaction_count,
+                p.missing_rates_count,
+                (p.pms_amount - COALESCE(y_fuzzy.yayoi_amount, 0))::numeric as difference,
+                CASE 
+                    WHEN y_fuzzy.yayoi_amount IS NULL THEN 'pms_only'
+                    WHEN ABS(p.pms_amount - COALESCE(y_fuzzy.yayoi_amount, 0)) > 1000 THEN 'significant_diff'
+                    ELSE 'matched'
+                END as status,
+                y_fuzzy.target_type as mapping_type,
+                'fuzzy' as match_type
+            FROM pms_plan_sales p
+            LEFT JOIN LATERAL (
+                -- Find best fuzzy match for unmatched PMS plans
+                SELECT y.yayoi_amount, y.transaction_count, y.target_type
+                FROM yayoi_mapped_sales y
+                WHERE y.hotel_id = p.hotel_id 
+                AND y.tax_rate = p.tax_rate
+                AND (
+                    -- Similar name matching patterns
+                    LOWER(REPLACE(REPLACE(REPLACE(y.mapped_name, ' ', ''), '　', ''), '-', '')) 
+                    LIKE '%' || LOWER(REPLACE(REPLACE(REPLACE(p.plan_name, ' ', ''), '　', ''), '-', '')) || '%'
+                    OR
+                    LOWER(REPLACE(REPLACE(REPLACE(p.plan_name, ' ', ''), '　', ''), '-', '')) 
+                    LIKE '%' || LOWER(REPLACE(REPLACE(REPLACE(y.mapped_name, ' ', ''), '　', ''), '-', '')) || '%'
+                    OR
+                    -- Category name matching
+                    (p.category_name IS NOT NULL AND 
+                     LOWER(REPLACE(REPLACE(REPLACE(y.mapped_name, ' ', ''), '　', ''), '-', '')) 
+                     LIKE '%' || LOWER(REPLACE(REPLACE(REPLACE(p.category_name, ' ', ''), '　', ''), '-', '')) || '%')
+                )
+                -- Exclude already exactly matched items
+                AND NOT EXISTS (
+                    SELECT 1 FROM pms_plan_sales p2 
+                    WHERE p2.hotel_id = y.hotel_id 
+                    AND p2.plan_name = y.mapped_name 
+                    AND p2.tax_rate = y.tax_rate
+                )
+                ORDER BY 
+                    -- Prioritize better matches
+                    CASE 
+                        WHEN LOWER(REPLACE(REPLACE(REPLACE(y.mapped_name, ' ', ''), '　', ''), '-', '')) = 
+                             LOWER(REPLACE(REPLACE(REPLACE(p.plan_name, ' ', ''), '　', ''), '-', '')) THEN 1
+                        WHEN p.category_name IS NOT NULL AND 
+                             LOWER(REPLACE(REPLACE(REPLACE(y.mapped_name, ' ', ''), '　', ''), '-', '')) = 
+                             LOWER(REPLACE(REPLACE(REPLACE(p.category_name, ' ', ''), '　', ''), '-', '')) THEN 2
+                        ELSE 3
+                    END,
+                    ABS(y.yayoi_amount - p.pms_amount) -- Prefer closer amounts
+                LIMIT 1
+            ) y_fuzzy ON true
+            WHERE NOT EXISTS (
+                -- Only include PMS plans that weren't exactly matched
+                SELECT 1 FROM yayoi_mapped_sales y_exact 
+                WHERE y_exact.hotel_id = p.hotel_id 
+                AND y_exact.mapped_name = p.plan_name 
+                AND y_exact.tax_rate = p.tax_rate
+            )
+        ),
+        comparison AS (
+            -- Deduplicate and prioritize exact matches over fuzzy matches
+            SELECT DISTINCT ON (hotel_id, plan_name, tax_rate)
+                hotel_id,
+                hotel_name,
+                plan_name,
+                category_name,
+                tax_rate,
+                pms_amount,
+                yayoi_amount,
+                difference,
+                status,
+                reservation_count,
+                yayoi_transaction_count,
+                missing_rates_count,
+                mapping_type,
+                match_type
+            FROM fuzzy_matched_comparison
+            ORDER BY hotel_id, plan_name, tax_rate, 
+                     CASE WHEN match_type = 'exact' THEN 1 ELSE 2 END -- Prioritize exact matches
         )
         SELECT 
             hotel_id,
@@ -531,6 +623,7 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
             yayoi_transaction_count,
             missing_rates_count,
             mapping_type,
+            match_type,
             CASE 
                 WHEN missing_rates_count > 0 THEN 'missing_rates'
                 WHEN mapping_type IS NULL AND pms_amount > 0 THEN 'no_mapping'
@@ -646,7 +739,7 @@ const getMonthlySalesComparison = async (requestId, filters, dbClient = null) =>
                         WHEN rd.plan_type = 'per_room' THEN COALESCE(rr.price, rd.price)
                         ELSE COALESCE(rr.price, rd.price) * rd.number_of_people 
                     END
-                ) as pms_amount
+                )::numeric as pms_amount
             FROM reservation_details rd
             JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
             LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
@@ -664,28 +757,27 @@ const getMonthlySalesComparison = async (requestId, filters, dbClient = null) =>
         ),
         yayoi_monthly AS (
             -- Get Yayoi imported sales totals by month 
-            -- Use LEFT JOIN to get the best matching department for each record
+            -- Use proper JOIN to get the best matching department for each record
             SELECT 
                 to_char(yd.transaction_date, 'YYYY-MM') as month_key,
-                SUM(yd.credit_amount) as yayoi_amount,
+                SUM(yd.credit_amount)::numeric as yayoi_amount,
                 COUNT(DISTINCT yd.batch_id) as import_batches,
                 COUNT(*) as transaction_count
             FROM acc_yayoi_data yd
-            LEFT JOIN LATERAL (
-                -- For each yayoi record, find the best matching department
-                -- Prefer current departments, but fall back to historical if needed
-                SELECT d.hotel_id, d.name, d.is_current
-                FROM acc_departments d
-                WHERE d.name = yd.credit_department
-                ORDER BY d.is_current DESC, d.id DESC
-                LIMIT 1
-            ) d ON true
+            JOIN acc_departments d ON yd.credit_department = d.name
             JOIN acc_account_codes ac ON yd.credit_account_code = ac.name
             WHERE EXTRACT(YEAR FROM yd.transaction_date) = $1
-            AND d.hotel_id IS NOT NULL  -- Only include records with valid department mapping
-            AND d.hotel_id = ANY($2::int[])  -- Filter by hotel IDs after the JOIN
+            AND d.hotel_id = ANY($2::int[])  -- Filter by hotel IDs
             AND ac.management_group_id = 1  -- Sales accounts only
             AND yd.credit_amount > 0
+            -- Use the most current department mapping for each department name
+            AND d.id = (
+                SELECT d2.id 
+                FROM acc_departments d2 
+                WHERE d2.name = d.name 
+                ORDER BY d2.is_current DESC, d2.id DESC 
+                LIMIT 1
+            )
             GROUP BY to_char(yd.transaction_date, 'YYYY-MM')
         )
         SELECT 
@@ -696,7 +788,7 @@ const getMonthlySalesComparison = async (requestId, filters, dbClient = null) =>
             COALESCE(y.yayoi_amount, 0) as yayoi_amount,
             COALESCE(y.import_batches, 0) as import_batches,
             COALESCE(y.transaction_count, 0) as transaction_count,
-            COALESCE(p.pms_amount, 0) - COALESCE(y.yayoi_amount, 0) as difference,
+            (COALESCE(p.pms_amount, 0) - COALESCE(y.yayoi_amount, 0))::numeric as difference,
             CASE 
                 WHEN p.pms_amount IS NULL AND y.yayoi_amount IS NULL THEN 'no_data'
                 WHEN p.pms_amount IS NULL THEN 'yayoi_only'

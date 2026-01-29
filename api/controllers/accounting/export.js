@@ -211,7 +211,7 @@ const getDetailedDiscrepancyAnalysis = async (req, res) => {
                 missingRatesCount: analysis.filter(a => a.issue_type === 'missing_rates').length,
                 noMappingCount: analysis.filter(a => a.issue_type === 'no_mapping').length,
                 amountMismatchCount: analysis.filter(a => a.issue_type === 'amount_mismatch').length,
-                totalDifference: analysis.reduce((sum, a) => sum + (a.difference || 0), 0)
+                totalDifference: analysis.reduce((sum, a) => sum + (parseFloat(a.difference) || 0), 0)
             }
         });
     } catch (error) {
