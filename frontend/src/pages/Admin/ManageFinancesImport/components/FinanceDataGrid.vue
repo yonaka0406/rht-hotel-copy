@@ -465,9 +465,18 @@ const loadData = async () => {
                     if (dataMap[rowKey]) {
                         const oldValue = dataMap[rowKey][mKey] || 0;
                         const newValue = parseFloat(tr[m.key] || 0);
-                        dataMap[rowKey][mKey] = oldValue + newValue;
-                        if (newValue > 0) {
-                            console.log(`Global ${m.key}: ${oldValue} + ${newValue} = ${dataMap[rowKey][mKey]}`);
+                        
+                        // Use MAX for operating_days and available_room_nights, SUM for others
+                        if (m.key === 'operating_days' || m.key === 'available_room_nights') {
+                            dataMap[rowKey][mKey] = Math.max(oldValue, newValue);
+                            if (newValue > 0) {
+                                console.log(`Global ${m.key}: MAX(${oldValue}, ${newValue}) = ${dataMap[rowKey][mKey]}`);
+                            }
+                        } else {
+                            dataMap[rowKey][mKey] = oldValue + newValue;
+                            if (newValue > 0) {
+                                console.log(`Global ${m.key}: ${oldValue} + ${newValue} = ${dataMap[rowKey][mKey]}`);
+                            }
                         }
                     }
                 });
@@ -678,8 +687,8 @@ const applyManualMapping = () => {
             if (row) {
                 item.values.forEach((val, idx) => {
                     if (months.value[idx]) {
-                        // Sum the values in case multiple Excel rows are mapped to the same account
-                        row[months.value[idx].value] = (row[months.value[idx].value] || 0) + val;
+                        // Replace the values instead of summing
+                        row[months.value[idx].value] = val;
                     }
                 });
                 appliedCount++;
@@ -741,7 +750,7 @@ const processPaste = () => {
             matchedCount++;
             values.forEach((val, idx) => {
                 if (months.value[idx]) {
-                    row[months.value[idx].value] = (row[months.value[idx].value] || 0) + val;
+                    row[months.value[idx].value] = val; // Replace instead of add
                     dataUpdated = true;
                 }
             });
