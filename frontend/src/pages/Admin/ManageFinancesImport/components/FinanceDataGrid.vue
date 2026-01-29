@@ -474,16 +474,12 @@ const loadData = async () => {
                     if (dataMap[rowKey]) dataMap[rowKey][mKey] = parseFloat(tr[m.key] || 0);
                 });
             } else {
-                // Handle plan_type_category_id: 0 or null case
-                console.log('Processing as unset category (0 or null)');
-
                 // For plan_type_category_id: 0 - process accommodation_revenue and other metrics to categorized
                 if (tr.plan_type_category_id === 0) {
                     if (tr.accommodation_revenue && tr.accommodation_revenue > 0) {
                         const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
                         const rowKey = `categorized_${combo}_accommodation_revenue`;
                         if (dataMap[rowKey]) {
-                            console.log(`Adding ${tr.accommodation_revenue} to categorized accommodation_revenue for combo ${combo}`);
                             dataMap[rowKey][mKey] = parseFloat(tr.accommodation_revenue || 0);
                         }
                     }
@@ -498,7 +494,6 @@ const loadData = async () => {
                     });
 
                     // Handle other global metrics (operating_days, available_room_nights, non_accommodation_sold_rooms)
-                    // These fields are often populated in 0/0 rows if null/null rows don't exist
                     globalMetrics.forEach(m => {
                         if (m.key === 'non_accommodation_revenue') return; // Already handled below
 
@@ -510,7 +505,6 @@ const loadData = async () => {
                             if (m.key === 'operating_days' || m.key === 'available_room_nights') {
                                 dataMap[rowKey][mKey] = Math.max(oldValue, newValue);
                             } else {
-                                // non_accommodation_sold_rooms
                                 dataMap[rowKey][mKey] = oldValue + newValue;
                             }
                         }
@@ -523,9 +517,6 @@ const loadData = async () => {
                             const oldValue = dataMap[globalRowKey][mKey] || 0;
                             const newValue = parseFloat(tr.non_accommodation_revenue || 0);
                             dataMap[globalRowKey][mKey] = oldValue + newValue;
-                            if (newValue > 0) {
-                                console.log(`Adding ${newValue} to global non_accommodation_revenue from 0/0 record: ${oldValue} + ${newValue} = ${dataMap[globalRowKey][mKey]}`);
-                            }
                         }
                     }
                 }
@@ -590,10 +581,6 @@ const saveData = async () => {
                     }
                     tableDataMap[mapKey][row.metric_key] = amount;
 
-                    // Debug logging for operational metrics
-                    if (amount > 0) {
-                        console.log(`Saving ${row.metric_key}: ${amount} to combo ${combo} (plan_type_category_id: ${planTypeId}, plan_package_category_id: ${planPackageId})`);
-                    }
                 } else if (amount !== 0) {
                     entries.push({
                         hotel_id: selectedHotel.value.id,
