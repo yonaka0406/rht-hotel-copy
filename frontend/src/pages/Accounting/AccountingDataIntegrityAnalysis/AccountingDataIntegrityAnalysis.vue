@@ -303,12 +303,30 @@
                                 </thead>
                                 <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                                     <tr v-for="item in filteredHotelAnalysis" :key="`${item.hotel_id}-${item.plan_name}-${item.tax_rate}`"
-                                        class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                        :class="[
+                                            'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors',
+                                            item.item_type === 'account_total' ? 'bg-violet-50 dark:bg-violet-900/10 border-l-4 border-violet-500' : ''
+                                        ]">
                                         <td class="px-6 py-4">
                                             <div>
-                                                <div class="font-medium text-slate-900 dark:text-white">{{ item.plan_name }}</div>
-                                                <div v-if="item.category_name" class="text-xs text-slate-400">{{ item.category_name }}</div>
-                                                <div v-if="item.match_type === 'fuzzy'" class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                                <div class="flex items-center gap-2">
+                                                    <div v-if="item.item_type === 'account_total'" class="flex items-center gap-2">
+                                                        <i class="pi pi-building text-violet-600 dark:text-violet-400 text-sm"></i>
+                                                        <span class="font-bold text-slate-900 dark:text-white">{{ item.plan_name }}</span>
+                                                        <span class="text-xs bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-2 py-1 rounded">
+                                                            主勘定
+                                                        </span>
+                                                    </div>
+                                                    <div v-else class="flex items-center gap-2">
+                                                        <i class="pi pi-angle-right text-slate-400 text-sm ml-4"></i>
+                                                        <span class="font-medium text-slate-900 dark:text-white">{{ item.plan_name }}</span>
+                                                        <span v-if="item.subaccount_name" class="text-xs bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 px-2 py-1 rounded">
+                                                            {{ item.subaccount_name }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div v-if="item.category_name" class="text-xs text-slate-400 ml-6">{{ item.category_name }}</div>
+                                                <div v-if="item.match_type === 'fuzzy'" class="text-xs text-amber-600 dark:text-amber-400 mt-1 ml-6">
                                                     <i class="pi pi-search text-xs mr-1"></i>類似名称でマッチング
                                                 </div>
                                             </div>

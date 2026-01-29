@@ -441,19 +441,62 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
             GROUP BY rd.hotel_id, h.name, COALESCE(ph.name, pg.name, '未設定'), 
                      ph.plan_type_category_id, ptc.name, COALESCE(rr.tax_rate, 0.10)
         ),
-        yayoi_mapped_sales AS (
-            -- Get Yayoi sales mapped to plans via account mappings
+        pms_hotel_totals AS (
+            -- Get PMS totals by hotel and tax rate for comparison with main accounts
+            SELECT 
+                hotel_id,
+                hotel_name,
+                tax_rate,
+                SUM(pms_amount)::numeric as total_pms_amount,
+                SUM(reservation_count) as total_reservation_count,
+                SUM(missing_rates_count) as total_missing_rates_count
+            FROM pms_plan_sales
+            GROUP BY hotel_id, hotel_name, tax_rate
+        ),
+        yayoi_account_totals AS (
+            -- Get main account totals from Yayoi data (without subaccounts)
             SELECT 
                 d.hotel_id,
                 h.name as hotel_name,
+                ac.name as account_name,
+                tc.tax_rate,
+                COUNT(*) as transaction_count,
+                SUM(yd.credit_amount)::numeric as yayoi_amount
+            FROM acc_yayoi_data yd
+            JOIN acc_departments d ON yd.credit_department = d.name
+            JOIN hotels h ON d.hotel_id = h.id
+            JOIN acc_account_codes ac ON yd.credit_account_code = ac.name
+            LEFT JOIN acc_tax_classes tc ON yd.credit_tax_class = tc.yayoi_name
+            WHERE yd.transaction_date BETWEEN $1 AND $2
+            AND d.hotel_id = ANY($3::int[])  -- Filter by hotel IDs
+            AND ac.management_group_id = 1  -- Sales accounts only
+            AND yd.credit_amount > 0
+            AND (yd.credit_sub_account IS NULL OR yd.credit_sub_account = '')  -- Main account only
+            -- Use the most current department mapping for each department name
+            AND d.id = (
+                SELECT d2.id 
+                FROM acc_departments d2 
+                WHERE d2.name = d.name 
+                ORDER BY d2.is_current DESC, d2.id DESC 
+                LIMIT 1
+            )
+            GROUP BY d.hotel_id, h.name, ac.name, tc.tax_rate
+        ),
+        yayoi_subaccount_sales AS (
+            -- Get subaccount sales from Yayoi data
+            SELECT 
+                d.hotel_id,
+                h.name as hotel_name,
+                ac.name as account_name,
+                yd.credit_sub_account as subaccount_name,
                 COALESCE(
                     CASE 
                         WHEN am.target_type = 'plan_hotel' THEN ph.name
                         WHEN am.target_type = 'plan_global' THEN pg.name
                         WHEN am.target_type = 'plan_type_category' THEN ptc.name
-                        ELSE ac.name
+                        ELSE yd.credit_sub_account
                     END, 
-                    ac.name
+                    yd.credit_sub_account
                 ) as mapped_name,
                 am.target_type,
                 tc.tax_rate,
@@ -472,6 +515,7 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
             AND d.hotel_id = ANY($3::int[])  -- Filter by hotel IDs
             AND ac.management_group_id = 1  -- Sales accounts only
             AND yd.credit_amount > 0
+            AND yd.credit_sub_account IS NOT NULL AND yd.credit_sub_account != ''  -- Subaccounts only
             -- Use the most current department mapping for each department name
             AND d.id = (
                 SELECT d2.id 
@@ -480,19 +524,78 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
                 ORDER BY d2.is_current DESC, d2.id DESC 
                 LIMIT 1
             )
-            GROUP BY d.hotel_id, h.name, 
+            GROUP BY d.hotel_id, h.name, ac.name, yd.credit_sub_account, 
                      COALESCE(
                          CASE 
                              WHEN am.target_type = 'plan_hotel' THEN ph.name
                              WHEN am.target_type = 'plan_global' THEN pg.name
                              WHEN am.target_type = 'plan_type_category' THEN ptc.name
-                             ELSE ac.name
+                             ELSE yd.credit_sub_account
                          END, 
-                         ac.name
+                         yd.credit_sub_account
                      ), am.target_type, tc.tax_rate
+        ),
+        yayoi_mapped_sales AS (
+            -- Combine main accounts and subaccounts for comparison
+            SELECT 
+                hotel_id,
+                hotel_name,
+                account_name as mapped_name,
+                NULL as subaccount_name,
+                'main_account' as target_type,
+                tax_rate,
+                transaction_count,
+                yayoi_amount,
+                'account_total' as item_type
+            FROM yayoi_account_totals
+            
+            UNION ALL
+            
+            SELECT 
+                hotel_id,
+                hotel_name,
+                mapped_name,
+                subaccount_name,
+                target_type,
+                tax_rate,
+                transaction_count,
+                yayoi_amount,
+                'subaccount' as item_type
+            FROM yayoi_subaccount_sales
         ),
         -- Add fuzzy matching for similar names
         fuzzy_matched_comparison AS (
+            -- Compare PMS totals with Yayoi main account totals
+            SELECT 
+                COALESCE(p.hotel_id, y.hotel_id) as hotel_id,
+                COALESCE(p.hotel_name, y.hotel_name) as hotel_name,
+                COALESCE(y.mapped_name, 'PMS合計') as plan_name,
+                NULL as category_name,
+                COALESCE(p.tax_rate, y.tax_rate) as tax_rate,
+                COALESCE(p.total_pms_amount, 0) as pms_amount,
+                COALESCE(y.yayoi_amount, 0) as yayoi_amount,
+                COALESCE(p.total_reservation_count, 0) as reservation_count,
+                COALESCE(y.transaction_count, 0) as yayoi_transaction_count,
+                COALESCE(p.total_missing_rates_count, 0) as missing_rates_count,
+                (COALESCE(p.total_pms_amount, 0) - COALESCE(y.yayoi_amount, 0))::numeric as difference,
+                CASE 
+                    WHEN p.total_pms_amount IS NULL THEN 'yayoi_only'
+                    WHEN y.yayoi_amount IS NULL THEN 'pms_only'
+                    WHEN ABS(COALESCE(p.total_pms_amount, 0) - COALESCE(y.yayoi_amount, 0)) > 1000 THEN 'significant_diff'
+                    ELSE 'matched'
+                END as status,
+                y.target_type as mapping_type,
+                'exact' as match_type,
+                y.item_type,
+                y.subaccount_name
+            FROM pms_hotel_totals p
+            FULL OUTER JOIN yayoi_mapped_sales y ON p.hotel_id = y.hotel_id 
+                AND p.tax_rate = y.tax_rate
+                AND y.item_type = 'account_total'
+            
+            UNION ALL
+            
+            -- Compare individual PMS plans with Yayoi subaccounts (exact match)
             SELECT 
                 COALESCE(p.hotel_id, y.hotel_id) as hotel_id,
                 COALESCE(p.hotel_name, y.hotel_name) as hotel_name,
@@ -512,15 +615,18 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
                     ELSE 'matched'
                 END as status,
                 y.target_type as mapping_type,
-                'exact' as match_type
+                'exact' as match_type,
+                y.item_type,
+                y.subaccount_name
             FROM pms_plan_sales p
             FULL OUTER JOIN yayoi_mapped_sales y ON p.hotel_id = y.hotel_id 
                 AND p.plan_name = y.mapped_name 
                 AND p.tax_rate = y.tax_rate
+                AND y.item_type = 'subaccount'
             
             UNION ALL
             
-            -- Add fuzzy matching for unmatched PMS plans
+            -- Add fuzzy matching for unmatched PMS plans with subaccounts
             SELECT 
                 p.hotel_id,
                 p.hotel_name,
@@ -539,14 +645,17 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
                     ELSE 'matched'
                 END as status,
                 y_fuzzy.target_type as mapping_type,
-                'fuzzy' as match_type
+                'fuzzy' as match_type,
+                y_fuzzy.item_type,
+                y_fuzzy.subaccount_name
             FROM pms_plan_sales p
             LEFT JOIN LATERAL (
-                -- Find best fuzzy match for unmatched PMS plans
-                SELECT y.yayoi_amount, y.transaction_count, y.target_type
+                -- Find best fuzzy match for unmatched PMS plans in subaccounts
+                SELECT y.yayoi_amount, y.transaction_count, y.target_type, y.item_type, y.subaccount_name
                 FROM yayoi_mapped_sales y
                 WHERE y.hotel_id = p.hotel_id 
                 AND y.tax_rate = p.tax_rate
+                AND y.item_type = 'subaccount'
                 AND (
                     -- Similar name matching patterns
                     LOWER(REPLACE(REPLACE(REPLACE(y.mapped_name, ' ', ''), '　', ''), '-', '')) 
@@ -586,6 +695,7 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
                 WHERE y_exact.hotel_id = p.hotel_id 
                 AND y_exact.mapped_name = p.plan_name 
                 AND y_exact.tax_rate = p.tax_rate
+                AND y_exact.item_type = 'subaccount'
             )
         ),
         comparison AS (
@@ -624,6 +734,8 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
             missing_rates_count,
             mapping_type,
             match_type,
+            item_type,
+            subaccount_name,
             CASE 
                 WHEN missing_rates_count > 0 THEN 'missing_rates'
                 WHEN mapping_type IS NULL AND pms_amount > 0 THEN 'no_mapping'
@@ -632,7 +744,11 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
             END as issue_type
         FROM comparison
         WHERE status != 'matched' OR missing_rates_count > 0 OR ABS(difference) > 1000
-        ORDER BY ABS(difference) DESC, hotel_id, plan_name
+        ORDER BY 
+            hotel_id, 
+            CASE WHEN item_type = 'account_total' THEN 1 ELSE 2 END,  -- Show account totals first
+            ABS(difference) DESC, 
+            plan_name
     `;
 
     const values = [startDate, endDate, hotelIds];
