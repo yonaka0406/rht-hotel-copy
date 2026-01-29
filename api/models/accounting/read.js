@@ -411,68 +411,88 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
     try {
         // Get PMS plan sales data (including addons)
         const pmsQuery = `
-            WITH rd_with_primary_rate AS (
-                -- Get each reservation_detail with its primary (highest) tax rate
+            WITH rr_base AS (
+                -- Get all rate lines and identify the one with the highest tax rate per detail
+                -- We include billable cancelled reservations here if they have rates (cancel fees)
+                -- LEFT JOIN to include reservation_details without rates
                 SELECT 
                     rd.id as rd_id,
                     rd.hotel_id,
                     rd.plans_hotel_id,
                     rd.plans_global_id,
-                    rd.plan_type,
-                    rd.number_of_people,
-                    rd.price,
+                    ph.plan_type_category_id,
+                    ph.plan_package_category_id,
+                    ptc.name as category_name,
+                    COALESCE(ph.name, pg.name, '未設定') as plan_name,
                     CASE 
-                        WHEN rd.plan_type = 'per_room' THEN rd.price
+                        WHEN rd.plan_type = 'per_room' THEN rd.price 
                         ELSE rd.price * rd.number_of_people 
-                    END as total_price,
-                    COALESCE(
-                        (SELECT rr.tax_rate 
-                         FROM reservation_rates rr 
-                         WHERE rr.reservation_details_id = rd.id 
-                         AND rr.hotel_id = rd.hotel_id 
-                         ORDER BY rr.tax_rate DESC, rr.id DESC 
-                         LIMIT 1), 
-                        0.10
-                    ) as tax_rate,
-                    CASE WHEN NOT EXISTS(
-                        SELECT 1 FROM reservation_rates rr 
-                        WHERE rr.reservation_details_id = rd.id 
-                        AND rr.hotel_id = rd.hotel_id
-                    ) THEN 1 ELSE 0 END as missing_rates_count,
-                    rd.cancelled IS NOT NULL as is_cancelled
+                    END as total_rd_price,
+                    rr.id as rr_id,
+                    COALESCE(rr.tax_rate, 0.10) as tax_rate,
+                    CASE 
+                        WHEN rr.id IS NOT NULL THEN
+                            CASE 
+                                WHEN rd.plan_type = 'per_room' THEN rr.price 
+                                ELSE rr.price * rd.number_of_people 
+                            END
+                        ELSE 0
+                    END as rr_price,
+                    ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY COALESCE(rr.tax_rate, 0.10) DESC, rr.id DESC NULLS LAST) as rn,
+                    (rd.cancelled IS NOT NULL) as is_cancelled
                 FROM reservation_details rd
                 JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+                LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
+                LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
+                LEFT JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id
+                LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
                 WHERE rd.date BETWEEN $1 AND $2
                 AND rd.hotel_id = ANY($3::int[])
                 AND rd.billable = TRUE
                 AND r.status NOT IN ('hold', 'block')
                 AND r.type <> 'employee'
             ),
+            rr_totals AS (
+                -- Calculate the sum of rate prices to detect discrepancies
+                SELECT rd_id, SUM(rr_price) as sum_rr_price
+                FROM rr_base
+                GROUP BY rd_id
+            ),
             plan_sales AS (
+                -- Combined adjusted plan sales (same logic as getLedgerPreview)
                 SELECT 
-                    rp.hotel_id,
+                    b.hotel_id,
                     h.name as hotel_name,
                     CASE 
-                        WHEN rp.is_cancelled THEN 'キャンセル'
-                        ELSE COALESCE(ph.name, pg.name, '未設定')
+                        WHEN b.is_cancelled THEN 'キャンセル' 
+                        WHEN b.plan_name LIKE '%マンスリー%' THEN COALESCE(b.category_name || ' - ', '') || 'マンスリー'
+                        ELSE COALESCE(b.category_name, b.plan_name)
                     END as plan_name,
-                    ph.plan_type_category_id,
-                    ptc.name as category_name,
-                    rp.tax_rate,
-                    COUNT(DISTINCT rp.rd_id) as reservation_count,
-                    SUM(rp.total_price)::numeric as pms_amount,
-                    SUM(rp.missing_rates_count) as missing_rates_count
-                FROM rd_with_primary_rate rp
-                JOIN hotels h ON rp.hotel_id = h.id
-                LEFT JOIN plans_hotel ph ON rp.plans_hotel_id = ph.id AND rp.hotel_id = ph.hotel_id
-                LEFT JOIN plans_global pg ON rp.plans_global_id = pg.id
-                LEFT JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id
-                GROUP BY rp.hotel_id, h.name, 
-                         CASE 
-                             WHEN rp.is_cancelled THEN 'キャンセル'
-                             ELSE COALESCE(ph.name, pg.name, '未設定')
-                         END, 
-                         ph.plan_type_category_id, ptc.name, rp.tax_rate
+                    b.plan_type_category_id,
+                    b.category_name,
+                    b.tax_rate,
+                    CASE 
+                        WHEN b.rn = 1 THEN b.rr_price + (b.total_rd_price - t.sum_rr_price)
+                        ELSE b.rr_price
+                    END as amount,
+                    b.is_cancelled
+                FROM rr_base b
+                JOIN rr_totals t ON b.rd_id = t.rd_id
+                JOIN hotels h ON b.hotel_id = h.id
+            ),
+            plan_sales_grouped AS (
+                SELECT 
+                    hotel_id,
+                    hotel_name,
+                    plan_name,
+                    plan_type_category_id,
+                    category_name,
+                    tax_rate,
+                    COUNT(*) as reservation_count,
+                    SUM(amount)::numeric as pms_amount,
+                    0 as missing_rates_count
+                FROM plan_sales
+                GROUP BY hotel_id, hotel_name, plan_name, plan_type_category_id, category_name, tax_rate
             ),
             addon_sales AS (
                 -- Get addon sales grouped by addon name
@@ -510,7 +530,7 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
                 SUM(pms_amount) as pms_amount,
                 SUM(missing_rates_count) as missing_rates_count
             FROM (
-                SELECT * FROM plan_sales
+                SELECT * FROM plan_sales_grouped
                 UNION ALL
                 SELECT * FROM addon_sales
             ) combined
@@ -1150,8 +1170,8 @@ const getPlanReservationDetails = async (requestId, filters, dbClient = null) =>
 
     try {
         const query = `
-            WITH rd_with_primary_rate AS (
-                -- Get each reservation_detail with its primary (highest) tax rate
+            WITH rr_base AS (
+                -- Get all rate lines and identify the one with the highest tax rate per detail
                 SELECT 
                     rd.id as rd_id,
                     rd.reservation_id,
@@ -1163,60 +1183,93 @@ const getPlanReservationDetails = async (requestId, filters, dbClient = null) =>
                     rd.number_of_people,
                     rd.price,
                     CASE 
-                        WHEN rd.plan_type = 'per_room' THEN rd.price
+                        WHEN rd.plan_type = 'per_room' THEN rd.price 
                         ELSE rd.price * rd.number_of_people 
-                    END as total_price,
-                    COALESCE(
-                        (SELECT rr.tax_rate 
-                         FROM reservation_rates rr 
-                         WHERE rr.reservation_details_id = rd.id 
-                         AND rr.hotel_id = rd.hotel_id 
-                         ORDER BY rr.tax_rate DESC, rr.id DESC 
-                         LIMIT 1), 
-                        0.10
-                    ) as tax_rate,
+                    END as total_rd_price,
+                    rr.id as rr_id,
+                    COALESCE(rr.tax_rate, 0.10) as tax_rate,
+                    CASE 
+                        WHEN rr.id IS NOT NULL THEN
+                            CASE 
+                                WHEN rd.plan_type = 'per_room' THEN rr.price 
+                                ELSE rr.price * rd.number_of_people 
+                            END
+                        ELSE 0
+                    END as rr_price,
+                    ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY COALESCE(rr.tax_rate, 0.10) DESC, rr.id DESC NULLS LAST) as rn,
                     CASE WHEN NOT EXISTS(
-                        SELECT 1 FROM reservation_rates rr 
-                        WHERE rr.reservation_details_id = rd.id 
-                        AND rr.hotel_id = rd.hotel_id
+                        SELECT 1 FROM reservation_rates rr2 
+                        WHERE rr2.reservation_details_id = rd.id 
+                        AND rr2.hotel_id = rd.hotel_id
                     ) THEN true ELSE false END as missing_rates,
-                    rd.cancelled IS NOT NULL as is_cancelled
+                    (rd.cancelled IS NOT NULL) as is_cancelled
                 FROM reservation_details rd
                 JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+                LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
                 WHERE rd.date BETWEEN $2 AND $3
                 AND rd.hotel_id = $1
                 AND rd.billable = TRUE
                 AND r.status NOT IN ('hold', 'block')
                 AND r.type <> 'employee'
+            ),
+            rr_totals AS (
+                -- Calculate the sum of rate prices to detect discrepancies
+                SELECT rd_id, SUM(rr_price) as sum_rr_price
+                FROM rr_base
+                GROUP BY rd_id
+            ),
+            plan_sales AS (
+                -- Combined adjusted plan sales (same logic as getLedgerPreview)
+                SELECT 
+                    b.reservation_id,
+                    b.date,
+                    b.number_of_people,
+                    b.price as unit_price,
+                    CASE 
+                        WHEN b.rn = 1 THEN b.rr_price + (b.total_rd_price - t.sum_rr_price)
+                        ELSE b.rr_price
+                    END as total_amount,
+                    b.tax_rate,
+                    b.missing_rates,
+                    b.is_cancelled,
+                    COALESCE(ph.name, pg.name, '未設定') as plan_name,
+                    ptc.name as category_name
+                FROM rr_base b
+                JOIN rr_totals t ON b.rd_id = t.rd_id
+                LEFT JOIN plans_hotel ph ON b.plans_hotel_id = ph.id AND b.hotel_id = ph.hotel_id
+                LEFT JOIN plans_global pg ON b.plans_global_id = pg.id
+                LEFT JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id
             )
             SELECT 
-                rp.reservation_id,
-                rp.date,
-                rp.number_of_people,
-                rp.price as unit_price,
-                rp.total_price as total_amount,
-                rp.tax_rate,
-                rp.missing_rates,
-                rp.is_cancelled,
-                COALESCE(ph.name, pg.name, '未設定') as plan_name,
-                ptc.name as category_name,
+                ps.reservation_id,
+                ps.date,
+                ps.number_of_people,
+                ps.unit_price,
+                ps.total_amount,
+                ps.tax_rate,
+                ps.missing_rates,
+                ps.is_cancelled,
+                ps.plan_name,
+                ps.category_name,
                 COALESCE(c.name_kanji, c.name_kana, c.name, '未設定') as client_name,
                 r.check_in,
                 r.check_out
-            FROM rd_with_primary_rate rp
-            JOIN reservations r ON rp.reservation_id = r.id AND rp.hotel_id = r.hotel_id
-            LEFT JOIN plans_hotel ph ON rp.plans_hotel_id = ph.id AND rp.hotel_id = ph.hotel_id
-            LEFT JOIN plans_global pg ON rp.plans_global_id = pg.id
-            LEFT JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id
+            FROM plan_sales ps
+            JOIN reservations r ON ps.reservation_id = r.id AND r.hotel_id = $1
             LEFT JOIN clients c ON r.reservation_client_id = c.id
             WHERE (
                 CASE 
-                    WHEN $4 = 'キャンセル' THEN rp.is_cancelled = true
-                    ELSE rp.is_cancelled = false AND COALESCE(ph.name, pg.name, '未設定') = $4
+                    WHEN $4 = 'キャンセル' THEN ps.is_cancelled = true
+                    ELSE ps.is_cancelled = false AND (
+                        CASE 
+                            WHEN ps.plan_name LIKE '%マンスリー%' THEN COALESCE(ps.category_name || ' - ', '') || 'マンスリー'
+                            ELSE COALESCE(ps.category_name, ps.plan_name)
+                        END
+                    ) = $4
                 END
             )
-            AND ABS(rp.tax_rate - $5) < 0.001  -- Match tax rate with small tolerance
-            ORDER BY rp.date DESC, rp.reservation_id DESC
+            AND ABS(ps.tax_rate - $5) < 0.001  -- Match tax rate with small tolerance
+            ORDER BY ps.date DESC, ps.reservation_id DESC
         `;
 
         const values = [hotelId, startDate, endDate, planName, parseFloat(taxRate) || 0.10];
