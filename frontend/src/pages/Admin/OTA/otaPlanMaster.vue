@@ -524,10 +524,32 @@
         console.log('[OTA Plan Master] フィルタ後のデータ件数:', filteredData.length);
                 
         const updatedFilteredData = filteredData.map(item => {
+            // 特定のアイテムのみ詳細ログ（開始時点）
+            if (item.plangroupcode === "11") {
+                console.log(`[OTA Plan Master] 詳細ログ - アイテム11 開始:`, {
+                    step: "savePlanMaster開始",
+                    item_plans_hotel_id: item.plans_hotel_id,
+                    item_extracted_hotel_id: item.extracted_hotel_id,
+                    item_plan_key: item.plan_key
+                });
+            }
+            
             const matchingPlan = hotelPlans.value.find(plan => plan.plan_key === item.plan_key);
 
             // plan_keyから正しいIDを抽出
             const extractedIds = extractIdsFromPlanKey(item.plan_key);
+            
+            // 特定のアイテムのみ詳細ログ（抽出後）
+            if (item.plangroupcode === "11") {
+                console.log(`[OTA Plan Master] 詳細ログ - アイテム11 抽出後:`, {
+                    step: "extractIdsFromPlanKey実行後",
+                    plan_key: item.plan_key,
+                    extractedIds: extractedIds,
+                    item_extracted_hotel_id: item.extracted_hotel_id,
+                    条件2チェック: !!(item.plan_key && (extractedIds.plans_global_id || extractedIds.plans_hotel_id)),
+                    条件3チェック: !!(item.extracted_hotel_id || item.extracted_global_id)
+                });
+            }
             
             // 最終的なIDの決定
             let finalGlobalId = null;
@@ -563,6 +585,16 @@
                         hotel: finalHotelId
                     }
                 });
+                
+                if (item.plangroupcode === "11") {
+                    console.log(`[OTA Plan Master] 詳細ログ - アイテム11:`, {
+                        step: "条件2: plan_keyから抽出",
+                        extractedIds: extractedIds,
+                        finalGlobalId: finalGlobalId,
+                        finalHotelId: finalHotelId,
+                        typeof_finalHotelId: typeof finalHotelId
+                    });
+                }
             } else if (item.extracted_hotel_id || item.extracted_global_id) {
                 // アイテム自体に抽出済みのIDがある場合（UIで計算済み）
                 finalGlobalId = item.extracted_global_id;
@@ -577,6 +609,32 @@
                         hotel: finalHotelId
                     }
                 });
+                
+                if (item.plangroupcode === "11") {
+                    console.log(`[OTA Plan Master] 詳細ログ - アイテム11:`, {
+                        step: "条件3: 事前抽出済みID使用",
+                        sourceIds: {
+                            extracted_global_id: item.extracted_global_id,
+                            extracted_hotel_id: item.extracted_hotel_id,
+                            typeof_extracted_hotel_id: typeof item.extracted_hotel_id
+                        },
+                        finalGlobalId: finalGlobalId,
+                        finalHotelId: finalHotelId,
+                        typeof_finalHotelId: typeof finalHotelId
+                    });
+                }
+            } else if (!matchingPlan && item.extracted_hotel_id) {
+                // 追加の安全策: extracted_hotel_idがあるが他の条件に引っかからない場合
+                finalGlobalId = item.extracted_global_id;
+                finalHotelId = item.extracted_hotel_id;
+                
+                if (item.plangroupcode === "11") {
+                    console.log(`[OTA Plan Master] 詳細ログ - アイテム11:`, {
+                        step: "条件4: 安全策でextracted_hotel_id使用",
+                        extracted_hotel_id: item.extracted_hotel_id,
+                        finalHotelId: finalHotelId
+                    });
+                }
             } else {
                 console.warn(`[OTA Plan Master] プラン連携失敗:`, {
                     otaPlanName: item.plangroupname,
@@ -598,6 +656,25 @@
                 willSendGlobal: finalGlobalId,
                 willSendHotel: finalHotelId
             });
+
+            // 特定のアイテムのみ詳細ログ
+            if (item.plangroupcode === "11") {
+                console.log(`[OTA Plan Master] 詳細ログ - アイテム11:`, {
+                    step: "最終ID確認",
+                    finalGlobalId: finalGlobalId,
+                    finalHotelId: finalHotelId,
+                    typeof_finalGlobalId: typeof finalGlobalId,
+                    typeof_finalHotelId: typeof finalHotelId,
+                    willSendGlobal: finalGlobalId,
+                    willSendHotel: finalHotelId
+                });
+                
+                // 強制的にfinalHotelIdを設定（デバッグ用）
+                if (!finalHotelId && item.extracted_hotel_id) {
+                    console.log(`[OTA Plan Master] 強制修正 - アイテム11: finalHotelIdをextracted_hotel_idから設定`);
+                    finalHotelId = item.extracted_hotel_id;
+                }
+            }
 
             // バックエンドに送信するデータを構築
             const backendData = {
@@ -706,7 +783,7 @@
                     plangroupname: item.plangroupname,
                     plan_key: item.plan_key,
                     plans_global_id: item.plans_global_id,
-                    plans_hotel_id: item.plans_hotel_id
+                    plans_hotel_id: item.plans_hotel_id !== undefined ? item.plans_hotel_id : null // Ensure it's never undefined
                 };
                 
                 // 各アイテムの詳細ログ（デバッグ用）
@@ -742,6 +819,15 @@
             // 実際に送信されるJSONを確認
             console.log('[OTA Plan Master] 送信JSON (全体):', JSON.stringify(cleanedDataForBackend, null, 2));
             
+            // plans_hotel_idが含まれているかの確認
+            const itemsWithHotelId = cleanedDataForBackend.filter(item => 'plans_hotel_id' in item);
+            console.log('[OTA Plan Master] plans_hotel_idフィールドを持つアイテム数:', itemsWithHotelId.length);
+            console.log('[OTA Plan Master] plans_hotel_idフィールドの値:', itemsWithHotelId.map(item => ({
+                plangroupcode: item.plangroupcode,
+                plans_hotel_id: item.plans_hotel_id,
+                typeof: typeof item.plans_hotel_id
+            })));
+            
             // 特定のアイテム（plangroupcode: "11"）の詳細確認
             const targetItem = cleanedDataForBackend.find(item => item.plangroupcode === "11");
             if (targetItem) {
@@ -754,7 +840,8 @@
                     plans_hotel_id: targetItem.plans_hotel_id,
                     typeof_plans_hotel_id: typeof targetItem.plans_hotel_id,
                     is_null: targetItem.plans_hotel_id === null,
-                    is_undefined: targetItem.plans_hotel_id === undefined
+                    is_undefined: targetItem.plans_hotel_id === undefined,
+                    has_plans_hotel_id_field: 'plans_hotel_id' in targetItem
                 });
             }
             
