@@ -121,11 +121,11 @@ const availableMonths = computed(() => {
     }));
 });
 
-// Hotel summary for overview table
+// Hotel summary for overview table - use backend-calculated totals
 const hotelSummary = computed(() => {
     if (!analysisData.value || !analysisData.value.hotelTotals) return [];
     
-    // Calculate issue counts per hotel from analysis data
+    // Calculate issue counts per hotel from detailed analysis data
     const issueCountsByHotel = new Map();
     if (analysisData.value.analysis) {
         analysisData.value.analysis.forEach(item => {
@@ -136,7 +136,7 @@ const hotelSummary = computed(() => {
         });
     }
     
-    // Use the hotelTotals data directly from the API for accurate hotel summaries
+    // Use the backend-calculated hotel totals directly (no processing needed)
     return analysisData.value.hotelTotals.map(hotel => ({
         hotel_id: hotel.hotel_id,
         hotel_name: hotel.hotel_name,
@@ -147,7 +147,7 @@ const hotelSummary = computed(() => {
     })).sort((a, b) => a.hotel_name.localeCompare(b.hotel_name));
 });
 
-// Calculate summary totals from hotel summary instead of raw analysis data
+// Calculate summary totals from backend-calculated hotel totals
 const summaryTotals = computed(() => {
     if (!hotelSummary.value.length) {
         return {
@@ -160,10 +160,10 @@ const summaryTotals = computed(() => {
         };
     }
     
-    // Use hotel summary for total difference calculation
+    // Use hotel summary for total difference calculation (backend-calculated)
     const totalDifference = hotelSummary.value.reduce((sum, hotel) => sum + hotel.total_difference, 0);
     
-    // Use analysis data for issue counts
+    // Use analysis data for issue counts (detailed analysis)
     const analysis = analysisData.value?.analysis || [];
     
     return {
@@ -172,7 +172,7 @@ const summaryTotals = computed(() => {
         noMappingCount: analysis.filter(a => a.issue_type === 'no_mapping').length,
         amountMismatchCount: analysis.filter(a => a.issue_type === 'amount_mismatch').length,
         fuzzyMatchCount: analysis.filter(a => a.match_type === 'fuzzy').length,
-        totalDifference: totalDifference
+        totalDifference: totalDifference  // Use backend-calculated total
     };
 });
 
@@ -300,7 +300,7 @@ const fetchAnalysisData = async () => {
         
         // Log hotel totals for comparison
         if (result?.hotelTotals?.length > 0) {
-            console.log('=== Hotel Totals from Backend ===');
+            console.log('=== Backend-Calculated Hotel Totals ===');
             console.log('All hotel totals:', result.hotelTotals);
             result.hotelTotals.forEach(hotel => {
                 console.log(`Hotel ${hotel.hotel_name} (${hotel.hotel_id}):`, {
@@ -322,8 +322,8 @@ const fetchAnalysisData = async () => {
         analysisData.value = {
             period: result.period,
             analysis: processedAnalysis,
-            hotelTotals: result.hotelTotals,
-            rawData: result.rawData
+            hotelTotals: result.hotelTotals,  // Backend-calculated totals
+            rawData: result.rawData           // Raw details for drill-down
         };
         
         console.log('=== Processed Analysis ===');

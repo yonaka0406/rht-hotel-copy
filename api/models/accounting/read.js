@@ -558,10 +558,80 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
             logger.warn(`[${requestId}] No Yayoi subaccount data found for period ${startDate} to ${endDate}`);
         }
 
+        // Calculate totals by hotel for summary
+        const pmsTotalsByHotel = new Map();
+        const yayoiTotalsByHotel = new Map();
+
+        // Calculate PMS totals by hotel
+        pmsResult.rows.forEach(row => {
+            const hotelId = row.hotel_id;
+            if (!pmsTotalsByHotel.has(hotelId)) {
+                pmsTotalsByHotel.set(hotelId, {
+                    hotel_id: hotelId,
+                    hotel_name: row.hotel_name,
+                    total_pms_amount: 0,
+                    total_reservations: 0,
+                    total_missing_rates: 0
+                });
+            }
+            const hotelTotal = pmsTotalsByHotel.get(hotelId);
+            hotelTotal.total_pms_amount += parseFloat(row.pms_amount) || 0;
+            hotelTotal.total_reservations += parseInt(row.reservation_count) || 0;
+            hotelTotal.total_missing_rates += parseInt(row.missing_rates_count) || 0;
+        });
+
+        // Calculate Yayoi totals by hotel (from main accounts which are sums of subaccounts)
+        yayoiMainResult.rows.forEach(row => {
+            const hotelId = row.hotel_id;
+            if (!yayoiTotalsByHotel.has(hotelId)) {
+                yayoiTotalsByHotel.set(hotelId, {
+                    hotel_id: hotelId,
+                    hotel_name: row.hotel_name,
+                    total_yayoi_amount: 0,
+                    total_transactions: 0
+                });
+            }
+            const hotelTotal = yayoiTotalsByHotel.get(hotelId);
+            hotelTotal.total_yayoi_amount += parseFloat(row.yayoi_amount) || 0;
+            hotelTotal.total_transactions += parseInt(row.transaction_count) || 0;
+        });
+
+        // Combine hotel totals
+        const hotelTotals = [];
+        const allHotelIds = new Set([...pmsTotalsByHotel.keys(), ...yayoiTotalsByHotel.keys()]);
+        
+        allHotelIds.forEach(hotelId => {
+            const pmsTotal = pmsTotalsByHotel.get(hotelId);
+            const yayoiTotal = yayoiTotalsByHotel.get(hotelId);
+            
+            const pmsTotalAmount = pmsTotal?.total_pms_amount || 0;
+            const yayoiTotalAmount = yayoiTotal?.total_yayoi_amount || 0;
+            
+            hotelTotals.push({
+                hotel_id: hotelId,
+                hotel_name: pmsTotal?.hotel_name || yayoiTotal?.hotel_name || `Hotel ${hotelId}`,
+                total_pms_amount: pmsTotalAmount,
+                total_yayoi_amount: yayoiTotalAmount,
+                total_difference: pmsTotalAmount - yayoiTotalAmount,
+                total_reservations: pmsTotal?.total_reservations || 0,
+                total_transactions: yayoiTotal?.total_transactions || 0,
+                missing_rates_count: pmsTotal?.total_missing_rates || 0
+            });
+        });
+
+        logger.debug(`[${requestId}] Calculated hotel totals:`, hotelTotals);
+
         return {
-            pmsData: pmsResult.rows,
-            yayoiMainAccounts: yayoiMainResult.rows,
-            yayoiSubAccounts: yayoiSubResult.rows
+            // Raw details for drill-down analysis
+            details: {
+                pmsData: pmsResult.rows,
+                yayoiMainAccounts: yayoiMainResult.rows,
+                yayoiSubAccounts: yayoiSubResult.rows
+            },
+            // Pre-calculated totals for hotel summary
+            totals: {
+                hotelTotals: hotelTotals.sort((a, b) => a.hotel_name.localeCompare(b.hotel_name))
+            }
         };
 
     } catch (err) {

@@ -201,13 +201,12 @@ const getRawDataForIntegrityAnalysis = async (req, res) => {
             hotelIds: hotelIdsArray
         };
 
-        const rawData = await accountingModel.accountingRead.getRawDataForIntegrityAnalysis(requestId, filters);
-        const hotelTotals = await accountingModel.accountingRead.getHotelTotalsForIntegrityAnalysis(requestId, filters);
+        const result = await accountingModel.accountingRead.getRawDataForIntegrityAnalysis(requestId, filters);
 
         res.json({
             period: selectedMonth,
-            rawData,
-            hotelTotals
+            rawData: result.details,  // Detailed data for drill-down
+            hotelTotals: result.totals.hotelTotals  // Pre-calculated totals for summary
         });
     } catch (error) {
         logger.error(`[${requestId}] Error in getRawDataForIntegrityAnalysis:`, error);
