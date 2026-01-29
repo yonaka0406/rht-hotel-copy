@@ -1,4 +1,5 @@
 const reservationsModel = require('../models/reservations');
+const { checkBookingConflict } = require('../models/reservations/validation');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
 const logger = require('../config/logger');
@@ -1167,7 +1168,7 @@ const editReservationStatus = async (req, res) => {
     if (status !== 'cancelled') {
       const existingReservation = await reservationsModel.selectReservationById(req.requestId, id, hotel_id, client);
       if (existingReservation && existingReservation.status === 'cancelled') {
-        const conflicts = await reservationsModel.checkBookingConflict(req.requestId, { reservationId: id }, client);
+        const conflicts = await checkBookingConflict(req.requestId, { reservationId: id }, client);
         if (conflicts.length > 0) {
           await client.query('ROLLBACK');
           const conflictInfo = conflicts.map(c => 
@@ -1213,7 +1214,7 @@ const editReservationDetailStatus = async (req, res) => {
     if (status !== 'cancelled') {
       const existingDetails = await reservationsModel.selectReservationDetail(req.requestId, id, hotel_id, client);
       if (existingDetails && existingDetails.length > 0 && existingDetails[0].cancelled) {
-        const conflicts = await reservationsModel.checkBookingConflict(req.requestId, { detailId: id }, client);
+        const conflicts = await checkBookingConflict(req.requestId, { detailId: id }, client);
         if (conflicts.length > 0) {
           await client.query('ROLLBACK');
           const conflictDate = new Date(conflicts[0].date).toLocaleDateString('ja-JP');
