@@ -125,7 +125,51 @@ const { plans_global_id: plan_gid, plans_hotel_id: plan_hid } = await selectPlan
 
 ### 既存データの修正
 
-現在 `sc_tl_plans` テーブルに保存されている `plans_hotel_id` が `NULL` のレコードについて、`plan_key` から正しいIDを抽出して更新するマイグレーションスクリプトの作成を検討してください。
+現在 `sc_tl_plans` テーブルに保存されている `plans_hotel_id` が `NULL` のレコードについて、`plan_key` から正しいIDを抽出して更新するマイグレーションスクリプトを作成しました。
+
+#### 作成されたスクリプト
+
+1. **`api/scripts/test_plan_key_extraction.sql`** - 抽出ロジックのテストスクリプト
+2. **`api/scripts/fix_sc_tl_plans_ids_from_plan_key_safe.sql`** - 本番環境用の安全なアップデートスクリプト
+3. **`api/scripts/fix_sc_tl_plans_ids_from_plan_key.sql`** - 開発環境用のベーシック版
+4. **`api/scripts/README_plan_key_extraction.md`** - 使用方法の詳細説明
+
+#### サポートする plan_key 形式
+
+| 形式 | 例 | 抽出されるID |
+|------|-----|-------------|
+| `h###` | `h169` | `plans_hotel_id: 169, plans_global_id: NULL` |
+| `#h#` | `1h1` | `plans_global_id: 1, plans_hotel_id: 1` |
+| `#h#` | `3h2` | `plans_global_id: 3, plans_hotel_id: 2` |
+| `#h` | `1h` | `plans_global_id: 1, plans_hotel_id: NULL` |
+
+#### 実行手順
+
+```sql
+-- 1. まずテストスクリプトを実行して抽出ロジックを検証
+\i api/scripts/test_plan_key_extraction.sql
+
+-- 2. 全テストがPASSすることを確認後、安全なアップデートスクリプトを実行
+\i api/scripts/fix_sc_tl_plans_ids_from_plan_key_safe.sql
+```
+
+#### 安全機能
+
+- **自動バックアップ**: 更新前に `sc_tl_plans_backup_20260129` テーブルを作成
+- **データ保護**: 既存の有効なデータは保持（`COALESCE`使用）
+- **選択的更新**: 抽出が成功したレコードのみ更新
+- **ロールバック対応**: 問題が発生した場合の復旧手順を提供
+- **詳細レポート**: 更新前後の状態と結果の詳細分析
+
+#### 期待される修正例
+
+| plangroupcode | plan_key | 修正前 | 修正後 |
+|---------------|----------|--------|--------|
+| 11 | h169 | plans_hotel_id: NULL | plans_hotel_id: 169 |
+| 12 | h177 | plans_hotel_id: NULL | plans_hotel_id: 177 |
+| 15 | h169 | plans_hotel_id: NULL | plans_hotel_id: 169 |
+| 5 | h9 | plans_hotel_id: NULL | plans_hotel_id: 9 |
+| 6 | h10 | plans_hotel_id: NULL | plans_hotel_id: 10 |
 
 ### 監視とテスト
 
