@@ -495,7 +495,9 @@ const fetchDataAndProcess = async () => {
         forecastDataByPlan.value = [];
         reservationListData.value = [];
     } finally {
-        loadingStatus.value = 'データを処理中...';
+        if (loadingStatus.value !== 'データ取得エラーが発生しました') {
+            loadingStatus.value = 'データを処理中...';
+        }
         // Process data for all components        
         await nextTick();
         calculateMetrics();
