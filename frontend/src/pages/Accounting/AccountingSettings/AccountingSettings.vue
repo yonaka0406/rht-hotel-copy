@@ -574,6 +574,12 @@ const editItem = (type, item) => {
         form.target_type = item.target_type;
         form.target_id = item.target_id;
         form.account_code_id = item.account_code_id;
+    } else if (type === 'subaccount') {
+        form.account_code_id = item.account_code_id;
+        form.code = item.code;
+        form.description = item.description;
+        form.display_order = item.display_order;
+        form.is_active = item.is_active;
     }
 };
 

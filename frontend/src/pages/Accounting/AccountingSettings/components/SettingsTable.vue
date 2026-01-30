@@ -14,9 +14,11 @@
                 </tr>
             </thead>
             <tbody>
-                <slot></slot>
+                <template v-if="items.length > 0">
+                    <slot></slot>
+                </template>
                 
-                <tr v-if="items.length === 0">
+                <tr v-else>
                     <td :colspan="headers.length" class="py-12 text-center text-slate-400 font-medium">
                         {{ emptyMessage }}
                     </td>
