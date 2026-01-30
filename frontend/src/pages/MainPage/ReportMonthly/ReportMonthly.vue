@@ -214,7 +214,7 @@ const calculateMetrics = () => {
     filteredMetricsReservations.forEach(res => {
         totalAccommodationRevenue += parseFloat(res.accommodation_price || 0);
         totalOtherRevenue += parseFloat(res.other_price || 0);
-        
+
         // Count rooms regardless of price (to include complimentary stays), 
         // but exclude provisory bookings to align with "Confirmed" definition in breakdown table.
         const totalRooms = parseInt(res.room_count || 0);
@@ -283,27 +283,62 @@ const calculateMetrics = () => {
         totalForecastAvailableRooms += parseInt(forecast.available_room_nights || 0);
     });
 
+    // Calculate Accounting Available Rooms
+    const accountingDataForPeriod = accountingData.value.filter(acc => {
+        const accDate = acc.date;
+        return accDate >= startDateForCalc && accDate <= endDateForCalc;
+    });
+
+    let totalAccountingAvailableRooms = 0;
+    accountingDataForPeriod.forEach(acc => {
+        totalAccountingAvailableRooms += parseInt(acc.available_room_nights || 0);
+    });
+
     totalForecastAvailableRoomsRef.value = totalForecastAvailableRooms;
 
-    const revPARDenominator = (totalForecastAvailableRooms && totalForecastAvailableRooms > 0) ? totalForecastAvailableRooms : totalAvailableRoomNightsInPeriod;
+    // RevPAR Denominator Logic: Forecast > Accounting > PMS
+    let revPARDenominator = totalAvailableRoomNightsInPeriod;
+    if (totalForecastAvailableRooms > 0) {
+        revPARDenominator = totalForecastAvailableRooms;
+    } else if (totalAccountingAvailableRooms > 0) {
+        revPARDenominator = totalAccountingAvailableRooms;
+    }
+
     revPAR.value = revPARDenominator > 0 ? Math.round(totalRevenue / revPARDenominator) : 0;
 
     console.log('[ReportMonthly] RevPAR calculation:', {
         numerator: totalRevenue,
         denominator: revPARDenominator,
-        result: revPAR.value
+        result: revPAR.value,
+        sources: {
+            forecast: totalForecastAvailableRooms,
+            accounting: totalAccountingAvailableRooms,
+            pms: totalAvailableRoomNightsInPeriod
+        }
     });
 
 
     // OCC calculation using net capacity from occupation breakdown
     const totalAvailableRow = occupationBreakdownData.value.find(row => row.plan_name === 'Total Available');
     const baseNetAvailableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.net_available_room_nights || 0) : totalAvailableRoomNightsInPeriod;
-    const netAvailableRoomNights = (totalForecastAvailableRooms && totalForecastAvailableRooms > 0) ? totalForecastAvailableRooms : baseNetAvailableRoomNights;
+
+    // OCC Denominator Logic: Forecast > Accounting > PMS (Net/Base)
+    let netAvailableRoomNights = baseNetAvailableRoomNights;
+    if (totalForecastAvailableRooms > 0) {
+        netAvailableRoomNights = totalForecastAvailableRooms;
+    } else if (totalAccountingAvailableRooms > 0) {
+        netAvailableRoomNights = totalAccountingAvailableRooms;
+    }
 
     console.log('[ReportMonthly] Actual OCC calculation:', {
         numerator: totalRoomsSold,
         denominator: netAvailableRoomNights,
-        result: netAvailableRoomNights > 0 ? (totalRoomsSold / netAvailableRoomNights) * 100 : 0
+        result: netAvailableRoomNights > 0 ? (totalRoomsSold / netAvailableRoomNights) * 100 : 0,
+        sources: {
+            forecast: totalForecastAvailableRooms,
+            accounting: totalAccountingAvailableRooms,
+            pms: baseNetAvailableRoomNights
+        }
     });
 
     OCC.value = netAvailableRoomNights > 0 ? Math.round((totalRoomsSold / netAvailableRoomNights) * 10000) / 100 : 0;
