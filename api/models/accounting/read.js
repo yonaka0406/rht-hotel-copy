@@ -1164,9 +1164,9 @@ const getDepartments = async (requestId, dbClient = null) => {
     const query = `
         SELECT 
             ad.id, 
-            ad.hotel_id, 
-            h.name as hotel_name, 
             ad.name, 
+            ad.hotel_id,
+            h.name as hotel_name,
             ad.is_current,
             ad.department_group_id,
             dg.name as department_group_name,
@@ -1175,7 +1175,7 @@ const getDepartments = async (requestId, dbClient = null) => {
         FROM acc_departments ad
         LEFT JOIN hotels h ON ad.hotel_id = h.id
         LEFT JOIN acc_department_groups dg ON ad.department_group_id = dg.id
-        ORDER BY COALESCE(ad.hotel_id, 0) ASC, ad.is_current DESC NULLS LAST
+        ORDER BY ad.hotel_id ASC NULLS FIRST, ad.is_current DESC NULLS LAST, ad.name ASC
     `;
 
     try {

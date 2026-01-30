@@ -29,6 +29,7 @@ CREATE INDEX idx_acc_departments_group ON acc_departments(department_group_id);
 
 -- 6. Insert initial groups (optional, but good for demo)
 INSERT INTO acc_department_groups (name, display_order) VALUES 
-('北海道エリア', 10),
-('関東エリア', 20),
-('管理・事務', 30);
+('WH運営', 10),
+('WH販売', 20),
+('コンサル店舗', 30),
+('その他（本部含む）', 40);

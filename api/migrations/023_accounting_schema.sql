@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS acc_accounting_mappings CASCADE;
 DROP TABLE IF EXISTS acc_account_codes CASCADE;
 DROP TABLE IF EXISTS acc_tax_classes CASCADE;
 DROP TABLE IF EXISTS acc_management_groups CASCADE;
+DROP TABLE IF EXISTS acc_department_groups CASCADE;
 
 -- 1. Management Groups Master
 -- Categorizes accounts into high-level groups for reporting and sorting.
@@ -30,6 +31,25 @@ INSERT INTO acc_management_groups (id, name, display_order, created_by) VALUES
 (8, '特別利益', 8, 1),
 (9, '特別損失', 9, 1),
 (10, '法人税等', 10, 1);
+
+-- 1.1 Department Groups Master
+-- Groups for accounting departments used for reporting purposes.
+CREATE TABLE acc_department_groups (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE acc_department_groups IS 'Groups for accounting departments used for reporting purposes.';
+
+-- Seed Department Groups
+INSERT INTO acc_department_groups (name, display_order) VALUES 
+('WH運営', 10),
+('WH販売', 20),
+('コンサル店舗', 30),
+('その他（本部含む）', 40);
 
 -- 2. Tax Classes Master
 -- Defines tax categories as recognized by the accounting system (e.g., Yayoi).
@@ -386,15 +406,18 @@ CREATE INDEX idx_acc_yayoi_batch ON acc_yayoi_data (batch_id);
 -- Each hotel has one current name (for exports) and optional historical names (for import matching)
 CREATE TABLE acc_departments (
     id SERIAL PRIMARY KEY,
-    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+    hotel_id INT REFERENCES hotels(id) ON DELETE CASCADE, -- Nullable for global/office departments
+    department_group_id INT REFERENCES acc_department_groups(id) ON DELETE SET NULL,
     name VARCHAR(24) NOT NULL, -- Yayoi department name (部門) e.g., "WH室蘭"
     is_current BOOLEAN DEFAULT false, -- true = current name for exports, false = historical name for import matching
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_by INT REFERENCES users(id),
-    UNIQUE (hotel_id, name) -- Each hotel can have multiple names, but each name must be unique per hotel
+    updated_by INT REFERENCES users(id)
 );
+
+-- Ensure uniqueness handling NULL hotel_id
+CREATE UNIQUE INDEX idx_acc_departments_hotel_name_unique ON acc_departments (COALESCE(hotel_id, 0), name);
 
 COMMENT ON TABLE acc_departments IS 'Maps hotels to accounting department codes. Each hotel has one current name (for exports) and optional historical names (for import matching).';
 COMMENT ON COLUMN acc_departments.name IS 'Accounting department name (部門) used in Yayoi CSV exports or for matching imports';
@@ -403,11 +426,12 @@ COMMENT ON COLUMN acc_departments.is_current IS 'true = current name used for ex
 -- Create indexes for lookups
 CREATE INDEX idx_acc_departments_hotel ON acc_departments(hotel_id);
 CREATE INDEX idx_acc_departments_name ON acc_departments(name);
+CREATE INDEX idx_acc_departments_group ON acc_departments(department_group_id);
 
 -- Ensure only one current department per hotel
 CREATE UNIQUE INDEX idx_acc_departments_one_current 
 ON acc_departments(hotel_id) 
-WHERE is_current = true;
+WHERE is_current = true AND hotel_id IS NOT NULL;
 
 -- Seed department codes for existing hotels
 -- Update these values according to your actual hotel-to-department mapping

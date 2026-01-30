@@ -83,9 +83,9 @@
                     <InputText v-model="form.name" placeholder="例: WH室蘭" fluid />
                 </div>
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">部門グループ</label>
+                    <label class="text-xs font-black text-slate-500 uppercase">部門区分</label>
                     <Select v-model="form.department_group_id" :options="settings.departmentGroups" optionLabel="name"
-                        optionValue="id" placeholder="グループを選択" showClear fluid />
+                        optionValue="id" placeholder="区分を選択" showClear fluid />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-black text-slate-500 uppercase">状態</label>
@@ -101,7 +101,7 @@
             <!-- Department Group Form -->
             <div v-if="type === 'dept_group'" class="space-y-4">
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">グループ名 <span
+                    <label class="text-xs font-black text-slate-500 uppercase">区分名 <span
                             class="text-rose-500">*</span></label>
                     <InputText v-model="form.name" placeholder="例: 北海道エリア" fluid />
                 </div>
@@ -282,7 +282,7 @@ const modalTitle = computed(() => {
         group: '管理区分', 
         tax: '税区分', 
         dept: '部門', 
-        dept_group: '部門グループ',
+        dept_group: '部門区分',
         mapping: 'マッピング',
         subaccount: '補助科目'
     };

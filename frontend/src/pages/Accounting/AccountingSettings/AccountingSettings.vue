@@ -239,7 +239,7 @@
                                 :headers="[
                                     { label: '店舗名' },
                                     { label: '部門名 (弥生会計)' },
-                                    { label: 'グループ' },
+                                    { label: '区分' },
                                     { label: '状態' },
                                     { label: '操作' }
                                 ]"
@@ -287,8 +287,8 @@
                         <div v-if="activeTab === 'dept_groups'">
                             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                                 <div>
-                                    <h2 class="text-2xl font-black text-slate-900 dark:text-white">部門グループ設定</h2>
-                                    <p class="text-sm text-slate-500">レポート作成用の部門グループを管理します</p>
+                                    <h2 class="text-2xl font-black text-slate-900 dark:text-white">部門区分設定</h2>
+                                    <p class="text-sm text-slate-500">レポート作成用の部門区分を管理します</p>
                                 </div>
                                 <button @click="openModal('dept_group')"
                                     class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none">
@@ -298,7 +298,7 @@
                             <SettingsTable
                                 :headers="[
                                     { label: '順序', class: 'w-24' },
-                                    { label: 'グループ名' },
+                                    { label: '区分名' },
                                     { label: '操作' }
                                 ]"
                                 :items="settings.departmentGroups"
@@ -445,9 +445,9 @@ const selectedTaxFilter = ref(null);
 const tabs = [
     { id: 'codes', label: '勘定科目' },
     { id: 'groups', label: '管理区分' },
-    { id: 'tax', label: '税区分' },
     { id: 'dept', label: '部門設定' },
-    { id: 'dept_groups', label: '部門グループ' }
+    { id: 'dept_groups', label: '部門区分' },
+    { id: 'tax', label: '税区分' }
 ];
 
 const settings = reactive({
