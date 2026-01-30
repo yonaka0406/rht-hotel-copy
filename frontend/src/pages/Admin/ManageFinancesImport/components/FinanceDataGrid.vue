@@ -3,8 +3,10 @@
         <div class="flex flex-col gap-4 mb-6">
             <!-- Row 1: Selection -->
             <div class="flex flex-wrap items-center gap-3">
-                <Select v-model="selectedContext" :options="combinedTargets" optionLabel="name" placeholder="ターゲットを選択"
-                    class="w-64" filter />
+                <SelectButton v-if="viewFilter === 'account'" v-model="targetType" :options="targetTypeOptions"
+                    optionLabel="label" optionValue="value" />
+                <Select v-model="selectedContext" :options="availableTargets" optionLabel="name"
+                    :placeholder="targetType === 'hotel' ? 'ホテルを選択' : '部門を選択'" class="w-64" filter />
                 <DatePicker v-model="selectedMonth" view="month" dateFormat="yy/mm" placeholder="開始月を選択" />
                 <Button label="読み込み" icon="pi pi-refresh" @click="loadData" :loading="loading" />
             </div>
@@ -172,31 +174,40 @@ const departments = ref([]);
 const selectedContext = ref(null);
 const selectedMonth = ref(new Date());
 
-const combinedTargets = computed(() => {
-    const list = [];
-    
-    // Add Hotels
-    hotels.value.forEach(h => {
-        list.push({
+// View Filter State
+const viewFilter = ref('operational'); // 'operational' or 'account'
+const viewOptions = computed(() => {
+    const options = [{ label: '運用指標を表示', value: 'operational' }];
+    if (props.type === 'forecast') {
+        options.push({ label: '勘定科目を表示', value: 'account' });
+    }
+    return options;
+});
+
+const targetType = ref('hotel');
+const targetTypeOptions = [
+    { label: 'ホテル', value: 'hotel' },
+    { label: '本部・部門', value: 'department' }
+];
+
+const availableTargets = computed(() => {
+    if (viewFilter.value === 'operational' || targetType.value === 'hotel') {
+        return hotels.value.map(h => ({
             type: 'hotel',
             id: h.id,
-            name: `[ホテル] ${h.name}`,
+            name: h.name,
             baseName: h.name
-        });
-    });
-
-    // Add Global/Non-hotel Departments
-    departments.value
+        }));
+    }
+    
+    // Department mode (only in account view when department is selected)
+    return departments.value
         .filter(d => !d.hotel_id && d.is_current)
-        .forEach(d => {
-            list.push({
-                type: 'department',
-                name: `[部門] ${d.name}`,
-                baseName: d.name
-            });
-        });
-
-    return list;
+        .map(d => ({
+            type: 'department',
+            name: d.name,
+            baseName: d.name
+        }));
 });
 
 const loading = ref(false);
@@ -210,14 +221,18 @@ const hideZeroRows = ref(false);
 const loadedTargetName = ref('');
 const loadedMonthRangeLabel = ref('');
 
-// View Filter State
-const viewFilter = ref('operational'); // 'operational' or 'account'
-const viewOptions = computed(() => {
-    const options = [{ label: '運用指標を表示', value: 'operational' }];
-    if (props.type === 'forecast') {
-        options.push({ label: '勘定科目を表示', value: 'account' });
+// Watchers to reset selection when mode changes
+watch(viewFilter, (newVal) => {
+    if (newVal === 'operational') {
+        targetType.value = 'hotel';
     }
-    return options;
+    selectedContext.value = null;
+    gridData.value = [];
+});
+
+watch(targetType, () => {
+    selectedContext.value = null;
+    gridData.value = [];
 });
 
 const hideZeroRowsOptions = ref([
