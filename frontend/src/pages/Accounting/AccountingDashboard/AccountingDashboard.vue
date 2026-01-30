@@ -408,32 +408,6 @@ onMounted(async () => {
                             </div>
                         </div>
                     </section>
-
-                    <!-- Budget vs Actual Comparison Section -->
-                    <section
-                        class="mt-8 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <div class="p-6 sm:p-8">
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                                <div>
-                                    <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                        <i class="pi pi-percentage text-violet-600 dark:text-violet-400"></i>
-                                        予実管理
-                                    </h2>
-                                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                        設定された予算と実績値の比較分析
-                                    </p>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs font-bold text-slate-400 uppercase">対象月:</span>
-                                    <span class="text-sm font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-lg">
-                                        {{ lastMonthLabel }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <BudgetActualTable :data="budgetActualData" :is-loading="isLoading" />
-                        </div>
-                    </section>
                 </div>
 
                 <!-- Right Column: Status Overview -->
