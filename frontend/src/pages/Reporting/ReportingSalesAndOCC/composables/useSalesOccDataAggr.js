@@ -456,7 +456,8 @@ export function useSalesOccDataAggr({
                     pmsRecords.forEach(record => {
                         if (record && record.date) {
                             const recordDateObj = normalizeDate(new Date(record.date));
-                            if (!recordDateObj) return; const monthKey = formatDateMonth(recordDateObj);
+                            if (!recordDateObj) return;
+                            const monthKey = formatDateMonth(recordDateObj);
                             if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
                                 if (record.room_count !== undefined) monthlyOccupancyAggregates[monthKey][stringHotelIdKey].sold_rooms += record.room_count;
                                 if (record.non_accommodation_stays !== undefined) monthlyOccupancyAggregates[monthKey][stringHotelIdKey].non_accommodation_stays += record.non_accommodation_stays;

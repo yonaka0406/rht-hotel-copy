@@ -228,8 +228,7 @@ const calculateMetrics = () => {
     // displayedCumulativeSales shows accommodation revenue only (existing behavior)
     displayedCumulativeSales.value = Math.round(totalAccommodationRevenue);
 
-    // ADR
-    // ADR
+    // ADR    
     ADR.value = totalRoomsSold > 0 ? Math.round(totalRevenue / totalRoomsSold) : 0;
 
     // RevPAR
@@ -378,36 +377,31 @@ const fetchDataAndProcess = async () => {
         isLoading.value = true;
 
         // Fetch data for the widest necessary range
-        loadingStatus.value = '予約データを取得中...';
-        const rawData = await fetchCountReservation(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
+        loadingStatus.value = 'データを取得中...';
 
-        loadingStatus.value = '予算データを取得中...';
-        const forecastDataResult = await fetchForecastData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-
-        loadingStatus.value = '実績・予約データを取得中...';
-        const accountingDataResult = await fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-
-        loadingStatus.value = 'プラン別売上データを取得中...';
-        const salesByPlanResult = await fetchSalesByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = '稼働率データを取得中...';
-        const occupationBreakdownResult = await fetchOccupationBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = '予約チャネルデータを取得中...';
-        const bookingSourceResult = await fetchBookingSourceBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = '決済タイミングデータを取得中...';
-        const paymentResult = await fetchPaymentTimingBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = '予約者タイプデータを取得中...';
-        const bookerTypeBreakdownResult = await fetchBookerTypeBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = 'プラン別予算データを取得中...';
-        const forecastDataByPlanResult = await fetchForecastDataByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = '予約詳細データを取得中...';
-        // Fetch reservation list for booker type and length of stay
-        const reservationListViewResult = await fetchReservationListView(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+        const [
+            rawData,
+            forecastDataResult,
+            accountingDataResult,
+            salesByPlanResult,
+            occupationBreakdownResult,
+            bookingSourceResult,
+            paymentResult,
+            bookerTypeBreakdownResult,
+            forecastDataByPlanResult,
+            reservationListViewResult
+        ] = await Promise.all([
+            fetchCountReservation(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value),
+            fetchForecastData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value),
+            fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value),
+            fetchSalesByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchOccupationBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchBookingSourceBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchPaymentTimingBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchBookerTypeBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchForecastDataByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchReservationListView(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value)
+        ]);
 
 
         if (rawData && Array.isArray(rawData)) {
