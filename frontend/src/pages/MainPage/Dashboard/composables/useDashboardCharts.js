@@ -92,12 +92,7 @@ export function useDashboardCharts() {
         endDateObjForApi.setDate(endDateObjForApi.getDate() + 6);
         const chartEndDate = formatDate(endDateObjForApi);
 
-        // Fetch PMS, Forecast, and Accounting data
-        const [countData, forecastData, accountingData] = await Promise.all([
-            fetchCountReservation(selectedHotelId, chartStartDate, chartEndDate),
-            fetchForecastData(selectedHotelId, chartStartDate, chartEndDate),
-            fetchAccountingData(selectedHotelId, chartStartDate, chartEndDate)
-        ]);
+        const countData = await fetchCountReservation(selectedHotelId, chartStartDate, chartEndDate);
 
         const dateArray = [];
         let currentDate = new Date(chartStartDate);
@@ -120,61 +115,21 @@ export function useDashboardCharts() {
             return;
         }
 
-        // Determine Max Value based on available capacity (Forecast > Accounting > PMS) for scaling
-        let maxAvailable = 0;
+        barChartyAxisMax.value = countData.length > 0 ? parseInt(countData[0].total_rooms) || 0 : 0;
 
         countData.forEach(item => {
-            const rawDate = new Date(item.date);
-            const dateStr = formatDate(rawDate);
-            const itemDate = formatDateWithDay(rawDate);
+            const itemDate = formatDateWithDay(new Date(item.date));
             const index = dateArray.indexOf(itemDate);
 
             if (index !== -1) {
-                // Find matching forecast and accounting data
-                const fcItem = forecastData.find(f => {
-                    // forecastData uses 'forecast_month' or 'date' depending on endpoint, usually 'date' if normalized or 'forecast_month'
-                    // The fetchForecastData in store returns raw data. Standardize on date comparison.
-                    // Assuming fetchForecastData returns entries with a date-like field.
-                    // Looking at other components, it might have 'forecast_month' or 'date'.
-                    // Use format check.
-                    const d = f.date || f.forecast_month;
-                    return d && formatDate(new Date(d)) === dateStr;
-                });
-
-                const accItem = accountingData.find(a => {
-                    const d = a.date || a.accounting_month;
-                    return d && formatDate(new Date(d)) === dateStr;
-                });
-
-                // Prioritized Capacity Logic
-                const pmsCapacity = parseInt(item.total_rooms_real) || 0;
-                const fcCapacity = fcItem ? (parseInt(fcItem.available_room_nights) || 0) : 0;
-                const accCapacity = accItem ? (parseInt(accItem.available_room_nights) || 0) : 0;
-
-                let effectiveCapacity = pmsCapacity;
-                if (fcCapacity > 0) {
-                    effectiveCapacity = fcCapacity;
-                } else if (accCapacity > 0) {
-                    effectiveCapacity = accCapacity;
-                }
-
-                // Update Max for Chart Scaling
-                if (effectiveCapacity > maxAvailable) maxAvailable = effectiveCapacity;
-
                 barChartyAxisBar.value[index] = item.room_count;
-
-                // Calculate OCC % using effective capacity
-                const calculatedPercentage = effectiveCapacity > 0 ? Math.round(item.room_count / effectiveCapacity * 10000) / 100 : 0;
-
+                const calculatedPercentage = item.total_rooms_real ? Math.round(item.room_count / item.total_rooms_real * 10000) / 100 : 0;
                 barChartyAxisLine.value[index] = calculatedPercentage;
                 barChartyAxisMale.value[index] = item.male_count;
                 barChartyAxisFemale.value[index] = item.female_count;
                 barChartyAxisUnspecified.value[index] = item.unspecified_count;
             }
         });
-
-        // Use the maximum capacity found as the max value for Y-axis, or at least the max room count
-        barChartyAxisMax.value = maxAvailable > 0 ? maxAvailable : 0;
     };
 
     const fetchBarStackChartData = async (selectedHotelId, startDate, endDate, selectedDate) => {
