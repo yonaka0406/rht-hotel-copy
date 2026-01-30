@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import { useReportStore } from '@/composables/useReportStore';
 
 export function useDashboardCharts() {
-    const { fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod } = useReportStore();
+    const { fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchForecastData, fetchAccountingData } = useReportStore();
 
     // Bar Chart Data
     const barChartxAxis = ref([]);
@@ -280,28 +280,97 @@ export function useDashboardCharts() {
     };
 
     const fetchGaugeChartData = async (selectedHotelId, startDate) => {
-        const month_0 = await fetchOccupationByPeriod('month_0', selectedHotelId, startDate);
-        const month_1 = await fetchOccupationByPeriod('month_1', selectedHotelId, startDate);
-        const month_2 = await fetchOccupationByPeriod('month_2', selectedHotelId, startDate);
+        // Fetch base occupation data (PMS)
+        const [month_0, month_1, month_2] = await Promise.all([
+            fetchOccupationByPeriod('month_0', selectedHotelId, startDate),
+            fetchOccupationByPeriod('month_1', selectedHotelId, startDate),
+            fetchOccupationByPeriod('month_2', selectedHotelId, startDate)
+        ]);
 
-        if (month_0) {
-            const gaugeValue_0 = month_0[0].available_rooms === 0 ? 0 : Math.round(month_0[0].room_count / month_0[0].available_rooms * 10000) / 100;
-            gaugeData.value[2].value = gaugeValue_0;
-        } else {
-            gaugeData.value[2].value = 0;
-        }
-        if (month_1) {
-            const gaugeValue_1 = month_1[0].available_rooms === 0 ? 0 : Math.round(month_1[0].room_count / month_1[0].available_rooms * 10000) / 100;
-            gaugeData.value[1].value = gaugeValue_1;
-        } else {
-            gaugeData.value[1].value = 0;
-        }
-        if (month_2) {
-            const gaugeValue_2 = month_2[0].available_rooms === 0 ? 0 : Math.round(month_2[0].room_count / month_2[0].available_rooms * 10000) / 100;
-            gaugeData.value[0].value = gaugeValue_2;
-        } else {
-            gaugeData.value[0].value = 0;
-        }
+        // Calculate end date for 3 months range to fetch Forecast/Accounting
+        const start = new Date(startDate);
+        const end = new Date(startDate);
+        end.setMonth(end.getMonth() + 3); // Approx 3 months out
+        const forecastStartDate = formatDate(start);
+        const forecastEndDate = formatDate(end);
+
+        // Fetch Forecast and Accounting for the entire period
+        const [forecastData, accountingData] = await Promise.all([
+            fetchForecastData(selectedHotelId, forecastStartDate, forecastEndDate),
+            fetchAccountingData(selectedHotelId, forecastStartDate, forecastEndDate)
+        ]);
+
+        // Helper to sum capacity and sold rooms for a specific month
+        const getMonthlySummary = (targetDate, rawData) => {
+            // targetDate is a Date object. rawData contains monthly entries.
+            // We need to sum up available_room_nights and rooms_sold_nights for entries falling in the same month/year as targetDate
+            const targetMonth = targetDate.getMonth();
+            const targetYear = targetDate.getFullYear();
+
+            let totalCapacity = 0;
+            let totalSoldRooms = 0;
+            rawData.forEach(item => {
+                const d = new Date(item.date || item.forecast_month || item.accounting_month);
+                if (d.getMonth() === targetMonth && d.getFullYear() === targetYear) {
+                    totalCapacity += (parseInt(item.available_room_nights) || 0);
+                    totalSoldRooms += (parseInt(item.rooms_sold_nights) || 0);
+                }
+            });
+            return { capacity: totalCapacity, soldRooms: totalSoldRooms };
+        };
+
+        const updateGaugeValue = (gaugeIndex, monthData, offsetMonths) => {
+            if (monthData && monthData.length > 0) {
+                const pmsRooms = monthData[0].room_count;
+                const pmsCapacity = monthData[0].available_rooms;
+
+                // Determine effective capacity and sold rooms
+                const targetDate = new Date(startDate);
+                targetDate.setMonth(targetDate.getMonth() + offsetMonths);
+
+                const fcSummary = getMonthlySummary(targetDate, forecastData);
+                const accSummary = getMonthlySummary(targetDate, accountingData);
+
+                // Prioritize capacity: Forecast > Accounting > PMS
+                let effectiveCapacity = pmsCapacity;
+                if (fcSummary.capacity > 0) {
+                    effectiveCapacity = fcSummary.capacity;
+                } else if (accSummary.capacity > 0) {
+                    effectiveCapacity = accSummary.capacity;
+                }
+
+                // Fallback numerator: If PMS shows 0 sold rooms, use Accounting data
+                let effectiveSoldRooms = pmsRooms;
+                if (pmsRooms === 0 && accSummary.soldRooms > 0) {
+                    effectiveSoldRooms = accSummary.soldRooms;
+                }
+
+                const gaugeValue = effectiveCapacity === 0 ? 0 : Math.round(effectiveSoldRooms / effectiveCapacity * 10000) / 100;
+                gaugeData.value[gaugeIndex].value = gaugeValue;
+            } else {
+                gaugeData.value[gaugeIndex].value = 0;
+            }
+        };
+
+        // Month 0 (Next Month + 2) -> Index 0 in logic? No, look at original code:
+        // month_2 -> gaugeData[0]
+        // month_1 -> gaugeData[1]
+        // month_0 -> gaugeData[2]
+        // And month_0 is "months from now = 0" i.e. current month?
+        // Original: const currentMonth = new Date(startDate).getMonth() + 1; gaugeName_2 (index 0) = (currentMonth+1)%12+1...
+        // Let's trace naming:
+        // gaugeData[2].name = gaugeName_0 + '月' (Current Month)
+        // gaugeData[1].name = gaugeName_1 + '月' (Next Month)
+        // gaugeData[0].name = gaugeName_2 + '月' (Next Next Month)
+
+        // So:
+        // Index 2 = Current Month (offset 0)
+        // Index 1 = Next Month (offset 1)
+        // Index 0 = Next Next Month (offset 2)
+
+        updateGaugeValue(2, month_0, 0);
+        updateGaugeValue(1, month_1, 1);
+        updateGaugeValue(0, month_2, 2);
 
         const currentMonth = new Date(startDate).getMonth() + 1;
         const gaugeName_0 = currentMonth;

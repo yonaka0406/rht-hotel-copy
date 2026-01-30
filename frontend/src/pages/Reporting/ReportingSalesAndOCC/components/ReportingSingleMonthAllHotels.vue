@@ -278,26 +278,6 @@ const aggregateHotelZeroData = computed(() => {
         prevYearOccupancy: prevYearOccupancyEntry?.total_rooms > 0 ? prevYearOccupancyEntry.sold_rooms / prevYearOccupancyEntry.total_rooms : null
     };
 
-    //console.log('[ReportingSingleMonthAllHotels] aggregateHotelZeroData result:', {
-    //    result,
-    //    revenueEntryMonth: revenueEntry?.month,
-    //    prevYearRevenueEntryMonth: prevYearRevenueEntry?.month,
-    //    occupancyEntryMonth: occupancyEntry?.month,
-    //    prevYearOccupancyEntryMonth: prevYearOccupancyEntry?.month
-    //});
-
-    const actualDenominator = result.total_fc_available_rooms > 0 ? result.total_fc_available_rooms : result.total_available_rooms;
-    console.log('[ReportingSingleMonthAllHotels] Actual OCC calculation:', {
-        numerator: result.total_sold_rooms,
-        denominator: actualDenominator,
-        result: actualDenominator > 0 ? (result.total_sold_rooms / actualDenominator) * 100 : 0
-    });
-
-    console.log('[ReportingSingleMonthAllHotels] Forecast OCC calculation:', {
-        numerator: result.total_fc_sold_rooms,
-        denominator: result.total_fc_available_rooms,
-        result: result.total_fc_available_rooms > 0 ? (result.total_fc_sold_rooms / result.total_fc_available_rooms) * 100 : 0
-    });
 
     return result;
 });
@@ -316,8 +296,8 @@ const forecastADR = computed(() => {
 });
 
 const actualRevPAR = computed(() => {
-    const { total_period_accommodation_revenue, total_available_rooms, total_fc_available_rooms } = aggregateHotelZeroData.value;
-    const denominator = total_fc_available_rooms > 0 ? total_fc_available_rooms : total_available_rooms;
+    const { total_period_accommodation_revenue, total_available_rooms } = aggregateHotelZeroData.value;
+    const denominator = total_available_rooms;
     if (denominator === 0 || denominator === null || denominator === undefined) return NaN;
     return Math.round(total_period_accommodation_revenue / denominator);
 });

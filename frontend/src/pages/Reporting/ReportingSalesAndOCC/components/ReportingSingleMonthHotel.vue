@@ -92,12 +92,13 @@
                                 <template #body="{ data }">
                                     <div class="flex justify-end mr-2">
                                         {{ formatCurrency(data.accommodation_revenue - data.forecast_revenue) }}
-                                        <Badge class="ml-2"
+                                        <Badge class="ml-2" v-if="data.forecast_revenue"
                                             :severity="getSeverity((data.accommodation_revenue / data.forecast_revenue) - 1)"
                                             size="small">
                                             {{ formatPercentage((data.accommodation_revenue / data.forecast_revenue) -
-                                                1) }}
+                                            1) }}
                                         </Badge>
+                                        <span v-else class="ml-2 text-sm text-gray-500">-</span>
                                     </div>
                                 </template>
                             </Column>
@@ -243,15 +244,6 @@ const currentHotelAggregateData = computed(() => {
 
 
 
-    return {
-        total_forecast_revenue,
-        total_period_accommodation_revenue,
-        total_prev_year_accommodation_revenue,
-        total_fc_sold_rooms,
-        total_sold_rooms,
-        total_fc_available_rooms,
-        total_available_rooms,
-    };
     let total_prev_year_sold_rooms = 0;
     props.prevYearOccupancyData?.forEach((item, index) => {
         total_prev_year_sold_rooms += (item.sold_rooms || 0);
@@ -299,8 +291,8 @@ const forecastADR = computed(() => {
 });
 
 const actualRevPAR = computed(() => {
-    const { total_period_accommodation_revenue, total_available_rooms, total_fc_available_rooms } = currentHotelAggregateData.value;
-    const denominator = total_fc_available_rooms > 0 ? total_fc_available_rooms : total_available_rooms;
+    const { total_period_accommodation_revenue, total_available_rooms } = currentHotelAggregateData.value;
+    const denominator = total_available_rooms;
     if (denominator === 0 || denominator === null || denominator === undefined) return NaN;
     return Math.round(total_period_accommodation_revenue / denominator);
 });
@@ -336,7 +328,8 @@ const gaugeChartData = computed(() => {
         total_fc_available_rooms: raw.fc_total_rooms
     };
 
-    const actualDenominator = data.total_fc_available_rooms > 0 ? data.total_fc_available_rooms : data.total_available_rooms;
+    const actualDenominator = data.total_available_rooms;
+    /*
     console.log('[ReportingSingleMonthHotel] Actual OCC calculation:', {
         numerator: data.total_sold_rooms,
         denominator: actualDenominator,
@@ -348,6 +341,7 @@ const gaugeChartData = computed(() => {
         denominator: data.total_fc_available_rooms,
         result: data.total_fc_available_rooms > 0 ? (data.total_fc_sold_rooms / data.total_fc_available_rooms) * 100 : 0
     });
+    */
 
     return data;
 });

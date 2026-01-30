@@ -27,10 +27,11 @@
             <ReportingYearCumulativeAllHotels v-else-if="selectedView === 'yearCumulativeAllHotels'"
                 :revenueData="revenueData" :occupancyData="occupancyData"
                 :rawOccupationBreakdownData="occupationBreakdownAllHotels" :prevYearRevenueData="prevYearRevenueData"
-                :prevYearOccupancyData="prevYearOccupancyData" />
+                :prevYearOccupancyData="prevYearOccupancyData" :selectedMonth="selectedDate" />
             <ReportingYearCumulativeHotel v-else-if="selectedView === 'yearCumulativeHotel'" :revenueData="revenueData"
                 :occupancyData="occupancyData" :rawOccupationBreakdownData="occupationBreakdownAllHotels"
-                :prevYearRevenueData="prevYearRevenueData" :prevYearOccupancyData="prevYearOccupancyData" />
+                :prevYearRevenueData="prevYearRevenueData" :prevYearOccupancyData="prevYearOccupancyData"
+                :selectedMonth="selectedDate" />
             <div v-else class="text-gray-700 dark:text-gray-200 text-center mt-4">
                 レポートタイプに対応するサマリービューが見つかりません。
             </div>
@@ -589,6 +590,8 @@ const fetchData = async () => {
                 newAccountingTotalData[String(hotelId)] = rawAccountingData.map(item => ({
                     date: formatDateToYMD(item.accounting_month),
                     revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
+                    sold_rooms: item.rooms_sold_nights !== undefined ? Number(item.rooms_sold_nights) : 0, // Add sold_rooms mapping
+                    total_rooms: item.available_room_nights !== undefined ? Number(item.available_room_nights) : 0, // Add total_rooms from accounting
                 })).filter(item => item.date !== null);
             } else {
                 newAccountingTotalData[String(hotelId)] = [];

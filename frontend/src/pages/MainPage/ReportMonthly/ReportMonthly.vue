@@ -211,10 +211,12 @@ const calculateMetrics = () => {
     let totalOtherRevenue = 0;
     let totalRoomsSold = 0;
 
+    // console.log('[ReportMonthly] Metrics Calculation Debug:', ...);
+
     filteredMetricsReservations.forEach(res => {
         totalAccommodationRevenue += parseFloat(res.accommodation_price || 0);
         totalOtherRevenue += parseFloat(res.other_price || 0);
-        
+
         // Count rooms regardless of price (to include complimentary stays), 
         // but exclude provisory bookings to align with "Confirmed" definition in breakdown table.
         const totalRooms = parseInt(res.room_count || 0);
@@ -225,15 +227,9 @@ const calculateMetrics = () => {
     // For ADR and RevPAR calculations, use accommodation revenue only
     const totalRevenue = totalAccommodationRevenue;
 
-    // displayedCumulativeSales shows accommodation revenue only (existing behavior)
-    displayedCumulativeSales.value = Math.round(totalAccommodationRevenue);
-
-    // ADR
-    // ADR
-    ADR.value = totalRoomsSold > 0 ? Math.round(totalRevenue / totalRoomsSold) : 0;
-
-    // RevPAR
-    const hotelCapacity = parseInt(allReservationsData.value[0].total_rooms || 0);
+    // RevPAR Denominator Preparation (PMS Capacity)
+    const hotelCapacity = parseInt(allReservationsData.value[0]?.total_rooms || 0);
+    // ... (PMS Capacity loop logic remains unchanged below, just ensuring it's not deleted) ...
     let totalAvailableRoomNightsInPeriod = 0;
     const startDateObj = normalizeDate(new Date(metricsEffectiveStartDate.value));
     const endDateObj = normalizeDate(new Date(metricsEffectiveEndDate.value));
@@ -262,11 +258,6 @@ const calculateMetrics = () => {
         currentDateIter = addDaysUTC(currentDateIter, 1);
     }
 
-    //console.log('[ReportMonthly] RevPAR calculation:', {
-    //    totalRevenue,
-    //    totalAvailableRoomNightsInPeriod,
-    //    revPAR: totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0
-    //});
 
     // Calculate Forecast
     const forecastDataForPeriod = forecastData.value.filter(forecast => {
@@ -283,34 +274,96 @@ const calculateMetrics = () => {
         totalForecastAvailableRooms += parseInt(forecast.available_room_nights || 0);
     });
 
+    // Calculate Accounting
+    const accountingDataForPeriod = accountingData.value.filter(acc => {
+        const accDate = acc.date;
+        return accDate >= startDateForCalc && accDate <= endDateForCalc;
+    });
+
+    let totalAccountingAvailableRooms = 0;
+    let totalAccountingSoldRooms = 0;
+    let totalAccountingRevenue = 0;
+    accountingDataForPeriod.forEach(acc => {
+        totalAccountingAvailableRooms += parseInt(acc.available_room_nights || 0);
+        totalAccountingSoldRooms += parseInt(acc.rooms_sold_nights || 0);
+        totalAccountingRevenue += parseInt(acc.accommodation_revenue || 0);
+    });
+
     totalForecastAvailableRoomsRef.value = totalForecastAvailableRooms;
 
-    const revPARDenominator = (totalForecastAvailableRooms && totalForecastAvailableRooms > 0) ? totalForecastAvailableRooms : totalAvailableRoomNightsInPeriod;
-    revPAR.value = revPARDenominator > 0 ? Math.round(totalRevenue / revPARDenominator) : 0;
+    // --- Determine Effective Numerators (Revenue & Sold Rooms) ---
+    // Fallback Logic: If PMS data (totalRevenue/totalRoomsSold) represents 0 sales (likely missing data),
+    // and Accounting data exists, use Accounting data for the monthly KPI.
+    let effectiveTotalRevenue = totalRevenue;
+    let effectiveTotalRoomsSold = totalRoomsSold;
+    let numeratorSource = 'PMS';
+
+    if (totalRoomsSold === 0 && totalAccountingSoldRooms > 0) {
+        effectiveTotalRevenue = totalAccountingRevenue;
+        effectiveTotalRoomsSold = totalAccountingSoldRooms;
+        numeratorSource = 'Accounting (Fallback)';
+    }
+
+    // displayedCumulativeSales shows accommodation revenue only
+    displayedCumulativeSales.value = Math.round(effectiveTotalRevenue);
+
+    // ADR
+    ADR.value = effectiveTotalRoomsSold > 0 ? Math.round(effectiveTotalRevenue / effectiveTotalRoomsSold) : 0;
+
+    // RevPAR Denominator Logic: Forecast > Accounting > PMS
+    let revPARDenominator = totalAvailableRoomNightsInPeriod;
+    if (totalForecastAvailableRooms > 0) {
+        revPARDenominator = totalForecastAvailableRooms;
+    } else if (totalAccountingAvailableRooms > 0) {
+        revPARDenominator = totalAccountingAvailableRooms;
+    }
+
+    revPAR.value = revPARDenominator > 0 ? Math.round(effectiveTotalRevenue / revPARDenominator) : 0;
 
     console.log('[ReportMonthly] RevPAR calculation:', {
-        numerator: totalRevenue,
+        numerator: effectiveTotalRevenue,
         denominator: revPARDenominator,
-        result: revPAR.value
+        result: revPAR.value,
+        sources: {
+            numeratorUsed: numeratorSource,
+            forecastCapacity: totalForecastAvailableRooms,
+            accountingCapacity: totalAccountingAvailableRooms,
+            pmsCapacity: totalAvailableRoomNightsInPeriod
+        }
     });
 
 
     // OCC calculation using net capacity from occupation breakdown
     const totalAvailableRow = occupationBreakdownData.value.find(row => row.plan_name === 'Total Available');
     const baseNetAvailableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.net_available_room_nights || 0) : totalAvailableRoomNightsInPeriod;
-    const netAvailableRoomNights = (totalForecastAvailableRooms && totalForecastAvailableRooms > 0) ? totalForecastAvailableRooms : baseNetAvailableRoomNights;
+
+    // OCC Denominator Logic: Forecast > Accounting > PMS (Net/Base)
+    let netAvailableRoomNights = baseNetAvailableRoomNights;
+    if (totalForecastAvailableRooms > 0) {
+        netAvailableRoomNights = totalForecastAvailableRooms;
+    } else if (totalAccountingAvailableRooms > 0) {
+        netAvailableRoomNights = totalAccountingAvailableRooms;
+    }
 
     console.log('[ReportMonthly] Actual OCC calculation:', {
-        numerator: totalRoomsSold,
+        numerator: effectiveTotalRoomsSold,
         denominator: netAvailableRoomNights,
-        result: netAvailableRoomNights > 0 ? (totalRoomsSold / netAvailableRoomNights) * 100 : 0
+        result: netAvailableRoomNights > 0 ? (effectiveTotalRoomsSold / netAvailableRoomNights) * 100 : 0,
+        sources: {
+            numeratorUsed: numeratorSource,
+            forecastCapacity: totalForecastAvailableRooms,
+            accountingCapacity: totalAccountingAvailableRooms,
+            pmsCapacity: baseNetAvailableRoomNights
+        }
     });
 
-    OCC.value = netAvailableRoomNights > 0 ? Math.round((totalRoomsSold / netAvailableRoomNights) * 10000) / 100 : 0;
+    OCC.value = netAvailableRoomNights > 0 ? Math.round((effectiveTotalRoomsSold / netAvailableRoomNights) * 10000) / 100 : 0;
 
     forecastSales.value = Math.round(totalForecastRevenue);
     forecastADR.value = totalForecastRooms > 0 ? Math.round(totalForecastRevenue / totalForecastRooms) : 0;
     forecastRevPAR.value = totalForecastAvailableRooms > 0 ? Math.round(totalForecastRevenue / totalForecastAvailableRooms) : 0;
+
+    // Note: Forecast OCC does not use fallback logic, it purely reflects Forecast vs Forecast.
     console.log('[ReportMonthly] Forecast OCC calculation:', {
         numerator: totalForecastRooms,
         denominator: totalForecastAvailableRooms,
@@ -320,7 +373,7 @@ const calculateMetrics = () => {
     forecastOCC.value = totalForecastAvailableRooms > 0 ? Math.round((totalForecastRooms / totalForecastAvailableRooms) * 10000) / 100 : 0;
 
     // Calculate Differences
-    salesDifference.value = Math.round(totalRevenue) - forecastSales.value;
+    salesDifference.value = Math.round(effectiveTotalRevenue) - forecastSales.value;
     ADRDifference.value = Math.round(ADR.value) - forecastADR.value;
     revPARDifference.value = Math.round(revPAR.value) - forecastRevPAR.value;
     OCCDifference.value = OCC.value - forecastOCC.value;
@@ -343,36 +396,31 @@ const fetchDataAndProcess = async () => {
         isLoading.value = true;
 
         // Fetch data for the widest necessary range
-        loadingStatus.value = '予約データを取得中...';
-        const rawData = await fetchCountReservation(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
+        loadingStatus.value = 'データを取得中...';
 
-        loadingStatus.value = '予算データを取得中...';
-        const forecastDataResult = await fetchForecastData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-
-        loadingStatus.value = '実績・予約データを取得中...';
-        const accountingDataResult = await fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-
-        loadingStatus.value = 'プラン別売上データを取得中...';
-        const salesByPlanResult = await fetchSalesByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = '稼働率データを取得中...';
-        const occupationBreakdownResult = await fetchOccupationBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = '予約チャネルデータを取得中...';
-        const bookingSourceResult = await fetchBookingSourceBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = '決済タイミングデータを取得中...';
-        const paymentResult = await fetchPaymentTimingBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = '予約者タイプデータを取得中...';
-        const bookerTypeBreakdownResult = await fetchBookerTypeBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = 'プラン別予算データを取得中...';
-        const forecastDataByPlanResult = await fetchForecastDataByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-
-        loadingStatus.value = '予約詳細データを取得中...';
-        // Fetch reservation list for booker type and length of stay
-        const reservationListViewResult = await fetchReservationListView(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+        const [
+            rawData,
+            forecastDataResult,
+            accountingDataResult,
+            salesByPlanResult,
+            occupationBreakdownResult,
+            bookingSourceResult,
+            paymentResult,
+            bookerTypeBreakdownResult,
+            forecastDataByPlanResult,
+            reservationListViewResult
+        ] = await Promise.all([
+            fetchCountReservation(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value),
+            fetchForecastData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value),
+            fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value),
+            fetchSalesByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchOccupationBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchBookingSourceBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchPaymentTimingBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchBookerTypeBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchForecastDataByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value),
+            fetchReservationListView(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value)
+        ]);
 
 
         if (rawData && Array.isArray(rawData)) {
@@ -460,7 +508,9 @@ const fetchDataAndProcess = async () => {
         forecastDataByPlan.value = [];
         reservationListData.value = [];
     } finally {
-        loadingStatus.value = 'データを処理中...';
+        if (loadingStatus.value !== 'データ取得エラーが発生しました') {
+            loadingStatus.value = 'データを処理中...';
+        }
         // Process data for all components        
         await nextTick();
         calculateMetrics();
@@ -486,8 +536,6 @@ onBeforeUnmount(() => {
 });
 
 watch([selectedMonth, selectedHotelId, viewMode], fetchDataAndProcess, { deep: true });
-
-
 
 </script>
 <style scoped></style>
