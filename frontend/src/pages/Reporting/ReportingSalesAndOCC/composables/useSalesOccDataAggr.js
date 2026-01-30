@@ -633,7 +633,7 @@ export function useSalesOccDataAggr({
         if (!selectedView.value) return [];
 
         const result = [];
-        if (!firstDayofFetch.value || !lastDayofFetch.value || selectedHotels.value.length === 0 || allHotels.value.length === 0) {
+        if (!firstDayofFetch.value || !lastDayofFetch.value || effectiveSelectedHotels.value.length === 0 || allHotels.value.length === 0) {
             return result;
         }
 
@@ -657,7 +657,7 @@ export function useSalesOccDataAggr({
             const firstDayOfCurrentProcessingMonth = normalizeDate(new Date(year, monthIndex, 1));
             const lastDayOfCurrentProcessingMonth = normalizeDate(new Date(year, monthIndex, daysInCalendarMonth));
 
-            selectedHotels.value.forEach(hotelId => {
+            effectiveSelectedHotels.value.forEach(hotelId => {
                 const hotelInfo = allHotels.value.find(h => String(h.id) === String(hotelId));
                 let physicalRooms = (hotelInfo && typeof hotelInfo.total_rooms === 'number') ? hotelInfo.total_rooms : 0;
                 let effectiveDaysForHotelInMonth = daysInCalendarMonth;
