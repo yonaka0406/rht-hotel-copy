@@ -103,14 +103,17 @@
                                             <button @click="openSubAccountManager(item)"
                                                 class="p-2 bg-slate-50 dark:bg-slate-900/50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all cursor-pointer"
                                                 title="補助科目管理"
-                                                aria-label="補助科目管理を開く">
+                                                aria-label="補助科目管理を開く"
+                                                v-tooltip.top="'補助科目管理'">
                                                 <i class="pi pi-list"></i>
                                             </button>
                                             <button @click="editItem('code', item)"
-                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
                                                     class="pi pi-pencil"></i></button>
                                             <button @click="confirmDelete('code', item)"
-                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
                                                     class="pi pi-trash"></i></button>
                                         </div>
                                     </td>
@@ -147,10 +150,12 @@
                                     <td class="py-4 px-4">
                                         <div class="flex gap-2">
                                             <button @click="editItem('group', item)"
-                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
                                                     class="pi pi-pencil"></i></button>
                                             <button @click="confirmDelete('group', item)"
-                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
                                                     class="pi pi-trash"></i></button>
                                         </div>
                                     </td>
@@ -205,10 +210,12 @@
                                     <td class="py-4 px-4">
                                         <div class="flex gap-2">
                                             <button @click="editItem('tax', item)"
-                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
                                                     class="pi pi-pencil"></i></button>
                                             <button @click="confirmDelete('tax', item)"
-                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
                                                     class="pi pi-trash"></i></button>
                                         </div>
                                     </td>
@@ -232,6 +239,7 @@
                                 :headers="[
                                     { label: '店舗名' },
                                     { label: '部門名 (弥生会計)' },
+                                    { label: 'グループ' },
                                     { label: '状態' },
                                     { label: '操作' }
                                 ]"
@@ -239,12 +247,15 @@
                             >
                                 <tr v-for="item in settings.departments" :key="item.id || 'h' + item.hotel_id"
                                     class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                    <td class="py-4 px-4 font-bold">{{ item.hotel_name }}</td>
+                                    <td class="py-4 px-4 font-bold">{{ item.hotel_name || '共通' }}</td>
                                     <td class="py-4 px-4">
                                         <span v-if="item.name"
                                             class="font-black text-slate-700 dark:text-slate-300">{{ item.name
                                             }}</span>
                                         <span v-else class="text-slate-400 text-sm font-medium">未設定</span>
+                                    </td>
+                                    <td class="py-4 px-4 text-sm text-slate-500">
+                                        {{ item.department_group_name || '-' }}
                                     </td>
                                     <td class="py-4 px-4">
                                         <span v-if="item.is_current"
@@ -259,10 +270,52 @@
                                     <td class="py-4 px-4">
                                         <div class="flex gap-2">
                                             <button @click="editItem('dept', item)"
-                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
                                                     class="pi pi-pencil"></i></button>
                                             <button v-if="item.id" @click="confirmDelete('dept', item)"
-                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
+                                                    class="pi pi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </SettingsTable>
+                        </div>
+
+                        <!-- Department Groups Tab -->
+                        <div v-if="activeTab === 'dept_groups'">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                                <div>
+                                    <h2 class="text-2xl font-black text-slate-900 dark:text-white">部門グループ設定</h2>
+                                    <p class="text-sm text-slate-500">レポート作成用の部門グループを管理します</p>
+                                </div>
+                                <button @click="openModal('dept_group')"
+                                    class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none">
+                                    <i class="pi pi-plus"></i> 新規追加
+                                </button>
+                            </div>
+                            <SettingsTable
+                                :headers="[
+                                    { label: '順序', class: 'w-24' },
+                                    { label: 'グループ名' },
+                                    { label: '操作' }
+                                ]"
+                                :items="settings.departmentGroups"
+                            >
+                                <tr v-for="item in settings.departmentGroups" :key="item.id"
+                                    class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                    <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
+                                    <td class="py-4 px-4 font-bold">{{ item.name }}</td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex gap-2">
+                                            <button @click="editItem('dept_group', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
+                                                    class="pi pi-pencil"></i></button>
+                                            <button @click="confirmDelete('dept_group', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
                                                     class="pi pi-trash"></i></button>
                                         </div>
                                     </td>
@@ -332,10 +385,12 @@
                                     <td class="py-4 px-4">
                                         <div class="flex gap-2">
                                             <button @click="editItem('mapping', item)"
-                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
                                                     class="pi pi-pencil"></i></button>
                                             <button @click="confirmDelete('mapping', item)"
-                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
                                                     class="pi pi-trash"></i></button>
                                         </div>
                                     </td>
@@ -391,7 +446,8 @@ const tabs = [
     { id: 'codes', label: '勘定科目' },
     { id: 'groups', label: '管理区分' },
     { id: 'tax', label: '税区分' },
-    { id: 'dept', label: '部門設定' }
+    { id: 'dept', label: '部門設定' },
+    { id: 'dept_groups', label: '部門グループ' }
 ];
 
 const settings = reactive({
@@ -399,6 +455,7 @@ const settings = reactive({
     groups: [],
     taxClasses: [],
     departments: [],
+    departmentGroups: [],
     subAccounts: [],
     mappings: [],
     mappingMasterData: {
@@ -491,6 +548,7 @@ const fetchSettings = async () => {
         settings.groups = data.groups;
         settings.taxClasses = data.taxClasses;
         settings.departments = data.departments;
+        settings.departmentGroups = data.departmentGroups || [];
         settings.subAccounts = data.subAccounts || [];
         settings.mappings = data.mappings;
         if (data.mappingMasterData) {
@@ -564,6 +622,8 @@ const editItem = (type, item) => {
         form.is_active = item.is_active;
     } else if (type === 'group') {
         form.display_order = item.display_order;
+    } else if (type === 'dept_group') {
+        form.display_order = item.display_order;
     } else if (type === 'tax') {
         form.yayoi_name = item.yayoi_name;
         form.tax_rate_percent = item.tax_rate * 100;
@@ -573,6 +633,7 @@ const editItem = (type, item) => {
         form.hotel_id = item.hotel_id;
         form.name = item.name || '';
         form.is_current = item.is_current !== undefined ? item.is_current : false;
+        form.department_group_id = item.department_group_id;
     } else if (type === 'mapping') {
         form.hotel_id = item.hotel_id;
         form.target_type = item.target_type;
@@ -604,6 +665,7 @@ const handleSave = async (formData) => {
         else if (modal.type === 'group') await store.upsertManagementGroup(payload);
         else if (modal.type === 'tax') await store.upsertTaxClass(payload);
         else if (modal.type === 'dept') await store.upsertDepartment(payload);
+        else if (modal.type === 'dept_group') await store.upsertDepartmentGroup(payload);
         else if (modal.type === 'mapping') await store.upsertMapping(payload);
         else if (modal.type === 'subaccount') await store.upsertSubAccount(payload);
 
@@ -643,6 +705,7 @@ const confirmDelete = (type, item) => {
                 else if (type === 'group') await store.deleteManagementGroup(item.id);
                 else if (type === 'tax') await store.deleteTaxClass(item.id);
                 else if (type === 'dept') await store.deleteDepartment(item.id);
+                else if (type === 'dept_group') await store.deleteDepartmentGroup(item.id);
                 else if (type === 'mapping') await store.deleteMapping(item.id);
                 else if (type === 'subaccount') await store.deleteSubAccount(item.id);
                 await fetchSettings();

@@ -200,7 +200,7 @@ const upsertDepartment = async (requestId, data, user_id, dbClient = null) => {
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
 
-    const { id, hotel_id, name, is_current } = data;
+    const { id, hotel_id, name, is_current, department_group_id } = data;
 
     try {
         let result;
@@ -213,29 +213,36 @@ const upsertDepartment = async (requestId, data, user_id, dbClient = null) => {
                     hotel_id = $1,
                     name = $2,
                     is_current = COALESCE($3, is_current),
-                    updated_by = $4,
+                    department_group_id = $4,
+                    updated_by = $5,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = $5
+                WHERE id = $6
                 RETURNING *;
             `;
-            const values = [hotel_id, name, is_current, user_id, id];
+            const values = [hotel_id, name, is_current, department_group_id, user_id, id];
             result = await client.query(query, values);
 
             if (result.rows.length === 0) {
                 throw new Error(`Department with id ${id} not found`);
             }
         } else {
-            // Insert new record with conflict handling
+            // Insert new record
+            // Since we have a functional unique index, we use a simple check or handle conflict differently
+            // but standard SQL ON CONFLICT works if the index matches.
+            // However, the index uses COALESCE, so we need to be careful.
+            // It's safer to just try insert and catch or check first.
+            
             const query = `
-                INSERT INTO acc_departments (hotel_id, name, is_current, created_by, updated_by)
-                VALUES ($1, $2, COALESCE($3, false), $4, $4)
-                ON CONFLICT (hotel_id, name) DO UPDATE SET
+                INSERT INTO acc_departments (hotel_id, name, is_current, department_group_id, created_by, updated_by)
+                VALUES ($1, $2, COALESCE($3, false), $4, $5, $5)
+                ON CONFLICT (COALESCE(hotel_id, 0), name) DO UPDATE SET
                     is_current = EXCLUDED.is_current,
+                    department_group_id = EXCLUDED.department_group_id,
                     updated_by = EXCLUDED.updated_by,
                     updated_at = CURRENT_TIMESTAMP
                 RETURNING *;
             `;
-            const values = [hotel_id, name, is_current, user_id];
+            const values = [hotel_id, name, is_current, department_group_id, user_id];
             result = await client.query(query, values);
         }
 
@@ -262,6 +269,62 @@ const deleteDepartment = async (requestId, id, dbClient = null) => {
         return result.rows[0];
     } catch (err) {
         logger.error('Error deleting department:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+const upsertDepartmentGroup = async (requestId, data, user_id, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const { id, name, display_order } = data;
+
+    try {
+        let result;
+
+        if (id) {
+            const query = `
+                UPDATE acc_department_groups 
+                SET 
+                    name = $1,
+                    display_order = COALESCE($2, display_order),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $3
+                RETURNING *;
+            `;
+            result = await client.query(query, [name, display_order, id]);
+        } else {
+            const query = `
+                INSERT INTO acc_department_groups (name, display_order)
+                VALUES ($1, COALESCE($2, 0))
+                RETURNING *;
+            `;
+            result = await client.query(query, [name, display_order]);
+        }
+
+        return result.rows[0];
+    } catch (err) {
+        logger.error('Error upserting department group:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+const deleteDepartmentGroup = async (requestId, id, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const query = `DELETE FROM acc_department_groups WHERE id = $1 RETURNING *`;
+    try {
+        const result = await client.query(query, [id]);
+        return result.rows[0];
+    } catch (err) {
+        logger.error('Error deleting department group:', err);
         throw new Error('Database error');
     } finally {
         if (shouldRelease) client.release();
@@ -373,6 +436,8 @@ module.exports = {
     deleteTaxClass,
     upsertDepartment,
     deleteDepartment,
+    upsertDepartmentGroup,
+    deleteDepartmentGroup,
     upsertSubAccount,
     deleteSubAccount
 };

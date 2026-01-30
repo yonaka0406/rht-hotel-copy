@@ -54,11 +54,13 @@
                             <td class="py-4 px-4">
                                 <div class="flex gap-2">
                                     <button @click="$emit('edit', item)"
-                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer">
+                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                        v-tooltip.top="'編集'">
                                         <i class="pi pi-pencil"></i>
                                     </button>
                                     <button @click="handleDelete(item)"
-                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer">
+                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                        v-tooltip.top="'削除'">
                                         <i class="pi pi-trash"></i>
                                     </button>
                                 </div>

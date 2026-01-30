@@ -69,19 +69,23 @@
             <!-- Department Form -->
             <div v-if="type === 'dept'" class="space-y-4">
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">対象店舗 <span v-if="!form.id"
-                            class="text-rose-500">*</span></label>
-                    <div v-if="form.id"
+                    <label class="text-xs font-black text-slate-500 uppercase">対象店舗</label>
+                    <div v-if="form.id && form.hotel_id"
                         class="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-700 dark:text-slate-300">
                         {{ getHotelName(form.hotel_id) }}
                     </div>
                     <Select v-else v-model="form.hotel_id" :options="hotels" optionLabel="name" optionValue="id"
-                        placeholder="ホテルを選択" fluid />
+                        placeholder="ホテルを選択 (共通の場合は未選択)" showClear fluid />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-black text-slate-500 uppercase">部門名 (弥生会計) <span
                             class="text-rose-500">*</span></label>
                     <InputText v-model="form.name" placeholder="例: WH室蘭" fluid />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-black text-slate-500 uppercase">部門グループ</label>
+                    <Select v-model="form.department_group_id" :options="settings.departmentGroups" optionLabel="name"
+                        optionValue="id" placeholder="グループを選択" showClear fluid />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-black text-slate-500 uppercase">状態</label>
@@ -91,6 +95,19 @@
                             現在のマッピング (エクスポートに使用)
                         </label>
                     </div>
+                </div>
+            </div>
+
+            <!-- Department Group Form -->
+            <div v-if="type === 'dept_group'" class="space-y-4">
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-black text-slate-500 uppercase">グループ名 <span
+                            class="text-rose-500">*</span></label>
+                    <InputText v-model="form.name" placeholder="例: 北海道エリア" fluid />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-black text-slate-500 uppercase">表示順序</label>
+                    <InputNumber v-model="form.display_order" placeholder="例: 10" fluid />
                 </div>
             </div>
 
@@ -226,6 +243,7 @@ const form = reactive({
     target_type: null,
     target_id: null,
     account_code_id: null,
+    department_group_id: null,
     description: ''
 });
 
@@ -250,6 +268,7 @@ watch(() => props.visible, (newVal) => {
                 target_type: null,
                 target_id: null,
                 account_code_id: null,
+                department_group_id: null,
                 description: ''
             });
         }
@@ -263,6 +282,7 @@ const modalTitle = computed(() => {
         group: '管理区分', 
         tax: '税区分', 
         dept: '部門', 
+        dept_group: '部門グループ',
         mapping: 'マッピング',
         subaccount: '補助科目'
     };
@@ -299,7 +319,9 @@ const isFormValid = computed(() => {
         case 'tax':
             return form.name && form.yayoi_name;
         case 'dept':
-            return form.hotel_id && form.name;
+            return form.name;
+        case 'dept_group':
+            return form.name;
         case 'mapping':
             return form.target_type && (form.target_type === 'cancellation' || form.target_id) && form.account_code_id;
         case 'subaccount':

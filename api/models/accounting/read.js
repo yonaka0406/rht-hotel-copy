@@ -1163,16 +1163,19 @@ const getDepartments = async (requestId, dbClient = null) => {
 
     const query = `
         SELECT 
-            h.id as hotel_id, 
-            h.name as hotel_name, 
             ad.id, 
+            ad.hotel_id, 
+            h.name as hotel_name, 
             ad.name, 
             ad.is_current,
+            ad.department_group_id,
+            dg.name as department_group_name,
             ad.created_at, 
             ad.updated_at
-        FROM hotels h
-        LEFT JOIN acc_departments ad ON h.id = ad.hotel_id
-        ORDER BY h.id ASC, ad.is_current DESC NULLS LAST
+        FROM acc_departments ad
+        LEFT JOIN hotels h ON ad.hotel_id = h.id
+        LEFT JOIN acc_department_groups dg ON ad.department_group_id = dg.id
+        ORDER BY COALESCE(ad.hotel_id, 0) ASC, ad.is_current DESC NULLS LAST
     `;
 
     try {
@@ -1983,6 +1986,24 @@ const getCostBreakdownData = async (requestId, topN = 5, dbClient = null) => {
     }
 };
 
+const getDepartmentGroups = async (requestId, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const query = `SELECT * FROM acc_department_groups ORDER BY display_order ASC, name ASC`;
+
+    try {
+        const result = await client.query(query);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error retrieving department groups:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
 const getSubAccounts = async (requestId, dbClient = null) => {
     const pool = getPool(requestId);
     const client = dbClient || await pool.connect();
@@ -2030,6 +2051,7 @@ module.exports = {
     getManagementGroups,
     getTaxClasses,
     getDepartments,
+    getDepartmentGroups,
     getDashboardMetrics,
     getReconciliationOverview,
     getReconciliationHotelDetails,
