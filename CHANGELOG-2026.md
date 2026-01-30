@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bug Fix: Fixed the accumulated date-based filtering capability to sales and occupancy reporting views
 - New Feature: Implemented intelligent data source prioritization for Occupancy metrics in Reports module
 - Performance: Improved data loading speed through parallel fetching operations in Monthly Report
+- Implementation: Dashboard data aligned with Room Indicator for consistent check-in/check-out statistics using effective date logic with edge detection for accurate room change and cancellation handling
 
 
 ---
