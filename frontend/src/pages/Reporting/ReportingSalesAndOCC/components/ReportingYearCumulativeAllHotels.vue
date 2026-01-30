@@ -140,7 +140,7 @@
 </template>
 <script setup>
 // Vue
-import { ref, computed, onMounted, onBeforeUnmount, watch, shallowRef, nextTick } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 // Props
 const props = defineProps({
@@ -171,7 +171,7 @@ const props = defineProps({
 });
 
 // Primevue
-import { Card, Badge, SelectButton, Button, DataTable, Column, Select } from 'primevue';
+import { Card, SelectButton } from 'primevue';
 import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
 import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
 import HotelSalesComparisonChart from './charts/HotelSalesComparisonChart.vue';
@@ -185,11 +185,7 @@ import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
 // Utilities
 import {
     formatCurrencyForReporting as formatCurrency,
-    formatPercentage,
-    formatYenInTenThousands,
-    formatYenInTenThousandsNoDecimal
 } from '@/utils/formatUtils';
-import { getSeverity as getSeverityUtil, colorScheme, calculateVariancePercentage } from '@/utils/reportingUtils';
 
 // View selection
 const selectedView = ref('graph'); // Default view
@@ -310,9 +306,7 @@ const periodMaxDate = computed(() => {
 
 // --- KPI Calculations (ADR, RevPAR) ---
 const aggregatedAllHotelsRevenue = computed(() => {
-    //console.log('aggregatedAllHotelsRevenue before', filteredRevenueData.value);
     const revenueEntry = filteredRevenueData.value?.filter(item => item.hotel_id === 0);
-    //console.log('aggregatedAllHotelsRevenue after', revenueEntry);
     if (!revenueEntry) return { total_forecast_revenue: 0, total_period_revenue: 0 };
 
     return revenueEntry.reduce((acc, item) => {
@@ -338,21 +332,6 @@ const aggregatedAllHotelsOccupancy = computed(() => {
         total_sold_rooms: 0, total_fc_sold_rooms: 0,
         total_available_rooms: 0, total_fc_available_rooms: 0
     });
-
-    const actualDenominator = result.total_fc_available_rooms > 0 ? result.total_fc_available_rooms : result.total_available_rooms;
-    /*
-    console.log('[ReportingYearCumulativeAllHotels] Actual OCC calculation:', {
-        numerator: result.total_sold_rooms,
-        denominator: actualDenominator,
-        result: actualDenominator > 0 ? (result.total_sold_rooms / actualDenominator) * 100 : 0
-    });
-
-    console.log('[ReportingYearCumulativeAllHotels] Forecast OCC calculation:', {
-        numerator: result.total_fc_sold_rooms,
-        denominator: result.total_fc_available_rooms,
-        result: result.total_fc_available_rooms > 0 ? (result.total_fc_sold_rooms / result.total_fc_available_rooms) * 100 : 0
-    });
-    */
 
     return result;
 });
@@ -392,7 +371,6 @@ const revPARDifference = computed(() => {
 
 // --- Data Computeds for Charts ---
 
-// --- Data Computeds for Charts ---
 const filteredRevenueForChart = computed(() => {
     if (!filteredRevenueData.value) return [];
     return filteredRevenueData.value.filter(item => item.hotel_id === 0);
@@ -433,140 +411,5 @@ const aggregateRevenueDataForChart = computed(() => {
     };
 });
 
-// All hotels occupancy chart data
-const allHotelsOccupancyChartData = computed(() => {
-    if (!filteredOccupancyData.value || filteredOccupancyData.value.length === 0) return [];
-    const hotelMap = new Map();
-    filteredOccupancyData.value.forEach(item => {
-        if (item.hotel_id !== 0 && item.hotel_name) {
-            const entry = hotelMap.get(item.hotel_name) || {
-                hotel_name: item.hotel_name,
-                total_sold_rooms: 0,
-                total_fc_sold_rooms: 0,
-                total_rooms: 0,
-                total_fc_total_rooms: 0,
-                total_prev_year_sold_rooms: 0,
-                total_prev_year_rooms: 0
-            };
-            entry.total_sold_rooms += (item.sold_rooms || 0);
-            entry.total_fc_sold_rooms += (item.fc_sold_rooms || 0);
-            entry.total_rooms += (item.total_rooms || 0);
-            entry.total_fc_total_rooms += (item.fc_total_rooms || 0);
-            hotelMap.set(item.hotel_name, entry);
-        }
-    });
-    return Array.from(hotelMap.values()).map(hotel => ({
-        hotel_name: hotel.hotel_name,
-        actual_occupancy_rate: hotel.total_rooms > 0 ? (hotel.total_sold_rooms / hotel.total_rooms) * 100 : 0,
-        forecast_occupancy_rate: hotel.total_fc_total_rooms > 0 ? (hotel.total_fc_sold_rooms / hotel.total_fc_total_rooms) * 100 : 0,
-        prev_year_occupancy_rate: 0 // No prev year data in this view
-    }));
-});
 
-const hasAllHotelsOccupancyData = computed(() => allHotelsOccupancyChartData.value.length > 0);
-
-const allHotelsChartHeight = computed(() => {
-    const numHotels = allHotelsOccupancyChartData.value.length;
-    const baseHeight = 150;
-    const heightPerHotel = 50;
-    const minHeight = 300;
-    return Math.max(minHeight, baseHeight + (numHotels * heightPerHotel));
-});
-
-
-// Initialize charts
-// Chart lifecycle functions are no longer needed since charts are now components
-const refreshAllCharts = () => { };
-const disposeAllCharts = () => { };
-
-// Table
-const getSeverity = getSeverityUtil;
-
-const exportCSV = (tableType) => {
-    let csvString = '';
-    let filename = 'data.csv';
-
-    if (tableType === 'revenue' && filteredRevenueData.value && filteredRevenueData.value.length > 0) {
-        filename = '複数施設・年度・収益データ.csv';
-        const headers = ["施設", "月度", "計画売上 (円)", "売上 (円)", "分散額 (円)", "分散率 (%)"];
-        const csvRows = [headers.join(',')];
-        filteredRevenueData.value.forEach(row => {
-            const forecastRevenue = row.forecast_revenue || 0;
-            const periodRevenue = row.period_revenue || 0;
-            const varianceAmount = periodRevenue - forecastRevenue;
-            let variancePercentage = 0;
-            if (forecastRevenue !== 0) variancePercentage = ((periodRevenue / forecastRevenue) - 1) * 100;
-            else if (periodRevenue !== 0) variancePercentage = Infinity; // Or "N/A" or specific handling
-
-            const csvRow = [
-                `"${row.hotel_name || ''}"`,
-                `"${row.month || ''}"`,
-                forecastRevenue,
-                periodRevenue,
-                varianceAmount,
-                (forecastRevenue === 0 && periodRevenue !== 0) ? "N/A" : variancePercentage.toFixed(2)
-            ];
-            csvRows.push(csvRow.join(','));
-        });
-        csvString = csvRows.join('\n');
-
-    } else if (tableType === 'occupancy' && filteredOccupancyData.value && filteredOccupancyData.value.length > 0) {
-        filename = '複数施設・年度・稼働率データ.csv';
-        const headers = [
-            "施設", "月度",
-            "計画販売室数", "販売室数", "販売室数差異", "非宿泊数",
-            "計画稼働率 (%)", "稼働率 (%)", "稼働率差異 (p.p.)",
-            "計画総室数", "総室数"
-        ];
-        const csvRows = [headers.join(',')];
-        filteredOccupancyData.value.forEach(row => {
-            const fcSold = row.fc_sold_rooms || 0;
-            const sold = row.sold_rooms || 0;
-            const nonAcc = row.non_accommodation_stays || 0;
-            const fcOcc = row.fc_occ || 0;
-            const occ = row.occ || 0;
-
-            const csvRow = [
-                `"${row.hotel_name || ''}"`,
-                `"${row.month || ''}"`,
-                fcSold,
-                sold,
-                sold - fcSold,
-                nonAcc,
-                fcOcc.toFixed(2),
-                occ.toFixed(2),
-                (occ - fcOcc).toFixed(2),
-                row.fc_total_rooms || 0,
-                row.total_rooms || 0
-            ];
-            csvRows.push(csvRow.join(','));
-        });
-        csvString = csvRows.join('\n');
-    } else {
-        //console.log(`RYCAll: No data to export for ${tableType} or invalid table type.`);
-        return;
-    }
-
-    const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }
-};
-
-onMounted(async () => {
-    // Charts are now handled by child components
-});
-onBeforeUnmount(() => {
-    // Charts are now handled by child components
-});
-
-// Chart options watches removed - charts are now handled by child components
 </script>

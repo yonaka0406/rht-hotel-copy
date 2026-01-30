@@ -111,7 +111,7 @@
 </template>
 <script setup>
 // Vue
-import { ref, computed, onMounted, onBeforeUnmount, watch, shallowRef, nextTick } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 // Props
 const props = defineProps({
@@ -142,7 +142,7 @@ const props = defineProps({
 });
 
 // Primevue
-import { Card, Badge, SelectButton, Button, DataTable, Column, Select } from 'primevue';
+import { Card, SelectButton } from 'primevue';
 import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
 import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
 import MonthlyRevenuePlanVsActualChart from './charts/MonthlyRevenuePlanVsActualChart.vue';
@@ -154,11 +154,7 @@ import KpiSummaryCards from './KpiSummaryCards.vue';
 // Utilities
 import {
     formatCurrencyForReporting as formatCurrency,
-    formatPercentage,
-    formatYenInTenThousands,
-    formatYenInTenThousandsNoDecimal
 } from '@/utils/formatUtils';
-import { getSeverity as getSeverityUtil, colorScheme, calculateVariancePercentage } from '@/utils/reportingUtils';
 
 // View selection
 const selectedView = ref('graph'); // Default view
@@ -336,21 +332,6 @@ const aggregatedCurrentHotelOccupancy = computed(() => {
         total_available_rooms: 0, total_fc_available_rooms: 0
     });
 
-    const actualDenominator = result.total_fc_available_rooms > 0 ? result.total_fc_available_rooms : result.total_available_rooms;
-    /*
-    console.log('[ReportingYearCumulativeHotel] Actual OCC calculation:', {
-        numerator: result.total_sold_rooms,
-        denominator: actualDenominator,
-        result: actualDenominator > 0 ? (result.total_sold_rooms / actualDenominator) * 100 : 0
-    });
-
-    console.log('[ReportingYearCumulativeHotel] Forecast OCC calculation:', {
-        numerator: result.total_fc_sold_rooms,
-        denominator: result.total_fc_available_rooms,
-        result: result.total_fc_available_rooms > 0 ? (result.total_fc_sold_rooms / result.total_fc_available_rooms) * 100 : 0
-    });
-    */
-
     return result;
 });
 
@@ -423,83 +404,4 @@ const revPARDifference = computed(() => {
     return actualRevPAR.value - forecastRevPAR.value;
 });
 
-// ECharts are now handled by individual chart components
-
-// All charts are now handled by components
-
-const getSeverity = getSeverityUtil;
-
-const exportCSV = (tableType) => {
-    let csvString = '';
-    let filename = `${currentHotelName.value || 'SingleHotel'}_YearCumulative_data.csv`;
-    const hotelDataRevenue = currentHotelRevenueData.value;
-    const hotelDataOccupancy = currentHotelOccupancyData.value;
-
-    if (tableType === 'revenue' && hotelDataRevenue && hotelDataRevenue.length > 0) {
-        filename = `${currentHotelName.value || 'SingleHotel'}_YearCumulative_Revenue.csv`;
-        const headers = ["月度", "計画売上 (円)", "売上 (円)", "分散額 (円)", "分散率 (%)"];
-        const csvRows = [headers.join(',')];
-        hotelDataRevenue.forEach(row => {
-            const forecastRevenue = row.forecast_revenue || 0;
-            const periodRevenue = row.period_revenue || 0;
-            const varianceAmount = periodRevenue - forecastRevenue;
-            let varianceStr = calculateVariancePercentage(periodRevenue, forecastRevenue);
-
-            const csvRow = [
-                `"${row.month || ''}"`,
-                forecastRevenue,
-                periodRevenue,
-                varianceAmount,
-                varianceStr
-            ];
-            csvRows.push(csvRow.join(','));
-        });
-        csvString = csvRows.join('\n');
-
-    } else if (tableType === 'occupancy' && hotelDataOccupancy && hotelDataOccupancy.length > 0) {
-        filename = `${currentHotelName.value || 'SingleHotel'}_YearCumulative_Occupancy.csv`;
-        const headers = ["月度", "計画販売室数", "販売室数", "販売室数差異", "計画稼働率 (%)", "稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数", "総室数"];
-        const csvRows = [headers.join(',')];
-        hotelDataOccupancy.forEach(row => {
-            const fcSold = row.fc_sold_rooms || 0;
-            const sold = row.sold_rooms || 0;
-            const fcOcc = row.fc_occ || 0;
-            const occ = row.occ || 0;
-
-            const csvRow = [
-                `"${row.month || ''}"`,
-                fcSold, sold, sold - fcSold,
-                fcOcc.toFixed(2), occ.toFixed(2), (occ - fcOcc).toFixed(2),
-                row.fc_total_rooms || 0, row.total_rooms || 0
-            ];
-            csvRows.push(csvRow.join(','));
-        });
-        csvString = csvRows.join('\n');
-    } else {
-        console.log(`RYCHotel: No data to export for ${tableType} or invalid table type.`);
-        return;
-    }
-
-    const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }
-};
-
-onMounted(async () => {
-    // All charts are now handled by child components
-});
-onBeforeUnmount(() => {
-    // All charts are now handled by child components
-});
-
-// All chart lifecycle management is now handled by child components
 </script>
