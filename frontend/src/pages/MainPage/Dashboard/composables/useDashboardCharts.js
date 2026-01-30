@@ -345,21 +345,23 @@ export function useDashboardCharts() {
             fetchAccountingData(selectedHotelId, forecastStartDate, forecastEndDate)
         ]);
 
-        // Helper to sum capacity for a specific month
-        const getMonthlyCapacity = (targetDate, rawData) => {
-            // targetDate is a Date object. rawData contains daily entries.
-            // We need to sum up available_room_nights for entries falling in the same month/year as targetDate
+        // Helper to sum capacity and sold rooms for a specific month
+        const getMonthlySummary = (targetDate, rawData) => {
+            // targetDate is a Date object. rawData contains monthly entries.
+            // We need to sum up available_room_nights and rooms_sold_nights for entries falling in the same month/year as targetDate
             const targetMonth = targetDate.getMonth();
             const targetYear = targetDate.getFullYear();
 
             let totalCapacity = 0;
+            let totalSoldRooms = 0;
             rawData.forEach(item => {
                 const d = new Date(item.date || item.forecast_month || item.accounting_month);
                 if (d.getMonth() === targetMonth && d.getFullYear() === targetYear) {
                     totalCapacity += (parseInt(item.available_room_nights) || 0);
+                    totalSoldRooms += (parseInt(item.rooms_sold_nights) || 0);
                 }
             });
-            return totalCapacity;
+            return { capacity: totalCapacity, soldRooms: totalSoldRooms };
         };
 
         const updateGaugeValue = (gaugeIndex, monthData, offsetMonths) => {
@@ -367,21 +369,28 @@ export function useDashboardCharts() {
                 const pmsRooms = monthData[0].room_count;
                 const pmsCapacity = monthData[0].available_rooms;
 
-                // Determine effective capacity
+                // Determine effective capacity and sold rooms
                 const targetDate = new Date(startDate);
                 targetDate.setMonth(targetDate.getMonth() + offsetMonths);
 
-                const fcCapacity = getMonthlyCapacity(targetDate, forecastData);
-                const accCapacity = getMonthlyCapacity(targetDate, accountingData);
+                const fcSummary = getMonthlySummary(targetDate, forecastData);
+                const accSummary = getMonthlySummary(targetDate, accountingData);
 
+                // Prioritize capacity: Forecast > Accounting > PMS
                 let effectiveCapacity = pmsCapacity;
-                if (fcCapacity > 0) {
-                    effectiveCapacity = fcCapacity;
-                } else if (accCapacity > 0) {
-                    effectiveCapacity = accCapacity;
+                if (fcSummary.capacity > 0) {
+                    effectiveCapacity = fcSummary.capacity;
+                } else if (accSummary.capacity > 0) {
+                    effectiveCapacity = accSummary.capacity;
                 }
 
-                const gaugeValue = effectiveCapacity === 0 ? 0 : Math.round(pmsRooms / effectiveCapacity * 10000) / 100;
+                // Fallback numerator: If PMS shows 0 sold rooms, use Accounting data
+                let effectiveSoldRooms = pmsRooms;
+                if (pmsRooms === 0 && accSummary.soldRooms > 0) {
+                    effectiveSoldRooms = accSummary.soldRooms;
+                }
+
+                const gaugeValue = effectiveCapacity === 0 ? 0 : Math.round(effectiveSoldRooms / effectiveCapacity * 10000) / 100;
                 gaugeData.value[gaugeIndex].value = gaugeValue;
             } else {
                 gaugeData.value[gaugeIndex].value = 0;
