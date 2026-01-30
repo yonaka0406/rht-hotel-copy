@@ -99,7 +99,7 @@
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-black text-slate-500 uppercase">親勘定科目 <span
                             class="text-rose-500">*</span></label>
-                    <div v-if="form.id && form.account_code_id"
+                    <div v-if="form.id"
                         class="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-700 dark:text-slate-300">
                         {{ getAccountCodeName(form.account_code_id) }}
                     </div>

@@ -102,7 +102,8 @@
                                         <div class="flex gap-2">
                                             <button @click="openSubAccountManager(item)"
                                                 class="p-2 bg-slate-50 dark:bg-slate-900/50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all cursor-pointer"
-                                                title="補助科目管理">
+                                                title="補助科目管理"
+                                                aria-label="補助科目管理を開く">
                                                 <i class="pi pi-list"></i>
                                             </button>
                                             <button @click="editItem('code', item)"
@@ -363,7 +364,6 @@
         <ConfirmDialog group="accounting-settings" />
     </div>
 </template>
-
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useAccountingStore } from '@/composables/useAccountingStore';
@@ -437,8 +437,7 @@ watch(() => settings.subAccounts, () => {
 
 const handleSubAccountCreate = (parentAccount) => {
     // Open SettingsDialog for creation, pre-filled
-    openModal('subaccount');
-    form.account_code_id = parentAccount.id;
+    openModal('subaccount', { account_code_id: parentAccount.id });
     // Note: We keep SubAccountManagerDialog open. PrimeVue Dialogs stack.
 };
 
@@ -522,25 +521,30 @@ const getHotelName = (id) => {
 
 
 
-const openModal = (type) => {
+const openModal = (type, initialValues = {}) => {
     modal.type = type;
     modal.isEdit = false;
     modal.visible = true;
 
     // Reset form
-    form.id = null;
-    form.code = '';
-    form.name = '';
-    form.management_group_id = null;
-    form.is_active = true;
-    form.display_order = 10;
-    form.yayoi_name = '';
-    form.tax_rate_percent = 10;
-    form.hotel_id = null;
-    form.is_current = false;
-    form.target_type = null;
-    form.target_id = null;
-    form.account_code_id = null;
+    Object.assign(form, {
+        id: null,
+        code: '',
+        name: '',
+        management_group_id: null,
+        is_active: true,
+        display_order: 10,
+        yayoi_name: '',
+        tax_rate_percent: 10,
+        hotel_id: null,
+        is_current: false,
+        target_type: null,
+        target_id: null,
+        account_code_id: null
+    });
+
+    // Merge initial values
+    Object.assign(form, initialValues);
 };
 
 const editItem = (type, item) => {
@@ -591,8 +595,6 @@ const handleSave = async (formData) => {
         if (modal.type === 'tax') {
             payload.tax_rate = payload.tax_rate_percent / 100;
         }
-
-
 
         if (modal.type === 'mapping' && payload.target_type === 'cancellation') {
             payload.target_id = 0;

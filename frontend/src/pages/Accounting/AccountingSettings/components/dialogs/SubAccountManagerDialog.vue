@@ -57,7 +57,7 @@
                                         class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer">
                                         <i class="pi pi-pencil"></i>
                                     </button>
-                                    <button @click="$emit('delete', item)"
+                                    <button @click="handleDelete(item)"
                                         class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer">
                                         <i class="pi pi-trash"></i>
                                     </button>
@@ -77,14 +77,18 @@
                 <Button label="閉じる" @click="$emit('update:visible', false)" severity="secondary" text
                     class="px-6 py-2 rounded-xl font-bold !bg-transparent" />
             </div>
+
+            <ConfirmDialog group="subaccount-manager" />
         </div>
     </Dialog>
 </template>
 
 <script setup>
 import { computed } from 'vue';
+import { useConfirm } from 'primevue/useconfirm';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
+import ConfirmDialog from 'primevue/confirmdialog';
 
 const props = defineProps({
     visible: Boolean,
@@ -95,16 +99,45 @@ const props = defineProps({
     }
 });
 
-defineEmits(['update:visible', 'create', 'edit', 'delete']);
+const emit = defineEmits(['update:visible', 'create', 'edit', 'delete']);
+
+const confirm = useConfirm();
 
 const sortedSubAccounts = computed(() => {
     return [...props.subAccounts].sort((a, b) => {
-        if (a.display_order !== b.display_order) {
-            return (a.display_order || 0) - (b.display_order || 0);
+        const orderA = a.display_order ?? 0;
+        const orderB = b.display_order ?? 0;
+        if (orderA !== orderB) {
+            return orderA - orderB;
         }
         return a.id - b.id;
     });
 });
+
+const handleDelete = (item) => {
+    confirm.require({
+        group: 'subaccount-manager',
+        message: '本当に削除しますか？この操作は取り消せません。',
+        header: '削除の確認',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'はい',
+        rejectLabel: 'いいえ',
+        acceptProps: {
+            label: 'はい',
+            severity: 'danger',
+            class: 'px-6 py-2 rounded-xl font-bold'
+        },
+        rejectProps: {
+            label: 'いいえ',
+            severity: 'secondary',
+            variant: 'text',
+            class: 'px-6 py-2 rounded-xl font-bold'
+        },
+        accept: () => {
+            emit('delete', item);
+        }
+    });
+};
 </script>
 
 <style scoped>
