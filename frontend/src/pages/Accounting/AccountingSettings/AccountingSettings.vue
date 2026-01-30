@@ -81,6 +81,9 @@
                                                 class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
                                                 管理区分</th>
                                             <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest text-center">
+                                                補助科目数</th>
+                                            <th
                                                 class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
                                                 状態</th>
                                             <th
@@ -95,6 +98,13 @@
                                             <td class="py-4 px-4 font-bold">{{ item.name }}</td>
                                             <td class="py-4 px-4 text-sm text-slate-500">{{
                                                 getGroupName(item.management_group_id) }}</td>
+                                            <td class="py-4 px-4 text-center">
+                                                <span v-if="getSubAccountCount(item.id) > 0" 
+                                                    class="inline-flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold px-2 py-1 rounded-md text-xs min-w-[30px]">
+                                                    {{ getSubAccountCount(item.id) }}
+                                                </span>
+                                                <span v-else class="text-slate-300 dark:text-slate-600 text-xs">-</span>
+                                            </td>
                                             <td class="py-4 px-4">
                                                 <span
                                                     :class="item.is_active ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'"
@@ -104,6 +114,11 @@
                                             </td>
                                             <td class="py-4 px-4">
                                                 <div class="flex gap-2">
+                                                    <button @click="openSubAccountManager(item)"
+                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all cursor-pointer"
+                                                        title="補助科目管理">
+                                                        <i class="pi pi-list"></i>
+                                                    </button>
                                                     <button @click="editItem('code', item)"
                                                         class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
                                                             class="pi pi-pencil"></i></button>
@@ -114,7 +129,7 @@
                                             </td>
                                         </tr>
                                         <tr v-if="filteredCodes.length === 0">
-                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">
+                                            <td colspan="6" class="py-12 text-center text-slate-400 font-medium">
                                                 データがありません。</td>
                                         </tr>
                                     </tbody>
@@ -176,94 +191,7 @@
                             </div>
                         </div>
 
-                        <!-- Sub-Accounts Tab -->
-                        <div v-if="activeTab === 'subaccounts'">
-                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                                <h2 class="text-2xl font-black text-slate-900 dark:text-white">補助科目一覧</h2>
-                                <button @click="openModal('subaccount')"
-                                    class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none">
-                                    <i class="pi pi-plus"></i> 新規追加
-                                </button>
-                            </div>
 
-                            <!-- Account Filter Buttons -->
-                            <div
-                                class="flex flex-wrap gap-2 mb-8 p-1 bg-slate-100/50 dark:bg-slate-900/50 rounded-2xl w-fit">
-                                <button @click="selectedAccountFilter = null"
-                                    class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
-                                    :class="!selectedAccountFilter ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'">
-                                    すべて
-                                </button>
-                                <button v-for="account in accountsWithSubAccounts" :key="account.id"
-                                    @click="selectedAccountFilter = account.id"
-                                    class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
-                                    :class="selectedAccountFilter === account.id ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'">
-                                    {{ account.name }}
-                                </button>
-                            </div>
-
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr class="border-b border-slate-100 dark:border-slate-700">
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                親勘定科目</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                補助科目名</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                コード</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                説明</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                状態</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                操作</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="item in filteredSubAccounts" :key="item.id"
-                                            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                            <td class="py-4 px-4">
-                                                <div class="flex flex-col">
-                                                    <span class="font-bold">{{ item.account_name }}</span>
-                                                    <span class="text-xs text-slate-500 tabular-nums">{{ item.account_code }}</span>
-                                                </div>
-                                            </td>
-                                            <td class="py-4 px-4 font-bold">{{ item.name }}</td>
-                                            <td class="py-4 px-4 font-mono text-sm text-slate-600">{{ item.code || '-' }}</td>
-                                            <td class="py-4 px-4 text-sm text-slate-500">{{ item.description || '-' }}</td>
-                                            <td class="py-4 px-4">
-                                                <span
-                                                    :class="item.is_active ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'"
-                                                    class="text-[10px] font-black px-2 py-1 rounded-md uppercase">
-                                                    {{ item.is_active ? '有効' : '無効' }}
-                                                </span>
-                                            </td>
-                                            <td class="py-4 px-4">
-                                                <div class="flex gap-2">
-                                                    <button @click="editItem('subaccount', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-pencil"></i></button>
-                                                    <button @click="confirmDelete('subaccount', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-trash"></i></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr v-if="filteredSubAccounts.length === 0">
-                                            <td colspan="6" class="py-12 text-center text-slate-400 font-medium">
-                                                データがありません。</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
 
                         <!-- Tax Classes Tab -->
                         <div v-if="activeTab === 'tax'">
@@ -509,12 +437,21 @@
         <SettingsDialog v-model:visible="modal.visible" :type="modal.type" :is-edit="modal.isEdit" :initial-data="form"
             :settings="settings" :hotels="hotelStore.safeHotels.value" :saving="saving" @save="handleSave" />
 
+        <!-- Sub-Account Manager Modal -->
+        <SubAccountManagerDialog v-model:visible="subAccountManager.visible" 
+            :parent-account="subAccountManager.parentAccount" 
+            :sub-accounts="subAccountManager.subAccounts"
+            @create="handleSubAccountCreate"
+            @edit="handleSubAccountEdit"
+            @delete="handleSubAccountDelete"
+        />
+
         <ConfirmDialog group="accounting-settings" />
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useAccountingStore } from '@/composables/useAccountingStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useConfirm } from 'primevue/useconfirm';
@@ -522,6 +459,7 @@ import { useToast } from 'primevue/usetoast';
 import Select from 'primevue/select';
 import ConfirmDialog from 'primevue/confirmdialog';
 import SettingsDialog from './components/dialogs/SettingsDialog.vue';
+import SubAccountManagerDialog from './components/dialogs/SubAccountManagerDialog.vue';
 
 const store = useAccountingStore();
 const hotelStore = useHotelStore();
@@ -533,11 +471,9 @@ const loading = ref(true);
 const saving = ref(false);
 const selectedGroupFilter = ref(null);
 const selectedTaxFilter = ref(null);
-const selectedAccountFilter = ref(null);
 
 const tabs = [
     { id: 'codes', label: '勘定科目' },
-    { id: 'subaccounts', label: '補助科目' },
     { id: 'groups', label: '管理区分' },
     { id: 'tax', label: '税区分' },
     { id: 'dept', label: '部門設定' }
@@ -561,6 +497,44 @@ const settings = reactive({
 
 const selectedMappingHotelId = ref(null);
 
+const subAccountManager = reactive({
+    visible: false,
+    parentAccount: null,
+    subAccounts: []
+});
+
+const getSubAccountCount = (accountId) => {
+    return settings.subAccounts.filter(sa => sa.account_code_id === accountId).length;
+};
+
+const openSubAccountManager = (account) => {
+    subAccountManager.parentAccount = account;
+    subAccountManager.subAccounts = settings.subAccounts.filter(sa => sa.account_code_id === account.id);
+    subAccountManager.visible = true;
+};
+
+// Update sub-account list when settings change
+watch(() => settings.subAccounts, () => {
+    if (subAccountManager.visible && subAccountManager.parentAccount) {
+        subAccountManager.subAccounts = settings.subAccounts.filter(sa => sa.account_code_id === subAccountManager.parentAccount.id);
+    }
+}, { deep: true });
+
+const handleSubAccountCreate = (parentAccount) => {
+    // Open SettingsDialog for creation, pre-filled
+    openModal('subaccount');
+    form.account_code_id = parentAccount.id;
+    // Note: We keep SubAccountManagerDialog open. PrimeVue Dialogs stack.
+};
+
+const handleSubAccountEdit = (item) => {
+    editItem('subaccount', item);
+};
+
+const handleSubAccountDelete = (item) => {
+    confirmDelete('subaccount', item);
+};
+
 const filteredCodes = computed(() => {
     if (!selectedGroupFilter.value) return settings.codes;
     return settings.codes.filter(c => c.management_group_id === selectedGroupFilter.value);
@@ -574,16 +548,6 @@ const uniqueTaxRates = computed(() => {
 const filteredTaxClasses = computed(() => {
     if (selectedTaxFilter.value === null) return settings.taxClasses;
     return settings.taxClasses.filter(t => Math.abs(t.tax_rate - selectedTaxFilter.value) < 0.0001);
-});
-
-const accountsWithSubAccounts = computed(() => {
-    const accountIds = new Set(settings.subAccounts.map(sa => sa.account_code_id));
-    return settings.codes.filter(code => accountIds.has(code.id));
-});
-
-const filteredSubAccounts = computed(() => {
-    if (!selectedAccountFilter.value) return settings.subAccounts;
-    return settings.subAccounts.filter(sa => sa.account_code_id === selectedAccountFilter.value);
 });
 
 const modal = reactive({
