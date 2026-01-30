@@ -1,6 +1,7 @@
 <template>
     <div>
-        <div class="flex justify-end mb-2">
+        <div class="flex justify-end mb-2 items-center gap-2">
+
             <SelectButton v-model="selectedComparison" :options="comparisonOptions" optionLabel="label"
                 optionValue="value" />
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value"
@@ -133,11 +134,15 @@ const props = defineProps({
     prevYearOccupancyData: {
         type: Array,
         default: () => []
+    },
+    selectedMonth: {
+        type: Date,
+        default: null
     }
 });
 
 // Primevue
-import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
+import { Card, Badge, SelectButton, Button, DataTable, Column, Select } from 'primevue';
 import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
 import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
 import MonthlyRevenuePlanVsActualChart from './charts/MonthlyRevenuePlanVsActualChart.vue';
@@ -169,35 +174,119 @@ const comparisonOptions = ref([
     { label: '前年', value: 'yoy' }
 ]);
 
+// --- Date Filtering Logic ---
+
+// Available Months
+const availableMonths = computed(() => {
+    if (!props.revenueData || props.revenueData.length === 0) return [];
+
+    // Extract unique months
+    const uniqueMonths = [...new Set(props.revenueData.map(item => item.month))];
+
+    // Sort
+    uniqueMonths.sort((a, b) => new Date(a) - new Date(b));
+
+    return uniqueMonths.map(m => {
+        const d = new Date(m);
+        return {
+            label: `${d.getFullYear()}年${d.getMonth() + 1}月`,
+            value: m
+        };
+    });
+});
+
+// Selected End Month
+const selectedEndMonth = ref(null);
+
+// Initialize default (watch availableMonths to set default when data loads)
+watch([availableMonths, () => props.selectedMonth], () => {
+    if (availableMonths.value.length === 0) return;
+
+    if (props.selectedMonth) {
+        const targetYear = props.selectedMonth.getFullYear();
+        const targetMonth = props.selectedMonth.getMonth();
+        const match = availableMonths.value.find(m => {
+            const d = new Date(m.value);
+            return d.getFullYear() === targetYear && d.getMonth() === targetMonth;
+        });
+        if (match) {
+            selectedEndMonth.value = match.value;
+            return;
+        }
+    }
+
+    // Fallback
+    const currentIsValid = selectedEndMonth.value && availableMonths.value.some(m => m.value === selectedEndMonth.value);
+    if (!currentIsValid) {
+        selectedEndMonth.value = availableMonths.value[availableMonths.value.length - 1].value;
+    }
+}, { immediate: true });
+
+// Filter Logic
+const cutoffDate = computed(() => {
+    return selectedEndMonth.value ? new Date(selectedEndMonth.value) : null;
+});
+
+const prevYearCutoffDate = computed(() => {
+    if (!cutoffDate.value) return null;
+    const d = new Date(cutoffDate.value);
+    d.setFullYear(d.getFullYear() - 1);
+    return d;
+});
+
+const filteredRevenueData = computed(() => {
+    if (!props.revenueData || !cutoffDate.value) return props.revenueData || [];
+    return props.revenueData.filter(item => new Date(item.month) <= cutoffDate.value);
+});
+
+const filteredOccupancyData = computed(() => {
+    if (!props.occupancyData || !cutoffDate.value) return props.occupancyData || [];
+    return props.occupancyData.filter(item => new Date(item.month) <= cutoffDate.value);
+});
+
+const filteredPrevYearRevenueData = computed(() => {
+    if (!props.prevYearRevenueData || !prevYearCutoffDate.value) return props.prevYearRevenueData || [];
+    return props.prevYearRevenueData.filter(item => new Date(item.month) <= prevYearCutoffDate.value);
+});
+
+const filteredPrevYearOccupancyData = computed(() => {
+    if (!props.prevYearOccupancyData || !prevYearCutoffDate.value) return props.prevYearOccupancyData || [];
+    return props.prevYearOccupancyData.filter(item => new Date(item.month) <= prevYearCutoffDate.value);
+});
+
 // Data extraction for the single hotel
 const currentHotelId = computed(() => {
     // This component is for a single hotel, so we expect all data to belong to the same hotel_id.
     // Or, if revenueData is pre-filtered by parent, it will contain only one hotel_id.
-    if (props.revenueData && props.revenueData.length > 0) {
+    // Use filtered data to ensure we are looking at valid range, although ID shouldn't change.
+    // However, if filtered data is empty, we might lose ID. So fall back to props.revenueData for ID detection.
+    const sourceData = props.revenueData;
+
+    if (sourceData && sourceData.length > 0) {
         // Prioritize a non-zero hotel_id if multiple types exist (e.g. summary row with id 0)
-        const specificHotelEntry = props.revenueData.find(item => item.hotel_id !== 0 && item.hotel_id != null);
+        const specificHotelEntry = sourceData.find(item => item.hotel_id !== 0 && item.hotel_id != null);
         if (specificHotelEntry) return specificHotelEntry.hotel_id;
-        return props.revenueData[0]?.hotel_id; // Fallback to the first entry's hotel_id
+        return sourceData[0]?.hotel_id; // Fallback to the first entry's hotel_id
     }
     return null;
 });
 
 const currentHotelRevenueData = computed(() => {
-    if (!props.revenueData) return [];
+    if (!filteredRevenueData.value) return [];
     // If currentHotelId is 0 or null (meaning it's a summary or no specific hotel identified),
     // and the data contains a hotel_id 0, use that. Otherwise, filter by currentHotelId.
-    if ((currentHotelId.value === 0 || currentHotelId.value === null) && props.revenueData.some(item => item.hotel_id === 0)) {
-        return props.revenueData.filter(item => item.hotel_id === 0);
+    if ((currentHotelId.value === 0 || currentHotelId.value === null) && filteredRevenueData.value.some(item => item.hotel_id === 0)) {
+        return filteredRevenueData.value.filter(item => item.hotel_id === 0);
     }
-    return props.revenueData.filter(item => item.hotel_id === currentHotelId.value);
+    return filteredRevenueData.value.filter(item => item.hotel_id === currentHotelId.value);
 });
 
 const currentHotelOccupancyData = computed(() => {
-    if (!props.occupancyData) return [];
-    if ((currentHotelId.value === 0 || currentHotelId.value === null) && props.occupancyData.some(item => item.hotel_id === 0)) {
-        return props.occupancyData.filter(item => item.hotel_id === 0);
+    if (!filteredOccupancyData.value) return [];
+    if ((currentHotelId.value === 0 || currentHotelId.value === null) && filteredOccupancyData.value.some(item => item.hotel_id === 0)) {
+        return filteredOccupancyData.value.filter(item => item.hotel_id === 0);
     }
-    return props.occupancyData.filter(item => item.hotel_id === currentHotelId.value);
+    return filteredOccupancyData.value.filter(item => item.hotel_id === currentHotelId.value);
 });
 
 const currentHotelName = computed(() => {
@@ -248,6 +337,7 @@ const aggregatedCurrentHotelOccupancy = computed(() => {
     });
 
     const actualDenominator = result.total_fc_available_rooms > 0 ? result.total_fc_available_rooms : result.total_available_rooms;
+    /*
     console.log('[ReportingYearCumulativeHotel] Actual OCC calculation:', {
         numerator: result.total_sold_rooms,
         denominator: actualDenominator,
@@ -259,26 +349,27 @@ const aggregatedCurrentHotelOccupancy = computed(() => {
         denominator: result.total_fc_available_rooms,
         result: result.total_fc_available_rooms > 0 ? (result.total_fc_sold_rooms / result.total_fc_available_rooms) * 100 : 0
     });
+    */
 
     return result;
 });
 
 // Previous year revenue data for current hotel
 const currentHotelPrevYearRevenueData = computed(() => {
-    if (!props.prevYearRevenueData) return [];
-    if ((currentHotelId.value === 0 || currentHotelId.value === null) && props.prevYearRevenueData.some(item => item.hotel_id === 0)) {
-        return props.prevYearRevenueData.filter(item => item.hotel_id === 0);
+    if (!filteredPrevYearRevenueData.value) return [];
+    if ((currentHotelId.value === 0 || currentHotelId.value === null) && filteredPrevYearRevenueData.value.some(item => item.hotel_id === 0)) {
+        return filteredPrevYearRevenueData.value.filter(item => item.hotel_id === 0);
     }
-    return props.prevYearRevenueData.filter(item => item.hotel_id === currentHotelId.value);
+    return filteredPrevYearRevenueData.value.filter(item => item.hotel_id === currentHotelId.value);
 });
 
 // Previous year occupancy data for current hotel
 const currentHotelPrevYearOccupancyData = computed(() => {
-    if (!props.prevYearOccupancyData) return [];
-    if ((currentHotelId.value === 0 || currentHotelId.value === null) && props.prevYearOccupancyData.some(item => item.hotel_id === 0)) {
-        return props.prevYearOccupancyData.filter(item => item.hotel_id === 0);
+    if (!filteredPrevYearOccupancyData.value) return [];
+    if ((currentHotelId.value === 0 || currentHotelId.value === null) && filteredPrevYearOccupancyData.value.some(item => item.hotel_id === 0)) {
+        return filteredPrevYearOccupancyData.value.filter(item => item.hotel_id === 0);
     }
-    return props.prevYearOccupancyData.filter(item => item.hotel_id === currentHotelId.value);
+    return filteredPrevYearOccupancyData.value.filter(item => item.hotel_id === currentHotelId.value);
 });
 
 // Aggregate revenue data for the RevenuePlanVsActualChart

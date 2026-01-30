@@ -1,6 +1,7 @@
 <template>
     <div>
-        <div class="flex justify-end mb-2">
+        <div class="flex justify-end mb-2 items-center gap-2">
+
             <SelectButton v-model="selectedComparison" :options="comparisonOptions" optionLabel="label"
                 optionValue="value" />
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value"
@@ -81,15 +82,16 @@
                 <template #content>
                     <div class="flex flex-col md:flex-row md:gap-4 p-4">
                         <div class="w-full md:w-1/2 mb-4 md:mb-0">
-                            <HotelSalesComparisonChart :revenueData="props.revenueData"
-                                :prevYearRevenueData="props.prevYearRevenueData" :comparisonType="selectedComparison" />
+                            <HotelSalesComparisonChart :revenueData="filteredRevenueData"
+                                :prevYearRevenueData="filteredPrevYearRevenueData"
+                                :comparisonType="selectedComparison" />
                         </div>
                         <div class="w-full md:w-1/2">
                             <h6 class="text-center">施設別 稼働率（{{ selectedComparison === 'forecast' ? '計画' : '前年' }} vs
                                 実績・予約）
                             </h6>
-                            <AllHotelsOccupancyChart :occupancyData="props.occupancyData"
-                                :prevYearOccupancyData="props.prevYearOccupancyData"
+                            <AllHotelsOccupancyChart :occupancyData="filteredOccupancyData"
+                                :prevYearOccupancyData="filteredPrevYearOccupancyData"
                                 :comparisonType="selectedComparison" />
                         </div>
                     </div>
@@ -120,14 +122,14 @@
                 </template>
             </Card>
 
-            <RevenuePlanVsActualTable :revenueData="props.revenueData" />
+            <RevenuePlanVsActualTable :revenueData="filteredRevenueData" />
 
             <Card>
                 <template #header>
                     <span class="text-xl font-bold">稼働状況（計画ｘ実績・予約）</span>
                 </template>
                 <template #content>
-                    <OccupancyPlanVsActualTable :occupancyData="props.occupancyData"
+                    <OccupancyPlanVsActualTable :occupancyData="filteredOccupancyData"
                         :rawOccupationBreakdownData="props.rawOccupationBreakdownData" :showHotelColumn="true"
                         :showNonAccommodationColumn="true" :rows="5" :rowsPerPageOptions="[5, 15, 30, 50]"
                         :showDetailedCsvButton="true" />
@@ -161,11 +163,15 @@ const props = defineProps({
     prevYearOccupancyData: {
         type: Array,
         default: () => []
+    },
+    selectedMonth: {
+        type: Date,
+        default: null
     }
 });
 
 // Primevue
-import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
+import { Card, Badge, SelectButton, Button, DataTable, Column, Select } from 'primevue';
 import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
 import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
 import HotelSalesComparisonChart from './charts/HotelSalesComparisonChart.vue';
@@ -199,12 +205,92 @@ const comparisonOptions = ref([
     { label: '前年', value: 'yoy' }
 ]);
 
+// --- Date Filtering Logic ---
+
+// Available Months
+const availableMonths = computed(() => {
+    if (!props.revenueData || props.revenueData.length === 0) return [];
+
+    // Extract unique months
+    const uniqueMonths = [...new Set(props.revenueData.map(item => item.month))];
+
+    // Sort
+    uniqueMonths.sort((a, b) => new Date(a) - new Date(b));
+
+    return uniqueMonths.map(m => {
+        const d = new Date(m);
+        return {
+            label: `${d.getFullYear()}年${d.getMonth() + 1}月`,
+            value: m
+        };
+    });
+});
+
+// Selected End Month
+const selectedEndMonth = ref(null);
+
+// Initialize default (watch availableMonths to set default when data loads)
+watch([availableMonths, () => props.selectedMonth], () => {
+    if (availableMonths.value.length === 0) return;
+
+    if (props.selectedMonth) {
+        const targetYear = props.selectedMonth.getFullYear();
+        const targetMonth = props.selectedMonth.getMonth();
+        const match = availableMonths.value.find(m => {
+            const d = new Date(m.value);
+            return d.getFullYear() === targetYear && d.getMonth() === targetMonth;
+        });
+        if (match) {
+            selectedEndMonth.value = match.value;
+            return;
+        }
+    }
+
+    // Fallback: If current selection is invalid or empty, default to last available
+    const currentIsValid = selectedEndMonth.value && availableMonths.value.some(m => m.value === selectedEndMonth.value);
+    if (!currentIsValid) {
+        selectedEndMonth.value = availableMonths.value[availableMonths.value.length - 1].value;
+    }
+}, { immediate: true });
+
+// Filter Logic
+const cutoffDate = computed(() => {
+    return selectedEndMonth.value ? new Date(selectedEndMonth.value) : null;
+});
+
+const prevYearCutoffDate = computed(() => {
+    if (!cutoffDate.value) return null;
+    const d = new Date(cutoffDate.value);
+    d.setFullYear(d.getFullYear() - 1);
+    return d;
+});
+
+const filteredRevenueData = computed(() => {
+    if (!props.revenueData || !cutoffDate.value) return props.revenueData || [];
+    return props.revenueData.filter(item => new Date(item.month) <= cutoffDate.value);
+});
+
+const filteredOccupancyData = computed(() => {
+    if (!props.occupancyData || !cutoffDate.value) return props.occupancyData || [];
+    return props.occupancyData.filter(item => new Date(item.month) <= cutoffDate.value);
+});
+
+const filteredPrevYearRevenueData = computed(() => {
+    if (!props.prevYearRevenueData || !prevYearCutoffDate.value) return props.prevYearRevenueData || [];
+    return props.prevYearRevenueData.filter(item => new Date(item.month) <= prevYearCutoffDate.value);
+});
+
+const filteredPrevYearOccupancyData = computed(() => {
+    if (!props.prevYearOccupancyData || !prevYearCutoffDate.value) return props.prevYearOccupancyData || [];
+    return props.prevYearOccupancyData.filter(item => new Date(item.month) <= prevYearCutoffDate.value);
+});
+
 // Computed property to get all unique hotel names from revenueData    
 const allHotelNames = computed(() => {
-    if (!props.revenueData || props.revenueData.length === 0) {
+    if (!filteredRevenueData.value || filteredRevenueData.value.length === 0) {
         return 'N/A';
     }
-    const names = props.revenueData
+    const names = filteredRevenueData.value
         .map(item => item.hotel_name)
         .filter(name => name && name !== '施設合計'); // Exclude null/undefined and "施設合計"
 
@@ -212,20 +298,20 @@ const allHotelNames = computed(() => {
     return uniqueNames.join(', ');
 });
 const periodMinDate = computed(() => {
-    if (!props.revenueData || props.revenueData.length === 0) return 'N/A';
-    const minDate = new Date(Math.min(...props.revenueData.map(item => new Date(item.month))));
+    if (!filteredRevenueData.value || filteredRevenueData.value.length === 0) return 'N/A';
+    const minDate = new Date(Math.min(...filteredRevenueData.value.map(item => new Date(item.month))));
     return minDate.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit' });
 });
 const periodMaxDate = computed(() => {
-    if (!props.revenueData || props.revenueData.length === 0) return 'N/A';
-    const maxDate = new Date(Math.max(...props.revenueData.map(item => new Date(item.month))));
+    if (!filteredRevenueData.value || filteredRevenueData.value.length === 0) return 'N/A';
+    const maxDate = new Date(Math.max(...filteredRevenueData.value.map(item => new Date(item.month))));
     return maxDate.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit' });
 });
 
 // --- KPI Calculations (ADR, RevPAR) ---
 const aggregatedAllHotelsRevenue = computed(() => {
-    //console.log('aggregatedAllHotelsRevenue before', props.revenueData);
-    const revenueEntry = props.revenueData?.filter(item => item.hotel_id === 0);
+    //console.log('aggregatedAllHotelsRevenue before', filteredRevenueData.value);
+    const revenueEntry = filteredRevenueData.value?.filter(item => item.hotel_id === 0);
     //console.log('aggregatedAllHotelsRevenue after', revenueEntry);
     if (!revenueEntry) return { total_forecast_revenue: 0, total_period_revenue: 0 };
 
@@ -237,7 +323,7 @@ const aggregatedAllHotelsRevenue = computed(() => {
 });
 
 const aggregatedAllHotelsOccupancy = computed(() => {
-    const occupancyEntry = props.occupancyData?.filter(item => item.hotel_id === 0);
+    const occupancyEntry = filteredOccupancyData.value?.filter(item => item.hotel_id === 0);
     if (!occupancyEntry) return {
         total_sold_rooms: 0, total_fc_sold_rooms: 0,
         total_available_rooms: 0, total_fc_available_rooms: 0
@@ -254,6 +340,7 @@ const aggregatedAllHotelsOccupancy = computed(() => {
     });
 
     const actualDenominator = result.total_fc_available_rooms > 0 ? result.total_fc_available_rooms : result.total_available_rooms;
+    /*
     console.log('[ReportingYearCumulativeAllHotels] Actual OCC calculation:', {
         numerator: result.total_sold_rooms,
         denominator: actualDenominator,
@@ -265,6 +352,7 @@ const aggregatedAllHotelsOccupancy = computed(() => {
         denominator: result.total_fc_available_rooms,
         result: result.total_fc_available_rooms > 0 ? (result.total_fc_sold_rooms / result.total_fc_available_rooms) * 100 : 0
     });
+    */
 
     return result;
 });
@@ -306,26 +394,26 @@ const revPARDifference = computed(() => {
 
 // --- Data Computeds for Charts ---
 const filteredRevenueForChart = computed(() => {
-    if (!props.revenueData) return [];
-    return props.revenueData.filter(item => item.hotel_id === 0);
+    if (!filteredRevenueData.value) return [];
+    return filteredRevenueData.value.filter(item => item.hotel_id === 0);
 });
 const hasRevenueDataForChart = computed(() => {
     return filteredRevenueForChart.value.length > 0;
 });
 
 const filteredPrevYearRevenueForChart = computed(() => {
-    if (!props.prevYearRevenueData) return [];
-    return props.prevYearRevenueData.filter(item => item.hotel_id === 0);
+    if (!filteredPrevYearRevenueData.value) return [];
+    return filteredPrevYearRevenueData.value.filter(item => item.hotel_id === 0);
 });
 
 const filteredOccupancyForChart = computed(() => {
-    if (!props.occupancyData) return [];
-    return props.occupancyData.filter(item => item.hotel_id === 0);
+    if (!filteredOccupancyData.value) return [];
+    return filteredOccupancyData.value.filter(item => item.hotel_id === 0);
 });
 
 const filteredPrevYearOccupancyForChart = computed(() => {
-    if (!props.prevYearOccupancyData) return [];
-    return props.prevYearOccupancyData.filter(item => item.hotel_id === 0);
+    if (!filteredPrevYearOccupancyData.value) return [];
+    return filteredPrevYearOccupancyData.value.filter(item => item.hotel_id === 0);
 });
 
 // Aggregate revenue data for the RevenuePlanVsActualChart
@@ -347,9 +435,9 @@ const aggregateRevenueDataForChart = computed(() => {
 
 // All hotels occupancy chart data
 const allHotelsOccupancyChartData = computed(() => {
-    if (!props.occupancyData || props.occupancyData.length === 0) return [];
+    if (!filteredOccupancyData.value || filteredOccupancyData.value.length === 0) return [];
     const hotelMap = new Map();
-    props.occupancyData.forEach(item => {
+    filteredOccupancyData.value.forEach(item => {
         if (item.hotel_id !== 0 && item.hotel_name) {
             const entry = hotelMap.get(item.hotel_name) || {
                 hotel_name: item.hotel_name,
@@ -398,11 +486,11 @@ const exportCSV = (tableType) => {
     let csvString = '';
     let filename = 'data.csv';
 
-    if (tableType === 'revenue' && props.revenueData && props.revenueData.length > 0) {
+    if (tableType === 'revenue' && filteredRevenueData.value && filteredRevenueData.value.length > 0) {
         filename = '複数施設・年度・収益データ.csv';
         const headers = ["施設", "月度", "計画売上 (円)", "売上 (円)", "分散額 (円)", "分散率 (%)"];
         const csvRows = [headers.join(',')];
-        props.revenueData.forEach(row => {
+        filteredRevenueData.value.forEach(row => {
             const forecastRevenue = row.forecast_revenue || 0;
             const periodRevenue = row.period_revenue || 0;
             const varianceAmount = periodRevenue - forecastRevenue;
@@ -422,7 +510,7 @@ const exportCSV = (tableType) => {
         });
         csvString = csvRows.join('\n');
 
-    } else if (tableType === 'occupancy' && props.occupancyData && props.occupancyData.length > 0) {
+    } else if (tableType === 'occupancy' && filteredOccupancyData.value && filteredOccupancyData.value.length > 0) {
         filename = '複数施設・年度・稼働率データ.csv';
         const headers = [
             "施設", "月度",
@@ -431,7 +519,7 @@ const exportCSV = (tableType) => {
             "計画総室数", "総室数"
         ];
         const csvRows = [headers.join(',')];
-        props.occupancyData.forEach(row => {
+        filteredOccupancyData.value.forEach(row => {
             const fcSold = row.fc_sold_rooms || 0;
             const sold = row.sold_rooms || 0;
             const nonAcc = row.non_accommodation_stays || 0;
