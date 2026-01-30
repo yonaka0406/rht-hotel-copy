@@ -117,6 +117,11 @@ export function useAccountingStore() {
         return await get(`/accounting/dashboard/reconciliation/hotel/${hotelId}/client/${clientId}?${query}`);
     };
 
+    const fetchBudgetActualComparison = async (params) => {
+        const query = new URLSearchParams(params).toString();
+        return await get(`/accounting/dashboard/budget-actual?${query}`);
+    };
+
 
     const upsertAccountCode = async (data) => {
         return await post('/accounting/settings/codes', data);
@@ -253,6 +258,7 @@ export function useAccountingStore() {
         fetchReconciliationOverview,
         fetchReconciliationHotelDetails,
         fetchReconciliationClientDetails,
+        fetchBudgetActualComparison,
         comparePmsVsYayoi,
         getMonthlySalesComparison,
         getRawDataForIntegrityAnalysis,

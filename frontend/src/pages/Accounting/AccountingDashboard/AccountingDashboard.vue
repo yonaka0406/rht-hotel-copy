@@ -3,6 +3,7 @@ import { ref, onMounted, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/composables/useUserStore';
 import { useAccountingStore } from '@/composables/useAccountingStore';
+import BudgetActualTable from './components/BudgetActualTable.vue';
 import VChart from 'vue-echarts';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -35,6 +36,7 @@ const metrics = ref({
 });
 
 const comparisonData = ref(null);
+const budgetActualData = ref({ actual: [], budget: [] });
 const monthlyChartData = ref(null);
 const availableYears = ref([]);
 const selectedYear = ref(new Date().getFullYear());
@@ -68,6 +70,12 @@ const lastImportPeriodFormatted = computed(() => {
     };
 
     return `${formatDate(info.min_date)} 〜 ${formatDate(info.max_date)}`;
+});
+
+const lastMonthLabel = computed(() => {
+    const today = new Date();
+    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    return `${lastMonth.getFullYear()}年${lastMonth.getMonth() + 1}月`;
 });
 
 // Computed properties for user information
@@ -294,7 +302,7 @@ onMounted(async () => {
         }
 
         // Fetch dashboard metrics, comparison data, and monthly chart data in parallel
-        const [metricsData, comparisonResult, monthlyData] = await Promise.all([
+        const [metricsData, comparisonResult, monthlyData, budgetActualResult] = await Promise.all([
             accountingStore.fetchDashboardMetrics({
                 startDate: formatDate(start),
                 endDate: formatDate(end)
@@ -311,12 +319,21 @@ onMounted(async () => {
             accountingStore.getMonthlySalesComparison(selectedYear.value, null).catch(err => {
                 console.warn('Failed to fetch monthly chart data:', err);
                 return null;
+            }),
+            // Fetch budget vs actual comparison data
+            accountingStore.fetchBudgetActualComparison({
+                startDate: formatDate(start),
+                endDate: formatDate(end)
+            }).catch(err => {
+                console.warn('Failed to fetch budget vs actual data:', err);
+                return { actual: [], budget: [] };
             })
         ]);
 
         metrics.value = metricsData;
         comparisonData.value = comparisonResult;
         monthlyChartData.value = monthlyData;
+        budgetActualData.value = budgetActualResult;
     } catch (e) {
         console.error('Failed to load dashboard metrics', e);
         hasError.value = true;
@@ -518,6 +535,32 @@ onMounted(async () => {
                                     </span>
                                 </div>
                             </div>
+                        </div>
+                    </section>
+
+                    <!-- Budget vs Actual Comparison Section -->
+                    <section
+                        class="mt-8 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div class="p-6 sm:p-8">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                                <div>
+                                    <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <i class="pi pi-percentage text-violet-600 dark:text-violet-400"></i>
+                                        予実管理
+                                    </h2>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                        設定された予算と実績値の比較分析
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-slate-400 uppercase">対象月:</span>
+                                    <span class="text-sm font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-lg">
+                                        {{ lastMonthLabel }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <BudgetActualTable :data="budgetActualData" :is-loading="isLoading" />
                         </div>
                     </section>
                 </div>

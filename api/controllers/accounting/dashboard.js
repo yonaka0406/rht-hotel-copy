@@ -125,9 +125,73 @@ const getReconciliationClientDetails = async (req, res, next) => {
     }
 };
 
+const getBudgetActualComparison = async (req, res, next) => {
+    try {
+        const { requestId } = req;
+        const { startDate, endDate, hotelIds } = req.query;
+
+        // 1. Resolve Hotel IDs
+        let targetHotelIds = [];
+        if (hotelIds && hotelIds !== 'null' && hotelIds !== 'undefined') {
+            if (Array.isArray(hotelIds)) {
+                targetHotelIds = hotelIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+            } else {
+                if (typeof hotelIds === 'string' && hotelIds.includes(',')) {
+                    targetHotelIds = hotelIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+                } else {
+                    targetHotelIds = [parseInt(hotelIds)].filter(id => !isNaN(id));
+                }
+            }
+        }
+
+        // 2. Resolve Dates
+        let queryStart = startDate;
+        let queryEnd = endDate;
+
+        if (!queryStart || !queryEnd) {
+            const today = new Date();
+            const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
+            const formatYMD = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+
+            queryStart = formatYMD(lastMonthStart);
+            queryEnd = formatYMD(lastMonthEnd);
+        }
+
+        // If specific hotels selected, we might also want to resolve their department names
+        // because Yayoi data uses department names.
+        let departmentNames = [];
+        if (targetHotelIds.length > 0) {
+            const departments = await accountingModel.accountingRead.getDepartments(requestId);
+            departmentNames = departments
+                .filter(d => targetHotelIds.includes(d.hotel_id))
+                .map(d => d.name);
+        }
+
+        const filters = {
+            startDate: queryStart,
+            endDate: queryEnd,
+            hotelIds: targetHotelIds,
+            departmentNames
+        };
+
+        const comparison = await accountingModel.budgetActual.getComparison(requestId, filters);
+        res.json(comparison);
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     getDashboardMetrics,
     getReconciliationOverview,
     getReconciliationHotelDetails,
-    getReconciliationClientDetails
+    getReconciliationClientDetails,
+    getBudgetActualComparison
 };
