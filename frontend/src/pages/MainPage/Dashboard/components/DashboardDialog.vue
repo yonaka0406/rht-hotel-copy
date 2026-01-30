@@ -155,14 +155,21 @@ const plainTextReportContent = computed(() => {
         const weekEndDate = getMidnight(props.dashboardSelectedDate);
         weekEndDate.setDate(weekEndDate.getDate() + 6);
 
-        const filteredWeeklyData = props.checkInOutReportData.filter(day => {
-            const dayDate = getMidnight(day.date);
-            return dayDate >= weekStartDate && dayDate <= weekEndDate;
-        });
+        // Generate all dates in the week range
+        const datesInWeek = [];
+        let currentDate = new Date(weekStartDate);
+        while (currentDate <= weekEndDate) {
+            datesInWeek.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
 
-        filteredWeeklyData.forEach(day => {
-            report += `  - ${formatReportDate(day.date)}:    イン ${String(day.checkin_room_count || 0).padStart(2, '0')}室 (${String(day.total_checkins || 0).padStart(2, '0')}人);    アウト ${String(day.checkout_room_count || 0).padStart(2, '0')}室 (${String(day.total_checkouts || 0).padStart(2, '0')}人)\n`;
-            const checkinFemale = formatGender(day.female_checkins);
+        // For each date in the week, find the corresponding data or use zeros
+        datesInWeek.forEach(date => {
+            const dateStr = formatDate(date);
+            const dayData = props.checkInOutReportData.find(day => formatDate(new Date(day.date)) === dateStr);
+            
+            report += `  - ${formatReportDate(date.toISOString())}:    イン ${String(dayData?.checkin_room_count || 0).padStart(2, '0')}室 (${String(dayData?.total_checkins || 0).padStart(2, '0')}人);    アウト ${String(dayData?.checkout_room_count || 0).padStart(2, '0')}室 (${String(dayData?.total_checkouts || 0).padStart(2, '0')}人)\n`;
+            const checkinFemale = formatGender(dayData?.female_checkins);
             if (checkinFemale) {
                 report += `    インのうち: ${checkinFemale}\n`;
             }
@@ -173,25 +180,27 @@ const plainTextReportContent = computed(() => {
     if (props.mealReportData) {
         report += `\n🍴 食事数\n`;
 
-        const weekStartDate = new Date(props.dashboardSelectedDate);
-        const weekEndDate = new Date(props.dashboardSelectedDate);
-        weekEndDate.setDate(weekEndDate.getDate() + 6);
-
-        const datesInWeek = [];
-        let currentDate = new Date(weekStartDate);
-        while (currentDate <= weekEndDate) {
-            datesInWeek.push(formatDate(currentDate));
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-
         if (selectedView.value === '当日') {
             const todayFormatted = formatReportDate(props.dashboardSelectedDate.toISOString());
             const mealDataToday = props.mealReportData[formatDate(new Date(props.dashboardSelectedDate))];
             report += `  - ${todayFormatted}:    朝食 ${String(mealDataToday?.breakfast || 0).padStart(2, '0')}食    昼食 ${String(mealDataToday?.lunch || 0).padStart(2, '0')}食    夕食 ${String(mealDataToday?.dinner || 0).padStart(2, '0')}食\n`;
         } else if (selectedView.value === '週間') {
-            datesInWeek.forEach(dateStr => {
+            // Reuse the same date range logic as above
+            const weekStartDate = getMidnight(props.dashboardSelectedDate);
+            const weekEndDate = getMidnight(props.dashboardSelectedDate);
+            weekEndDate.setDate(weekEndDate.getDate() + 6);
+
+            const datesInWeek = [];
+            let currentDate = new Date(weekStartDate);
+            while (currentDate <= weekEndDate) {
+                datesInWeek.push(new Date(currentDate));
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            datesInWeek.forEach(date => {
+                const dateStr = formatDate(date);
                 const mealData = props.mealReportData[dateStr];
-                report += `  - ${formatReportDate(dateStr)}:    朝食 ${String(mealData?.breakfast || 0).padStart(2, '0')}食    昼食 ${String(mealData?.lunch || 0).padStart(2, '0')}食    夕食 ${String(mealData?.dinner || 0).padStart(2, '0')}食\n`;
+                report += `  - ${formatReportDate(date.toISOString())}:    朝食 ${String(mealData?.breakfast || 0).padStart(2, '0')}食    昼食 ${String(mealData?.lunch || 0).padStart(2, '0')}食    夕食 ${String(mealData?.dinner || 0).padStart(2, '0')}食\n`;
             });
         }
     }
@@ -254,32 +263,33 @@ const displayReportData = computed(() => {
         const weekEndDate = getMidnight(props.dashboardSelectedDate);
         weekEndDate.setDate(weekEndDate.getDate() + 6);
 
-        const filteredWeeklyData = props.checkInOutReportData.filter(day => {
-            const dayDate = getMidnight(day.date);
-            return dayDate >= weekStartDate && dayDate <= weekEndDate;
-        });
+        // Generate all dates in the week range
+        const datesInWeek = [];
+        let currentDate = new Date(weekStartDate);
+        while (currentDate <= weekEndDate) {
+            datesInWeek.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
 
-        filteredWeeklyData.forEach(day => {
+        // For each date in the week, find the corresponding data or use zeros
+        datesInWeek.forEach(date => {
+            const dateStr = formatDate(date);
+            const dayData = props.checkInOutReportData.find(day => formatDate(new Date(day.date)) === dateStr);
+            
             data.weeklyCheckInOut.push({
-                date: formatReportDate(day.date),
-                checkin: `${day.checkin_room_count || 0}室 (${day.total_checkins || 0}人)`,
-                checkout: `${day.checkout_room_count || 0}室 (${day.total_checkouts || 0}人)`,                
-                remarks: day.female_checkins > 0 ? `インのうち：${formatGender(day.female_checkins)}` : ''
+                date: formatReportDate(date.toISOString()),
+                checkin: `${dayData?.checkin_room_count || 0}室 (${dayData?.total_checkins || 0}人)`,
+                checkout: `${dayData?.checkout_room_count || 0}室 (${dayData?.total_checkouts || 0}人)`,                
+                remarks: (dayData?.female_checkins > 0) ? `インのうち：${formatGender(dayData.female_checkins)}` : ''
             });
         });
 
         if (props.mealReportData) {
-            const datesInWeek = [];
-            let currentDate = new Date(weekStartDate);
-            while (currentDate <= weekEndDate) {
-                datesInWeek.push(formatDate(currentDate));
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-
-            datesInWeek.forEach(dateStr => {
+            datesInWeek.forEach(date => {
+                const dateStr = formatDate(date);
                 const mealData = props.mealReportData[dateStr];
                 data.weeklyMeal.push({
-                    date: formatReportDate(dateStr),
+                    date: formatReportDate(date.toISOString()),
                     breakfast: `${mealData?.breakfast || 0}食`,
                     lunch: `${mealData?.lunch || 0}食`,
                     dinner: `${mealData?.dinner || 0}食`
