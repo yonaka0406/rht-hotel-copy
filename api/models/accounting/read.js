@@ -1993,10 +1993,14 @@ const getSubAccounts = async (requestId, dbClient = null) => {
             sub_account_id as id,
             sub_account_name as name,
             sub_account_code as code,
+            sub_account_description as description,
+            sub_account_display_order as display_order,
+            sub_account_is_active as is_active,
+            account_id as account_code_id,
             account_name,
             account_code
         FROM acc_accounts_with_sub_accounts
-        WHERE sub_account_id IS NOT NULL AND sub_account_is_active = true
+        WHERE sub_account_id IS NOT NULL
         ORDER BY account_code ASC, sub_account_display_order ASC, sub_account_name ASC
     `;
 

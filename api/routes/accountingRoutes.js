@@ -18,6 +18,8 @@ router.post('/accounting/settings/mappings', authMiddleware_accounting, accounti
 router.delete('/accounting/settings/mappings/:id', authMiddleware_accounting, accountingController.deleteMapping);
 router.post('/accounting/settings/departments', authMiddleware_accounting, accountingController.upsertDepartment);
 router.delete('/accounting/settings/departments/:id', authMiddleware_accounting, accountingController.deleteDepartment);
+router.post('/accounting/settings/sub-accounts', authMiddleware_accounting, accountingController.upsertSubAccount);
+router.delete('/accounting/settings/sub-accounts/:id', authMiddleware_accounting, accountingController.deleteSubAccount);
 
 // Import
 router.post('/accounting/import/preview', authMiddleware_accounting, upload.single('file'), accountingController.previewImport);

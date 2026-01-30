@@ -221,6 +221,34 @@ const deleteMapping = async (req, res, next) => {
     }
 };
 
+const upsertSubAccount = async (req, res, next) => {
+    try {
+        const { requestId, user } = req;
+        const data = req.body;
+        if (!data.account_code_id || !data.name) {
+            const error = new Error('Account Code ID and Name are required');
+            error.statusCode = 400;
+            throw error;
+        }
+        const result = await accountingModel.accountingWrite.upsertSubAccount(requestId, data, user.id);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const deleteSubAccount = async (req, res, next) => {
+    try {
+        const { requestId } = req;
+        const { id } = req.params;
+        validationUtils.validateNumericParam(id, 'id');
+        const result = await accountingModel.accountingWrite.deleteSubAccount(requestId, id);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     getSettings,
     upsertCode,
@@ -232,5 +260,7 @@ module.exports = {
     upsertDepartment,
     deleteDepartment,
     upsertMapping,
-    deleteMapping
+    deleteMapping,
+    upsertSubAccount,
+    deleteSubAccount
 };

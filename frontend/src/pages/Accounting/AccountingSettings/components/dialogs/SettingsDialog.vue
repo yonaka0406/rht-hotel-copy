@@ -94,6 +94,50 @@
                 </div>
             </div>
 
+            <!-- Sub-Account Form -->
+            <div v-if="type === 'subaccount'" class="space-y-4">
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-black text-slate-500 uppercase">親勘定科目 <span
+                            class="text-rose-500">*</span></label>
+                    <div v-if="form.id && form.account_code_id"
+                        class="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-700 dark:text-slate-300">
+                        {{ getAccountCodeName(form.account_code_id) }}
+                    </div>
+                    <Select v-else v-model="form.account_code_id" :options="settings.codes" optionLabel="name" optionValue="id"
+                        placeholder="勘定科目を選択" fluid filter>
+                        <template #option="slotProps">
+                            <div class="flex justify-between items-center w-full">
+                                <span>{{ slotProps.option.name }}</span>
+                                <span class="text-[10px] tabular-nums text-slate-400">{{ slotProps.option.code }}</span>
+                            </div>
+                        </template>
+                    </Select>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-black text-slate-500 uppercase">補助科目名 <span
+                            class="text-rose-500">*</span></label>
+                    <InputText v-model="form.name" placeholder="例: ガス、水道、電気" fluid />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-black text-slate-500 uppercase">補助科目コード</label>
+                    <InputText v-model="form.code" placeholder="例: GAS001 (任意)" fluid />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-black text-slate-500 uppercase">説明</label>
+                    <InputText v-model="form.description" placeholder="補助科目の詳細説明 (任意)" fluid />
+                </div>
+                <div class="flex flex-row gap-4">
+                    <div class="flex flex-col gap-2 flex-1">
+                        <label class="text-xs font-black text-slate-500 uppercase">表示順序</label>
+                        <InputNumber v-model="form.display_order" placeholder="例: 10" fluid />
+                    </div>
+                    <div class="flex items-center gap-2 flex-1 pt-6">
+                        <Checkbox v-model="form.is_active" :binary="true" />
+                        <label class="text-sm font-bold text-slate-700 dark:text-slate-300">有効化する</label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Mapping Form -->
             <div v-if="type === 'mapping'" class="space-y-4">
                 <div class="flex flex-col gap-2">
@@ -181,7 +225,8 @@ const form = reactive({
     is_current: true,
     target_type: null,
     target_id: null,
-    account_code_id: null
+    account_code_id: null,
+    description: ''
 });
 
 // Watch for initialData changes or visibility to populate local form
@@ -204,7 +249,8 @@ watch(() => props.visible, (newVal) => {
                 is_current: true,
                 target_type: null,
                 target_id: null,
-                account_code_id: null
+                account_code_id: null,
+                description: ''
             });
         }
     }
@@ -212,13 +258,25 @@ watch(() => props.visible, (newVal) => {
 
 const modalTitle = computed(() => {
     const action = props.isEdit ? '編集' : '新規作成';
-    const targets = { code: '勘定科目', group: '管理区分', tax: '税区分', dept: '部門', mapping: 'マッピング' };
+    const targets = { 
+        code: '勘定科目', 
+        group: '管理区分', 
+        tax: '税区分', 
+        dept: '部門', 
+        mapping: 'マッピング',
+        subaccount: '補助科目'
+    };
     return `${targets[props.type] || ''}${action}`;
 });
 
 const getHotelName = (id) => {
     const h = props.hotels?.find(x => x.id === id);
     return h ? h.name : '-';
+};
+
+const getAccountCodeName = (id) => {
+    const code = props.settings?.codes?.find(x => x.id === id);
+    return code ? `${code.name} (${code.code})` : '-';
 };
 
 const getTargetOptions = (type) => {
@@ -244,6 +302,8 @@ const isFormValid = computed(() => {
             return form.hotel_id && form.name;
         case 'mapping':
             return form.target_type && (form.target_type === 'cancellation' || form.target_id) && form.account_code_id;
+        case 'subaccount':
+            return form.account_code_id && form.name;
         default:
             return false;
     }

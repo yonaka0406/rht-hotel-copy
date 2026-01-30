@@ -158,6 +158,14 @@ export function useAccountingStore() {
         return await del(`/accounting/settings/departments/${id}`);
     };
 
+    const upsertSubAccount = async (data) => {
+        return await post('/accounting/settings/sub-accounts', data);
+    };
+
+    const deleteSubAccount = async (id) => {
+        return await del(`/accounting/settings/sub-accounts/${id}`);
+    };
+
     const previewYayoiImport = async (file) => {
         const formData = new FormData();
         formData.append('file', file);
@@ -220,6 +228,8 @@ export function useAccountingStore() {
         deleteTaxClass,
         upsertDepartment,
         deleteDepartment,
+        upsertSubAccount,
+        deleteSubAccount,
         previewYayoiImport,
         executeYayoiImport,
         fetchProfitLossMonths,

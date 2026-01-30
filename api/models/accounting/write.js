@@ -268,6 +268,100 @@ const deleteDepartment = async (requestId, id, dbClient = null) => {
     }
 };
 
+const upsertSubAccount = async (requestId, data, user_id, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const { id, account_code_id, code, name, description, is_active, display_order } = data;
+
+    try {
+        let result;
+
+        if (id) {
+            // Update existing record by ID
+            const query = `
+                UPDATE acc_sub_accounts 
+                SET 
+                    account_code_id = $1,
+                    code = $2,
+                    name = $3,
+                    description = $4,
+                    is_active = COALESCE($5, is_active),
+                    display_order = COALESCE($6, display_order),
+                    updated_by = $7,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $8
+                RETURNING *;
+            `;
+            const values = [account_code_id, code, name, description, is_active, display_order, user_id, id];
+            result = await client.query(query, values);
+
+            if (result.rows.length === 0) {
+                throw new Error(`Sub-account with id ${id} not found`);
+            }
+        } else {
+            // Get next display order if not provided
+            let finalDisplayOrder = display_order;
+            if (!finalDisplayOrder) {
+                const orderQuery = `
+                    SELECT COALESCE(MAX(display_order), 0) + 1 as next_order 
+                    FROM acc_sub_accounts 
+                    WHERE account_code_id = $1
+                `;
+                const orderResult = await client.query(orderQuery, [account_code_id]);
+                finalDisplayOrder = orderResult.rows[0].next_order;
+            }
+
+            // Insert new record with conflict handling on (account_code_id, name)
+            const query = `
+                INSERT INTO acc_sub_accounts (account_code_id, code, name, description, is_active, display_order, created_by, updated_by)
+                VALUES ($1, $2, $3, $4, COALESCE($5, true), $6, $7, $7)
+                ON CONFLICT (account_code_id, name) DO UPDATE SET
+                    code = EXCLUDED.code,
+                    description = EXCLUDED.description,
+                    is_active = EXCLUDED.is_active,
+                    display_order = EXCLUDED.display_order,
+                    updated_by = EXCLUDED.updated_by,
+                    updated_at = CURRENT_TIMESTAMP
+                RETURNING *;
+            `;
+            const values = [account_code_id, code, name, description, is_active, finalDisplayOrder, user_id];
+            result = await client.query(query, values);
+        }
+
+        return result.rows[0];
+    } catch (err) {
+        logger.error('Error upserting sub-account:', err);
+        if (err.message.includes('not found')) {
+            throw err;
+        }
+        if (err.constraint === 'acc_sub_accounts_account_code_id_code_key') {
+            throw new Error('Sub-account code must be unique within the account');
+        }
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+const deleteSubAccount = async (requestId, id, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const query = `DELETE FROM acc_sub_accounts WHERE id = $1 RETURNING *`;
+    try {
+        const result = await client.query(query, [id]);
+        return result.rows[0];
+    } catch (err) {
+        logger.error('Error deleting sub-account:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
 module.exports = {
     upsertAccountCode,
     deleteAccountCode,
@@ -278,5 +372,7 @@ module.exports = {
     upsertTaxClass,
     deleteTaxClass,
     upsertDepartment,
-    deleteDepartment
+    deleteDepartment,
+    upsertSubAccount,
+    deleteSubAccount
 };
