@@ -590,6 +590,8 @@ const fetchData = async () => {
                 newAccountingTotalData[String(hotelId)] = rawAccountingData.map(item => ({
                     date: formatDateToYMD(item.accounting_month),
                     revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
+                    sold_rooms: item.rooms_sold_nights !== undefined ? Number(item.rooms_sold_nights) : 0, // Add sold_rooms mapping
+                    total_rooms: item.available_room_nights !== undefined ? Number(item.available_room_nights) : 0, // Add total_rooms from accounting
                 })).filter(item => item.date !== null);
             } else {
                 newAccountingTotalData[String(hotelId)] = [];

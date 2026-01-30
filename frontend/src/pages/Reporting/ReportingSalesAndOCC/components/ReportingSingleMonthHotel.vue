@@ -299,178 +299,181 @@ const forecastADR = computed(() => {
 });
 
 const actualRevPAR = computed(() => {
-    const { total_period_accommodation_revenue, total_available_rooms, total_fc_available_rooms } = currentHotelAggregateData.value;
-    const denominator = total_fc_available_rooms > 0 ? total_fc_available_rooms : total_available_rooms;
-    if (denominator === 0 || denominator === null || denominator === undefined) return NaN;
-    return Math.round(total_period_accommodation_revenue / denominator);
-});
+    const actualRevPAR = computed(() => {
+        const { total_period_accommodation_revenue, total_available_rooms } = currentHotelAggregateData.value;
+        const denominator = total_available_rooms;
+        if (denominator === 0 || denominator === null || denominator === undefined) return NaN;
+        return Math.round(total_period_accommodation_revenue / denominator);
+    });
 
-const forecastRevPAR = computed(() => {
-    const { total_forecast_revenue, total_fc_available_rooms } = currentHotelAggregateData.value;
-    if (total_fc_available_rooms === 0 || total_fc_available_rooms === null || total_fc_available_rooms === undefined) return NaN;
-    return Math.round(total_forecast_revenue / total_fc_available_rooms);
-});
+    const forecastRevPAR = computed(() => {
+        const { total_forecast_revenue, total_fc_available_rooms } = currentHotelAggregateData.value;
+        if (total_fc_available_rooms === 0 || total_fc_available_rooms === null || total_fc_available_rooms === undefined) return NaN;
+        return Math.round(total_forecast_revenue / total_fc_available_rooms);
+    });
 
-const ADRDifference = computed(() => {
-    if (isNaN(actualADR.value) || isNaN(forecastADR.value)) return null;
-    return actualADR.value - forecastADR.value;
-});
+    const ADRDifference = computed(() => {
+        if (isNaN(actualADR.value) || isNaN(forecastADR.value)) return null;
+        return actualADR.value - forecastADR.value;
+    });
 
-const revPARDifference = computed(() => {
-    if (isNaN(actualRevPAR.value) || isNaN(forecastRevPAR.value)) return null;
-    return actualRevPAR.value - forecastRevPAR.value;
-});
-
-
+    const revPARDifference = computed(() => {
+        if (isNaN(actualRevPAR.value) || isNaN(forecastRevPAR.value)) return null;
+        return actualRevPAR.value - forecastRevPAR.value;
+    });
 
 
-// Adapted data for OccupancyGaugeChart which expects 'total_sold_rooms' etc.
-const gaugeChartData = computed(() => {
-    // If no data, return empty object to prevent errors, defaults in chart will handle it
-    if (!props.occupancyData || props.occupancyData.length === 0) return {};
-    const raw = props.occupancyData[0] || {};
-    const data = {
-        total_sold_rooms: raw.sold_rooms,
-        total_available_rooms: raw.total_rooms,
-        total_fc_sold_rooms: raw.fc_sold_rooms,
-        total_fc_available_rooms: raw.fc_total_rooms
+
+
+    // Adapted data for OccupancyGaugeChart which expects 'total_sold_rooms' etc.
+    const gaugeChartData = computed(() => {
+        // If no data, return empty object to prevent errors, defaults in chart will handle it
+        if (!props.occupancyData || props.occupancyData.length === 0) return {};
+        const raw = props.occupancyData[0] || {};
+        const data = {
+            total_sold_rooms: raw.sold_rooms,
+            total_available_rooms: raw.total_rooms,
+            total_fc_sold_rooms: raw.fc_sold_rooms,
+            total_fc_available_rooms: raw.fc_total_rooms
+        };
+
+        const actualDenominator = data.total_available_rooms;
+        /*
+        console.log('[ReportingSingleMonthHotel] Actual OCC calculation:', {
+            numerator: data.total_sold_rooms,
+            denominator: actualDenominator,
+            result: actualDenominator > 0 ? (data.total_sold_rooms / actualDenominator) * 100 : 0
+        });
+
+        console.log('[ReportingSingleMonthHotel] Forecast OCC calculation:', {
+            numerator: data.total_fc_sold_rooms,
+            denominator: data.total_fc_available_rooms,
+            result: data.total_fc_available_rooms > 0 ? (data.total_fc_sold_rooms / data.total_fc_available_rooms) * 100 : 0
+        });
+        */
+
+        return data;
+    });
+
+    // ECharts imports    
+    const resizeChartHandler = () => {
+        if (selectedView.value === 'graph') {
+            // Nothing to resize here, as charts are now components
+        }
     };
 
-    const actualDenominator = data.total_fc_available_rooms > 0 ? data.total_fc_available_rooms : data.total_available_rooms;
-    console.log('[ReportingSingleMonthHotel] Actual OCC calculation:', {
-        numerator: data.total_sold_rooms,
-        denominator: actualDenominator,
-        result: actualDenominator > 0 ? (data.total_sold_rooms / actualDenominator) * 100 : 0
+    // --- Chart Refs and Instances ---    
+    // --- Data Computeds for Charts ---
+    // Provides the data for the main revenue chart (now for the single hotel)
+    const singleHotelRevenueChartDataSource = computed(() => {
+        // currentHotelAggregateData sums up all entries in props.revenueData
+        // The chart expects an array of data points, here it's a single point for the period total.
+        if (!currentHotelAggregateData.value) return [];
+        return [currentHotelAggregateData.value]; // Wrap in array
     });
 
-    console.log('[ReportingSingleMonthHotel] Forecast OCC calculation:', {
-        numerator: data.total_fc_sold_rooms,
-        denominator: data.total_fc_available_rooms,
-        result: data.total_fc_available_rooms > 0 ? (data.total_fc_sold_rooms / data.total_fc_available_rooms) * 100 : 0
+    const hasRevenueDataForChart = computed(() => {
+        return singleHotelRevenueChartDataSource.value.length > 0 &&
+            (singleHotelRevenueChartDataSource.value[0].total_forecast_revenue !== undefined ||
+                singleHotelRevenueChartDataSource.value[0].total_period_accommodation_revenue !== undefined);
     });
 
-    return data;
-});
+    // Table
+    const getSeverity = (value) => getSeverityUtil(value);
+    const exportCSV = (tableType) => {
+        let csvString = '';
+        let filename = 'data.csv';
+        const hotelNameForFile = currentHotelName.value.replace(/\s+/g, '_') || 'selected_hotel'; // Sanitize name for filename
+        const periodForFile = periodMaxDate.value.replace(/[^0-9]/g, ''); // Get YYYYMM from period
 
-// ECharts imports    
-const resizeChartHandler = () => {
-    if (selectedView.value === 'graph') {
-        // Nothing to resize here, as charts are now components
-    }
-};
+        if (tableType === 'revenue' && props.revenueData && props.revenueData.length > 0) {
+            filename = `${hotelNameForFile}_収益データ_${periodForFile}.csv`;
+            const headers = ["施設", "月度", "計画売上 (円)", "売上合計 (円)", "分散額 (円)", "分散率 (%)"];
+            const csvRows = [headers.join(',')];
+            // props.revenueData here should already be filtered for the single hotel by the parent.
+            // If it contains multiple months for that hotel, they will be exported.
+            props.revenueData.forEach(row => {
+                const forecastRevenue = row.forecast_revenue || 0;
+                const accommodationRevenue = row.accommodation_revenue || 0;
+                const varianceAmount = accommodationRevenue - forecastRevenue;
+                let variancePercentage = 0;
+                if (forecastRevenue !== 0) variancePercentage = ((accommodationRevenue / forecastRevenue) - 1) * 100;
+                else if (accommodationRevenue !== 0) variancePercentage = Infinity; // Or "N/A" or specific handling
 
-// --- Chart Refs and Instances ---    
-// --- Data Computeds for Charts ---
-// Provides the data for the main revenue chart (now for the single hotel)
-const singleHotelRevenueChartDataSource = computed(() => {
-    // currentHotelAggregateData sums up all entries in props.revenueData
-    // The chart expects an array of data points, here it's a single point for the period total.
-    if (!currentHotelAggregateData.value) return [];
-    return [currentHotelAggregateData.value]; // Wrap in array
-});
+                const csvRow = [
+                    `"${row.hotel_name || ''}"`,
+                    `"${row.month || ''}"`,
+                    forecastRevenue,
+                    accommodationRevenue,
+                    varianceAmount,
+                    (forecastRevenue === 0 && accommodationRevenue !== 0) ? "N/A" : variancePercentage.toFixed(2)
+                ];
+                csvRows.push(csvRow.join(','));
+            });
+            csvString = csvRows.join('\n');
 
-const hasRevenueDataForChart = computed(() => {
-    return singleHotelRevenueChartDataSource.value.length > 0 &&
-        (singleHotelRevenueChartDataSource.value[0].total_forecast_revenue !== undefined ||
-            singleHotelRevenueChartDataSource.value[0].total_period_accommodation_revenue !== undefined);
-});
-
-// Table
-const getSeverity = (value) => getSeverityUtil(value);
-const exportCSV = (tableType) => {
-    let csvString = '';
-    let filename = 'data.csv';
-    const hotelNameForFile = currentHotelName.value.replace(/\s+/g, '_') || 'selected_hotel'; // Sanitize name for filename
-    const periodForFile = periodMaxDate.value.replace(/[^0-9]/g, ''); // Get YYYYMM from period
-
-    if (tableType === 'revenue' && props.revenueData && props.revenueData.length > 0) {
-        filename = `${hotelNameForFile}_収益データ_${periodForFile}.csv`;
-        const headers = ["施設", "月度", "計画売上 (円)", "売上合計 (円)", "分散額 (円)", "分散率 (%)"];
-        const csvRows = [headers.join(',')];
-        // props.revenueData here should already be filtered for the single hotel by the parent.
-        // If it contains multiple months for that hotel, they will be exported.
-        props.revenueData.forEach(row => {
-            const forecastRevenue = row.forecast_revenue || 0;
-            const accommodationRevenue = row.accommodation_revenue || 0;
-            const varianceAmount = accommodationRevenue - forecastRevenue;
-            let variancePercentage = 0;
-            if (forecastRevenue !== 0) variancePercentage = ((accommodationRevenue / forecastRevenue) - 1) * 100;
-            else if (accommodationRevenue !== 0) variancePercentage = Infinity; // Or "N/A" or specific handling
-
-            const csvRow = [
-                `"${row.hotel_name || ''}"`,
-                `"${row.month || ''}"`,
-                forecastRevenue,
-                accommodationRevenue,
-                varianceAmount,
-                (forecastRevenue === 0 && accommodationRevenue !== 0) ? "N/A" : variancePercentage.toFixed(2)
+        } else if (tableType === 'occupancy' && props.occupancyData && props.occupancyData.length > 0) {
+            filename = `${hotelNameForFile}_稼働率データ_${periodForFile}.csv`;
+            const headers = [
+                "施設", "月度",
+                "計画販売室数", "販売室数", "販売室数差異",
+                "計画稼働率 (%)", "稼働率 (%)", "稼働率差異 (p.p.)",
+                "計画総室数", "総室数"
             ];
-            csvRows.push(csvRow.join(','));
-        });
-        csvString = csvRows.join('\n');
+            const csvRows = [headers.join(',')];
+            props.occupancyData.forEach(row => {
+                const fcSold = row.fc_sold_rooms || 0;
+                const sold = row.sold_rooms || 0;
+                const fcOcc = row.fc_occ || 0;
+                const occ = row.occ || 0;
 
-    } else if (tableType === 'occupancy' && props.occupancyData && props.occupancyData.length > 0) {
-        filename = `${hotelNameForFile}_稼働率データ_${periodForFile}.csv`;
-        const headers = [
-            "施設", "月度",
-            "計画販売室数", "販売室数", "販売室数差異",
-            "計画稼働率 (%)", "稼働率 (%)", "稼働率差異 (p.p.)",
-            "計画総室数", "総室数"
-        ];
-        const csvRows = [headers.join(',')];
-        props.occupancyData.forEach(row => {
-            const fcSold = row.fc_sold_rooms || 0;
-            const sold = row.sold_rooms || 0;
-            const fcOcc = row.fc_occ || 0;
-            const occ = row.occ || 0;
+                const csvRow = [
+                    `"${row.hotel_name || ''}"`,
+                    `"${row.month || ''}"`,
+                    fcSold,
+                    sold,
+                    sold - fcSold,
+                    fcOcc.toFixed(2),
+                    occ.toFixed(2),
+                    (occ - fcOcc).toFixed(2),
+                    row.fc_total_rooms || 0,
+                    row.total_rooms || 0
+                ];
+                csvRows.push(csvRow.join(','));
+            });
+            csvString = csvRows.join('\n');
+        } else {
+            console.log(`RSMHotel: No data to export for ${tableType} or invalid table type.`); // Updated console log prefix
+            return;
+        }
 
-            const csvRow = [
-                `"${row.hotel_name || ''}"`,
-                `"${row.month || ''}"`,
-                fcSold,
-                sold,
-                sold - fcSold,
-                fcOcc.toFixed(2),
-                occ.toFixed(2),
-                (occ - fcOcc).toFixed(2),
-                row.fc_total_rooms || 0,
-                row.total_rooms || 0
-            ];
-            csvRows.push(csvRow.join(','));
-        });
-        csvString = csvRows.join('\n');
-    } else {
-        console.log(`RSMHotel: No data to export for ${tableType} or invalid table type.`); // Updated console log prefix
-        return;
-    }
+        const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+    };
 
-    const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }
-};
+    onMounted(async () => {
+        // console.log('RSMHotel: onMounted', props.revenueData, props.occupancyData); // Updated console log prefix
+        window.addEventListener('resize', resizeChartHandler);
+    });
+    onBeforeUnmount(() => {
+        window.removeEventListener('resize', resizeChartHandler);
+    });
 
-onMounted(async () => {
-    // console.log('RSMHotel: onMounted', props.revenueData, props.occupancyData); // Updated console log prefix
-    window.addEventListener('resize', resizeChartHandler);
-});
-onBeforeUnmount(() => {
-    window.removeEventListener('resize', resizeChartHandler);
-});
-
-// Watch for changes in computed chart options    
-watch(selectedView, async (newView) => {
-    if (newView === 'graph') {
-        await nextTick();
-    }
-});
+    // Watch for changes in computed chart options    
+    watch(selectedView, async (newView) => {
+        if (newView === 'graph') {
+            await nextTick();
+        }
+    });
 
 </script>

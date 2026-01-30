@@ -348,9 +348,7 @@ const forecastADR = computed(() => {
 });
 const actualRevPAR = computed(() => {
     const revenue = aggregatedAllHotelsRevenue.value.total_period_revenue;
-    const availableRooms = aggregatedAllHotelsOccupancy.value.total_fc_available_rooms > 0
-        ? aggregatedAllHotelsOccupancy.value.total_fc_available_rooms
-        : aggregatedAllHotelsOccupancy.value.total_available_rooms;
+    const availableRooms = aggregatedAllHotelsOccupancy.value.total_available_rooms;
     return availableRooms ? Math.round(revenue / availableRooms) : NaN;
 });
 const forecastRevPAR = computed(() => {

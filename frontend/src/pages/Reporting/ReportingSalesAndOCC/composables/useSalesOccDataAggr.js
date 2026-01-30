@@ -104,17 +104,27 @@ export function useSalesOccDataAggr({
         return map;
     });
 
+    const effectiveSelectedHotels = computed(() => {
+        if (selectedHotels.value.includes(0)) {
+            // If "All Hotels" (0) is selected, we want to aggregate data for ALL real hotels
+            return allHotels.value
+                .map(h => Number(h.id))
+                .filter(id => id !== 0);
+        }
+        return selectedHotels.value;
+    });
+
     // --- Revenue Data Aggregation ---
     const prevYearRevenueData = computed(() => {
         if (!selectedView.value) return [];
 
         const result = [];
-        if (!firstDayofFetch.value || !lastDayofFetch.value || selectedHotels.value.length === 0) {
+        if (!firstDayofFetch.value || !lastDayofFetch.value || effectiveSelectedHotels.value.length === 0) {
             return result;
         }
 
         const hotelIdLookup = new Map();
-        selectedHotels.value.forEach(hotelId => {
+        effectiveSelectedHotels.value.forEach(hotelId => {
             hotelIdLookup.set(String(hotelId), hotelId);
         });
 
@@ -135,7 +145,7 @@ export function useSalesOccDataAggr({
                 other_revenue: 0,
                 pms_revenue: 0
             };
-            selectedHotels.value.forEach(hotelId => {
+            effectiveSelectedHotels.value.forEach(hotelId => {
                 monthlyAggregates[monthKey][String(hotelId)] = { pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, forecast_revenue: null, acc_revenue: null };
             });
             currentIterMonth.setMonth(currentIterMonth.getMonth() + 1);
@@ -265,11 +275,11 @@ export function useSalesOccDataAggr({
         if (!selectedView.value) return [];
 
         const result = [];
-        if (!firstDayofFetch.value || !lastDayofFetch.value || selectedHotels.value.length === 0) {
+        if (!firstDayofFetch.value || !lastDayofFetch.value || effectiveSelectedHotels.value.length === 0) {
             return result;
         }
         const hotelIdLookup = new Map();
-        selectedHotels.value.forEach(hotelId => {
+        effectiveSelectedHotels.value.forEach(hotelId => {
             hotelIdLookup.set(String(hotelId), hotelId);
         });
 
@@ -289,7 +299,7 @@ export function useSalesOccDataAggr({
                 pms_revenue: 0,
                 provisory_accommodation_revenue: 0 // New
             };
-            selectedHotels.value.forEach(hotelId => {
+            effectiveSelectedHotels.value.forEach(hotelId => {
                 monthlyAggregates[monthKey][String(hotelId)] = { pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, pms_provisory_accommodation_revenue: null, forecast_revenue: null, acc_revenue: null };
             });
             currentIterMonth.setMonth(currentIterMonth.getMonth() + 1);
@@ -421,7 +431,7 @@ export function useSalesOccDataAggr({
         if (!selectedView.value) return [];
 
         const result = [];
-        if (!firstDayofFetch.value || !lastDayofFetch.value || selectedHotels.value.length === 0 || allHotels.value.length === 0) {
+        if (!firstDayofFetch.value || !lastDayofFetch.value || effectiveSelectedHotels.value.length === 0 || allHotels.value.length === 0) {
             return result;
         }
 
@@ -431,15 +441,15 @@ export function useSalesOccDataAggr({
         while (currentIterMonth <= lastIterMonthDate) {
             const monthKey = formatDateMonth(normalizeDate(currentIterMonth));
             monthlyOccupancyAggregates[monthKey] = {};
-            selectedHotels.value.forEach(hotelId => {
-                monthlyOccupancyAggregates[monthKey][String(hotelId)] = { total_rooms: 0, sold_rooms: 0, non_accommodation_stays: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
+            effectiveSelectedHotels.value.forEach(hotelId => {
+                monthlyOccupancyAggregates[monthKey][String(hotelId)] = { total_rooms: 0, sold_rooms: 0, non_accommodation_stays: 0, fc_total_rooms: 0, fc_sold_rooms: 0, acc_sold_rooms: 0, acc_total_rooms: 0 };
             });
             currentIterMonth.setMonth(currentIterMonth.getMonth() + 1);
         }
 
         if (pmsTotalData.value) {
             for (const stringHotelIdKey in pmsTotalData.value) {
-                const isSelectedHotel = selectedHotels.value.some(selHotelId => String(selHotelId) === stringHotelIdKey);
+                const isSelectedHotel = effectiveSelectedHotels.value.some(selHotelId => String(selHotelId) === stringHotelIdKey);
                 if (stringHotelIdKey !== '0' && !isSelectedHotel) continue;
                 const pmsRecords = pmsTotalData.value[stringHotelIdKey];
                 if (Array.isArray(pmsRecords)) {
@@ -457,9 +467,33 @@ export function useSalesOccDataAggr({
             }
         }
 
+        if (accountingTotalData.value) {
+            for (const stringHotelIdKey in accountingTotalData.value) {
+                const isSelectedHotel = effectiveSelectedHotels.value.some(selHotelId => String(selHotelId) === stringHotelIdKey);
+                if (stringHotelIdKey !== '0' && !isSelectedHotel) continue;
+                const accRecords = accountingTotalData.value[stringHotelIdKey];
+                if (Array.isArray(accRecords)) {
+                    accRecords.forEach(record => {
+                        if (record && record.date) {
+                            const recordDateObj = normalizeDate(new Date(record.date));
+                            if (!recordDateObj) return; const monthKey = formatDateMonth(recordDateObj);
+                            if (monthKey && monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
+                                if (typeof record.sold_rooms === 'number') {
+                                    monthlyOccupancyAggregates[monthKey][stringHotelIdKey].acc_sold_rooms += record.sold_rooms;
+                                }
+                                if (typeof record.total_rooms === 'number') {
+                                    monthlyOccupancyAggregates[monthKey][stringHotelIdKey].acc_total_rooms += record.total_rooms;
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
         if (forecastTotalData.value) {
             for (const stringHotelIdKey in forecastTotalData.value) {
-                const isSelectedHotel = selectedHotels.value.some(selHotelId => String(selHotelId) === stringHotelIdKey);
+                const isSelectedHotel = effectiveSelectedHotels.value.some(selHotelId => String(selHotelId) === stringHotelIdKey);
                 if (stringHotelIdKey !== '0' && !isSelectedHotel) continue;
                 const forecastRecords = forecastTotalData.value[stringHotelIdKey];
                 if (Array.isArray(forecastRecords)) {
@@ -491,7 +525,14 @@ export function useSalesOccDataAggr({
                 const hotelData = monthData[hotelId];
                 let total_available_rooms_for_month_calc = 0;
                 let total_gross_rooms_for_month_calc = 0;
-                const fallbackCapacityForHotel = pmsFallbackCapacities.value[hotelId] || 0;
+                let fallbackCapacityForHotel = pmsFallbackCapacities.value[hotelId] || 0;
+                if (fallbackCapacityForHotel === 0) {
+                    // Fallback to static hotel data if PMS data is missing
+                    const hotelInfo = searchAllHotels(Number(hotelId))[0];
+                    if (hotelInfo && hotelInfo.number_of_rooms) {
+                        fallbackCapacityForHotel = Number(hotelInfo.number_of_rooms);
+                    }
+                }
                 const dailyRealRoomsMap = new Map();
                 const dailyGrossRoomsMap = new Map();
                 const hotelPmsDataForMonth = (pmsTotalData.value[hotelId] || []).filter(
@@ -522,27 +563,39 @@ export function useSalesOccDataAggr({
                 }
 
                 hotelData.total_available_rooms_for_month_calc = total_available_rooms_for_month_calc;
+
+                const parsedHotelId = parseInt(hotelId, 10);
+                const hotelName = searchAllHotels(parsedHotelId)[0]?.name || 'Unknown Hotel';
+
                 hotelData.total_gross_rooms_for_month_calc = total_gross_rooms_for_month_calc;
 
-                const hotel_actual_total_rooms = hotelData.fc_total_rooms > 0 ? hotelData.fc_total_rooms : total_available_rooms_for_month_calc;
+                let hotel_actual_total_rooms = 0;
+                if (hotelData.fc_total_rooms > 0) {
+                    hotel_actual_total_rooms = hotelData.fc_total_rooms;
+                } else if (hotelData.acc_total_rooms > 0) {
+                    hotel_actual_total_rooms = hotelData.acc_total_rooms;
+                } else {
+                    hotel_actual_total_rooms = total_available_rooms_for_month_calc;
+                }
+
+                const finalSoldRooms = hotelData.acc_sold_rooms > 0 ? hotelData.acc_sold_rooms : hotelData.sold_rooms;
 
                 totalRoomsSum += hotel_actual_total_rooms;
                 totalGrossRoomsSum += total_gross_rooms_for_month_calc;
                 totalFcSoldRoomsSum += hotelData.fc_sold_rooms;
                 totalFcTotalRoomsSum += hotelData.fc_total_rooms;
-                totalSoldRoomsSum += hotelData.sold_rooms;
+                totalSoldRoomsSum += finalSoldRooms;
                 totalNonAccommodationStaysSum += hotelData.non_accommodation_stays;
 
-                const occupancyRate = hotel_actual_total_rooms > 0 ? (hotelData.sold_rooms / hotel_actual_total_rooms) * 100 : 0;
-                const parsedHotelId = parseInt(hotelId, 10);
-                const hotelName = searchAllHotels(parsedHotelId)[0]?.name || 'Unknown Hotel';
+                const occupancyRate = hotel_actual_total_rooms > 0 ? (finalSoldRooms / hotel_actual_total_rooms) * 100 : 0;
+
                 const hotelOpenDate = searchAllHotels(parsedHotelId)[0]?.open_date || null;
 
                 result.push({
                     month: monthKey, hotel_id: parsedHotelId, hotel_name: hotelName,
                     sort_order: hotelSortOrderMap.value.get(parsedHotelId) ?? 999,
                     open_date: hotelOpenDate, total_rooms: hotel_actual_total_rooms, net_total_rooms: hotel_actual_total_rooms,
-                    gross_total_rooms: total_gross_rooms_for_month_calc, sold_rooms: hotelData.sold_rooms,
+                    gross_total_rooms: total_gross_rooms_for_month_calc, sold_rooms: finalSoldRooms,
                     non_accommodation_stays: hotelData.non_accommodation_stays, occ: parseFloat(occupancyRate.toFixed(2)),
                     not_available_rooms: 0, fc_total_rooms: hotelData.fc_total_rooms, fc_sold_rooms: hotelData.fc_sold_rooms,
                     fc_occ: hotelData.fc_total_rooms > 0 ? parseFloat(((hotelData.fc_sold_rooms / hotelData.fc_total_rooms) * 100).toFixed(2)) : 0
