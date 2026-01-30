@@ -51,7 +51,7 @@ const getLedgerPreview = async (req, res) => {
         // Fetch ledger data and validation results in parallel
         const [data, validation] = await Promise.all([
             accountingModel.accountingRead.getLedgerPreview(requestId, filters),
-            accountingModel.accountingRead.validateLedgerDataIntegrity(requestId, filters)
+            accountingModel.integrity.validateLedgerDataIntegrity(requestId, filters)
         ]);
 
         res.json({
@@ -201,7 +201,7 @@ const getRawDataForIntegrityAnalysis = async (req, res) => {
             hotelIds: hotelIdsArray
         };
 
-        const result = await accountingModel.accountingRead.getRawDataForIntegrityAnalysis(requestId, filters);
+        const result = await accountingModel.integrity.getRawDataForIntegrityAnalysis(requestId, filters);
 
         res.json({
             period: selectedMonth,
@@ -386,7 +386,7 @@ const getPlanReservationDetails = async (req, res) => {
             taxRate: parseFloat(taxRate) || 0.10
         };
 
-        const result = await accountingModel.accountingRead.getPlanReservationDetails(requestId, filters);
+        const result = await accountingModel.integrity.getPlanReservationDetails(requestId, filters);
 
         res.json({
             success: true,

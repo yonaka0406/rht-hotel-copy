@@ -67,59 +67,58 @@
                                 </button>
                             </div>
 
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr class="border-b border-slate-100 dark:border-slate-700">
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                コード</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                科目名</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                管理区分</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                状態</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                操作</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="item in filteredCodes" :key="item.id"
-                                            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                            <td class="py-4 px-4 font-black tabular-nums">{{ item.code }}</td>
-                                            <td class="py-4 px-4 font-bold">{{ item.name }}</td>
-                                            <td class="py-4 px-4 text-sm text-slate-500">{{
-                                                getGroupName(item.management_group_id) }}</td>
-                                            <td class="py-4 px-4">
-                                                <span
-                                                    :class="item.is_active ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'"
-                                                    class="text-[10px] font-black px-2 py-1 rounded-md uppercase">
-                                                    {{ item.is_active ? '有効' : '無効' }}
-                                                </span>
-                                            </td>
-                                            <td class="py-4 px-4">
-                                                <div class="flex gap-2">
-                                                    <button @click="editItem('code', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-pencil"></i></button>
-                                                    <button @click="confirmDelete('code', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-trash"></i></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr v-if="filteredCodes.length === 0">
-                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">
-                                                データがありません。</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                            <SettingsTable 
+                                :headers="[
+                                    { label: 'コード' },
+                                    { label: '科目名' },
+                                    { label: '管理区分' },
+                                    { label: '補助科目数', class: 'text-center' },
+                                    { label: '状態' },
+                                    { label: '操作' }
+                                ]"
+                                :items="filteredCodes"
+                            >
+                                <tr v-for="item in filteredCodes" :key="item.id"
+                                    class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                    <td class="py-4 px-4 font-black tabular-nums">{{ item.code }}</td>
+                                    <td class="py-4 px-4 font-bold">{{ item.name }}</td>
+                                    <td class="py-4 px-4 text-sm text-slate-500">{{
+                                        getGroupName(item.management_group_id) }}</td>
+                                    <td class="py-4 px-4 text-center">
+                                        <span v-if="getSubAccountCount(item.id) > 0" 
+                                            class="inline-flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold px-2 py-1 rounded-md text-xs min-w-[30px]">
+                                            {{ getSubAccountCount(item.id) }}
+                                        </span>
+                                        <span v-else class="text-slate-300 dark:text-slate-600 text-xs">-</span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <span
+                                            :class="item.is_active ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'"
+                                            class="text-[10px] font-black px-2 py-1 rounded-md uppercase">
+                                            {{ item.is_active ? '有効' : '無効' }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex gap-2">
+                                            <button @click="openSubAccountManager(item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all cursor-pointer"
+                                                title="補助科目管理"
+                                                aria-label="補助科目管理を開く"
+                                                v-tooltip.top="'補助科目管理'">
+                                                <i class="pi pi-list"></i>
+                                            </button>
+                                            <button @click="editItem('code', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
+                                                    class="pi pi-pencil"></i></button>
+                                            <button @click="confirmDelete('code', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
+                                                    class="pi pi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </SettingsTable>
                         </div>
 
                         <!-- Management Groups Tab -->
@@ -136,45 +135,35 @@
                                     <i class="pi pi-plus"></i> 新規追加
                                 </button>
                             </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr class="border-b border-slate-100 dark:border-slate-700">
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-24">
-                                                順序</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                区分名</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                操作</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="item in settings.groups" :key="item.id"
-                                            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                            <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
-                                            <td class="py-4 px-4 font-bold">{{ item.name }}</td>
-                                            <td class="py-4 px-4">
-                                                <div class="flex gap-2">
-                                                    <button @click="editItem('group', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-pencil"></i></button>
-                                                    <button @click="confirmDelete('group', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-trash"></i></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr v-if="settings.groups.length === 0">
-                                            <td colspan="3" class="py-12 text-center text-slate-400 font-medium">
-                                                データがありません。</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                            <SettingsTable
+                                :headers="[
+                                    { label: '順序', class: 'w-24' },
+                                    { label: '区分名' },
+                                    { label: '操作' }
+                                ]"
+                                :items="settings.groups"
+                            >
+                                <tr v-for="item in settings.groups" :key="item.id"
+                                    class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                    <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
+                                    <td class="py-4 px-4 font-bold">{{ item.name }}</td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex gap-2">
+                                            <button @click="editItem('group', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
+                                                    class="pi pi-pencil"></i></button>
+                                            <button @click="confirmDelete('group', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
+                                                    class="pi pi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </SettingsTable>
                         </div>
+
+
 
                         <!-- Tax Classes Tab -->
                         <div v-if="activeTab === 'tax'">
@@ -201,53 +190,37 @@
                                 </button>
                             </div>
 
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr class="border-b border-slate-100 dark:border-slate-700">
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-24">
-                                                順序</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                税区分名 (システム)</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                弥生会計名</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-32">
-                                                税率</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                操作</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="item in filteredTaxClasses" :key="item.id"
-                                            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                            <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
-                                            <td class="py-4 px-4 font-bold">{{ item.name }}</td>
-                                            <td class="py-4 px-4 text-sm">{{ item.yayoi_name }}</td>
-                                            <td class="py-4 px-4 font-black tabular-nums">{{ (item.tax_rate *
-                                                100).toFixed(0) }}%</td>
-                                            <td class="py-4 px-4">
-                                                <div class="flex gap-2">
-                                                    <button @click="editItem('tax', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-pencil"></i></button>
-                                                    <button @click="confirmDelete('tax', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-trash"></i></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr v-if="filteredTaxClasses.length === 0">
-                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">
-                                                データがありません。</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                            <SettingsTable
+                                :headers="[
+                                    { label: '順序', class: 'w-24' },
+                                    { label: '税区分名 (システム)' },
+                                    { label: '弥生会計名' },
+                                    { label: '税率', class: 'w-32' },
+                                    { label: '操作' }
+                                ]"
+                                :items="filteredTaxClasses"
+                            >
+                                <tr v-for="item in filteredTaxClasses" :key="item.id"
+                                    class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                    <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
+                                    <td class="py-4 px-4 font-bold">{{ item.name }}</td>
+                                    <td class="py-4 px-4 text-sm">{{ item.yayoi_name }}</td>
+                                    <td class="py-4 px-4 font-black tabular-nums">{{ (item.tax_rate *
+                                        100).toFixed(0) }}%</td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex gap-2">
+                                            <button @click="editItem('tax', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
+                                                    class="pi pi-pencil"></i></button>
+                                            <button @click="confirmDelete('tax', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
+                                                    class="pi pi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </SettingsTable>
                         </div>
 
                         <!-- Departments Tab -->
@@ -262,62 +235,92 @@
                                     <i class="pi pi-plus"></i> 部門名を追加
                                 </button>
                             </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr class="border-b border-slate-100 dark:border-slate-700">
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                店舗名</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                部門名 (弥生会計)</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                状態</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                操作</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="item in settings.departments" :key="item.id || 'h' + item.hotel_id"
-                                            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                            <td class="py-4 px-4 font-bold">{{ item.hotel_name }}</td>
-                                            <td class="py-4 px-4">
-                                                <span v-if="item.name"
-                                                    class="font-black text-slate-700 dark:text-slate-300">{{ item.name
-                                                    }}</span>
-                                                <span v-else class="text-slate-400 text-sm font-medium">未設定</span>
-                                            </td>
-                                            <td class="py-4 px-4">
-                                                <span v-if="item.is_current"
-                                                    class="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md uppercase">
-                                                    現在
-                                                </span>
-                                                <span v-else
-                                                    class="bg-slate-100 text-slate-600 text-[10px] font-black px-2 py-1 rounded-md uppercase">
-                                                    履歴
-                                                </span>
-                                            </td>
-                                            <td class="py-4 px-4">
-                                                <div class="flex gap-2">
-                                                    <button @click="editItem('dept', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-pencil"></i></button>
-                                                    <button v-if="item.id" @click="confirmDelete('dept', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-trash"></i></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr v-if="settings.departments.length === 0">
-                                            <td colspan="4" class="py-12 text-center text-slate-400 font-medium">
-                                                データがありません。</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <SettingsTable
+                                :headers="[
+                                    { label: '店舗名' },
+                                    { label: '部門名 (弥生会計)' },
+                                    { label: '区分' },
+                                    { label: '状態' },
+                                    { label: '操作' }
+                                ]"
+                                :items="settings.departments"
+                            >
+                                <tr v-for="item in settings.departments" :key="item.id || 'h' + item.hotel_id"
+                                    class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                    <td class="py-4 px-4 font-bold">{{ item.hotel_name || '共通' }}</td>
+                                    <td class="py-4 px-4">
+                                        <span v-if="item.name"
+                                            class="font-black text-slate-700 dark:text-slate-300">{{ item.name
+                                            }}</span>
+                                        <span v-else class="text-slate-400 text-sm font-medium">未設定</span>
+                                    </td>
+                                    <td class="py-4 px-4 text-sm text-slate-500">
+                                        {{ item.department_group_name || '-' }}
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <span v-if="item.is_current"
+                                            class="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md uppercase">
+                                            現在
+                                        </span>
+                                        <span v-else
+                                            class="bg-slate-100 text-slate-600 text-[10px] font-black px-2 py-1 rounded-md uppercase">
+                                            履歴
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex gap-2">
+                                            <button @click="editItem('dept', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
+                                                    class="pi pi-pencil"></i></button>
+                                            <button v-if="item.id" @click="confirmDelete('dept', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
+                                                    class="pi pi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </SettingsTable>
+                        </div>
+
+                        <!-- Department Groups Tab -->
+                        <div v-if="activeTab === 'dept_groups'">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                                <div>
+                                    <h2 class="text-2xl font-black text-slate-900 dark:text-white">部門区分設定</h2>
+                                    <p class="text-sm text-slate-500">レポート作成用の部門区分を管理します</p>
+                                </div>
+                                <button @click="openModal('dept_group')"
+                                    class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none">
+                                    <i class="pi pi-plus"></i> 新規追加
+                                </button>
                             </div>
+                            <SettingsTable
+                                :headers="[
+                                    { label: '順序', class: 'w-24' },
+                                    { label: '区分名' },
+                                    { label: '操作' }
+                                ]"
+                                :items="settings.departmentGroups"
+                            >
+                                <tr v-for="item in settings.departmentGroups" :key="item.id"
+                                    class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                    <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
+                                    <td class="py-4 px-4 font-bold">{{ item.name }}</td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex gap-2">
+                                            <button @click="editItem('dept_group', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
+                                                    class="pi pi-pencil"></i></button>
+                                            <button @click="confirmDelete('dept_group', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
+                                                    class="pi pi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </SettingsTable>
                         </div>
 
                         <!-- Mappings Tab -->
@@ -342,73 +345,57 @@
                                 </div>
                             </div>
 
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr class="border-b border-slate-100 dark:border-slate-700">
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                対象タイプ</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                対象アイテム</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                ホテル</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                勘定科目</th>
-                                            <th
-                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
-                                                操作</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="item in settings.mappings" :key="item.id"
-                                            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                            <td class="py-4 px-4">
-                                                <span class="text-[10px] font-black px-2 py-1 rounded-md uppercase"
-                                                    :class="getTargetTypeBadgeClass(item.target_type)">
-                                                    {{ getTargetTypeLabel(item.target_type) }}
-                                                </span>
-                                            </td>
-                                            <td class="py-4 px-4 font-bold">{{ getTargetName(item) }}</td>
-                                            <td class="py-4 px-4 text-sm text-slate-500">
-                                                <span v-if="item.hotel_id" class="flex items-center gap-1">
-                                                    <i class="pi pi-building text-[10px]"></i> {{
-                                                        getHotelName(item.hotel_id) }}
-                                                </span>
-                                                <span v-else
-                                                    class="text-violet-600 font-bold italic flex items-center gap-1">
-                                                    <i class="pi pi-globe text-[10px]"></i> 共通設定
-                                                </span>
-                                            </td>
-                                            <td class="py-4 px-4 font-black">
-                                                <div class="flex flex-col">
-                                                    <span class="text-slate-900 dark:text-white">{{ item.account_name
-                                                    }}</span>
-                                                    <span class="text-[10px] text-slate-400 tabular-nums">{{
-                                                        item.account_code }}</span>
-                                                </div>
-                                            </td>
-                                            <td class="py-4 px-4">
-                                                <div class="flex gap-2">
-                                                    <button @click="editItem('mapping', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-pencil"></i></button>
-                                                    <button @click="confirmDelete('mapping', item)"
-                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
-                                                            class="pi pi-trash"></i></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr v-if="settings.mappings.length === 0">
-                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">
-                                                データがありません。</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                            <SettingsTable
+                                :headers="[
+                                    { label: '対象タイプ' },
+                                    { label: '対象アイテム' },
+                                    { label: 'ホテル' },
+                                    { label: '勘定科目' },
+                                    { label: '操作' }
+                                ]"
+                                :items="settings.mappings"
+                            >
+                                <tr v-for="item in settings.mappings" :key="item.id"
+                                    class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                    <td class="py-4 px-4">
+                                        <span class="text-[10px] font-black px-2 py-1 rounded-md uppercase"
+                                            :class="getTargetTypeBadgeClass(item.target_type)">
+                                            {{ getTargetTypeLabel(item.target_type) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4 font-bold">{{ getTargetName(item) }}</td>
+                                    <td class="py-4 px-4 text-sm text-slate-500">
+                                        <span v-if="item.hotel_id" class="flex items-center gap-1">
+                                            <i class="pi pi-building text-[10px]"></i> {{
+                                                getHotelName(item.hotel_id) }}
+                                        </span>
+                                        <span v-else
+                                            class="text-violet-600 font-bold italic flex items-center gap-1">
+                                            <i class="pi pi-globe text-[10px]"></i> 共通設定
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4 font-black">
+                                        <div class="flex flex-col">
+                                            <span class="text-slate-900 dark:text-white">{{ item.account_name
+                                            }}</span>
+                                            <span class="text-[10px] text-slate-400 tabular-nums">{{
+                                                item.account_code }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex gap-2">
+                                            <button @click="editItem('mapping', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'編集'"><i
+                                                    class="pi pi-pencil"></i></button>
+                                            <button @click="confirmDelete('mapping', item)"
+                                                class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"
+                                                v-tooltip.top="'削除'"><i
+                                                    class="pi pi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </SettingsTable>
                         </div>
 
                     </div>
@@ -420,12 +407,20 @@
         <SettingsDialog v-model:visible="modal.visible" :type="modal.type" :is-edit="modal.isEdit" :initial-data="form"
             :settings="settings" :hotels="hotelStore.safeHotels.value" :saving="saving" @save="handleSave" />
 
+        <!-- Sub-Account Manager Modal -->
+        <SubAccountManagerDialog v-model:visible="subAccountManager.visible" 
+            :parent-account="subAccountManager.parentAccount" 
+            :sub-accounts="subAccountManager.subAccounts"
+            @create="handleSubAccountCreate"
+            @edit="handleSubAccountEdit"
+            @delete="handleSubAccountDelete"
+        />
+
         <ConfirmDialog group="accounting-settings" />
     </div>
 </template>
-
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useAccountingStore } from '@/composables/useAccountingStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useConfirm } from 'primevue/useconfirm';
@@ -433,6 +428,8 @@ import { useToast } from 'primevue/usetoast';
 import Select from 'primevue/select';
 import ConfirmDialog from 'primevue/confirmdialog';
 import SettingsDialog from './components/dialogs/SettingsDialog.vue';
+import SubAccountManagerDialog from './components/dialogs/SubAccountManagerDialog.vue';
+import SettingsTable from './components/SettingsTable.vue';
 
 const store = useAccountingStore();
 const hotelStore = useHotelStore();
@@ -448,8 +445,9 @@ const selectedTaxFilter = ref(null);
 const tabs = [
     { id: 'codes', label: '勘定科目' },
     { id: 'groups', label: '管理区分' },
-    { id: 'tax', label: '税区分' },
-    { id: 'dept', label: '部門設定' }
+    { id: 'dept', label: '部門設定' },
+    { id: 'dept_groups', label: '部門区分' },
+    { id: 'tax', label: '税区分' }
 ];
 
 const settings = reactive({
@@ -457,6 +455,8 @@ const settings = reactive({
     groups: [],
     taxClasses: [],
     departments: [],
+    departmentGroups: [],
+    subAccounts: [],
     mappings: [],
     mappingMasterData: {
         plans: [],
@@ -468,6 +468,43 @@ const settings = reactive({
 });
 
 const selectedMappingHotelId = ref(null);
+
+const subAccountManager = reactive({
+    visible: false,
+    parentAccount: null,
+    subAccounts: []
+});
+
+const getSubAccountCount = (accountId) => {
+    return settings.subAccounts.filter(sa => sa.account_code_id === accountId).length;
+};
+
+const openSubAccountManager = (account) => {
+    subAccountManager.parentAccount = account;
+    subAccountManager.subAccounts = settings.subAccounts.filter(sa => sa.account_code_id === account.id);
+    subAccountManager.visible = true;
+};
+
+// Update sub-account list when settings change
+watch(() => settings.subAccounts, () => {
+    if (subAccountManager.visible && subAccountManager.parentAccount) {
+        subAccountManager.subAccounts = settings.subAccounts.filter(sa => sa.account_code_id === subAccountManager.parentAccount.id);
+    }
+}, { deep: true });
+
+const handleSubAccountCreate = (parentAccount) => {
+    // Open SettingsDialog for creation, pre-filled
+    openModal('subaccount', { account_code_id: parentAccount.id });
+    // Note: We keep SubAccountManagerDialog open. PrimeVue Dialogs stack.
+};
+
+const handleSubAccountEdit = (item) => {
+    editItem('subaccount', item);
+};
+
+const handleSubAccountDelete = (item) => {
+    confirmDelete('subaccount', item);
+};
 
 const filteredCodes = computed(() => {
     if (!selectedGroupFilter.value) return settings.codes;
@@ -511,6 +548,8 @@ const fetchSettings = async () => {
         settings.groups = data.groups;
         settings.taxClasses = data.taxClasses;
         settings.departments = data.departments;
+        settings.departmentGroups = data.departmentGroups || [];
+        settings.subAccounts = data.subAccounts || [];
         settings.mappings = data.mappings;
         if (data.mappingMasterData) {
             settings.mappingMasterData = data.mappingMasterData;
@@ -540,25 +579,30 @@ const getHotelName = (id) => {
 
 
 
-const openModal = (type) => {
+const openModal = (type, initialValues = {}) => {
     modal.type = type;
     modal.isEdit = false;
     modal.visible = true;
 
     // Reset form
-    form.id = null;
-    form.code = '';
-    form.name = '';
-    form.management_group_id = null;
-    form.is_active = true;
-    form.display_order = 10;
-    form.yayoi_name = '';
-    form.tax_rate_percent = 10;
-    form.hotel_id = null;
-    form.is_current = false;
-    form.target_type = null;
-    form.target_id = null;
-    form.account_code_id = null;
+    Object.assign(form, {
+        id: null,
+        code: '',
+        name: '',
+        management_group_id: null,
+        is_active: true,
+        display_order: 10,
+        yayoi_name: '',
+        tax_rate_percent: 10,
+        hotel_id: null,
+        is_current: false,
+        target_type: null,
+        target_id: null,
+        account_code_id: null
+    });
+
+    // Merge initial values
+    Object.assign(form, initialValues);
 };
 
 const editItem = (type, item) => {
@@ -578,6 +622,8 @@ const editItem = (type, item) => {
         form.is_active = item.is_active;
     } else if (type === 'group') {
         form.display_order = item.display_order;
+    } else if (type === 'dept_group') {
+        form.display_order = item.display_order;
     } else if (type === 'tax') {
         form.yayoi_name = item.yayoi_name;
         form.tax_rate_percent = item.tax_rate * 100;
@@ -587,11 +633,18 @@ const editItem = (type, item) => {
         form.hotel_id = item.hotel_id;
         form.name = item.name || '';
         form.is_current = item.is_current !== undefined ? item.is_current : false;
+        form.department_group_id = item.department_group_id;
     } else if (type === 'mapping') {
         form.hotel_id = item.hotel_id;
         form.target_type = item.target_type;
         form.target_id = item.target_id;
         form.account_code_id = item.account_code_id;
+    } else if (type === 'subaccount') {
+        form.account_code_id = item.account_code_id;
+        form.code = item.code;
+        form.description = item.description;
+        form.display_order = item.display_order;
+        form.is_active = item.is_active;
     }
 };
 
@@ -604,8 +657,6 @@ const handleSave = async (formData) => {
             payload.tax_rate = payload.tax_rate_percent / 100;
         }
 
-
-
         if (modal.type === 'mapping' && payload.target_type === 'cancellation') {
             payload.target_id = 0;
         }
@@ -614,7 +665,9 @@ const handleSave = async (formData) => {
         else if (modal.type === 'group') await store.upsertManagementGroup(payload);
         else if (modal.type === 'tax') await store.upsertTaxClass(payload);
         else if (modal.type === 'dept') await store.upsertDepartment(payload);
+        else if (modal.type === 'dept_group') await store.upsertDepartmentGroup(payload);
         else if (modal.type === 'mapping') await store.upsertMapping(payload);
+        else if (modal.type === 'subaccount') await store.upsertSubAccount(payload);
 
         modal.visible = false;
         await fetchSettings();
@@ -652,7 +705,9 @@ const confirmDelete = (type, item) => {
                 else if (type === 'group') await store.deleteManagementGroup(item.id);
                 else if (type === 'tax') await store.deleteTaxClass(item.id);
                 else if (type === 'dept') await store.deleteDepartment(item.id);
+                else if (type === 'dept_group') await store.deleteDepartmentGroup(item.id);
                 else if (type === 'mapping') await store.deleteMapping(item.id);
+                else if (type === 'subaccount') await store.deleteSubAccount(item.id);
                 await fetchSettings();
                 toast.add({ severity: 'success', summary: '成功', detail: '削除しました。', life: 3000 });
             } catch (err) {

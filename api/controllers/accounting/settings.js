@@ -11,11 +11,12 @@ const getSettings = async (req, res, next) => {
             validationUtils.validateNumericParam(hotel_id, 'hotel_id');
         }
 
-        const [codes, groups, taxClasses, departments, subAccounts] = await Promise.all([
+        const [codes, groups, taxClasses, departments, departmentGroups, subAccounts] = await Promise.all([
             accountingModel.accountingRead.getAccountCodes(requestId),
             accountingModel.accountingRead.getManagementGroups(requestId),
             accountingModel.accountingRead.getTaxClasses(requestId),
             accountingModel.accountingRead.getDepartments(requestId),
+            accountingModel.accountingRead.getDepartmentGroups(requestId),
             accountingModel.accountingRead.getSubAccounts(requestId)
         ]);
 
@@ -25,6 +26,7 @@ const getSettings = async (req, res, next) => {
         let mappingMasterData = {
             plans: [],
             categories: [],
+            packageCategories: [],
             addonsGlobal: [],
             addonsHotel: []
         };
@@ -71,6 +73,7 @@ const getSettings = async (req, res, next) => {
             groups,
             taxClasses,
             departments,
+            departmentGroups,
             subAccounts,
             mappings,
             mappingMasterData
@@ -169,8 +172,8 @@ const upsertDepartment = async (req, res, next) => {
     try {
         const { requestId, user } = req;
         const data = req.body;
-        if (!data.hotel_id || !data.name) {
-            const error = new Error('Hotel ID and Name are required');
+        if (!data.name) {
+            const error = new Error('Name is required');
             error.statusCode = 400;
             throw error;
         }
@@ -187,6 +190,34 @@ const deleteDepartment = async (req, res, next) => {
         const { id } = req.params;
         validationUtils.validateNumericParam(id, 'id');
         const result = await accountingModel.accountingWrite.deleteDepartment(requestId, id);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const upsertDepartmentGroup = async (req, res, next) => {
+    try {
+        const { requestId, user } = req;
+        const data = req.body;
+        if (!data.name) {
+            const error = new Error('Name is required');
+            error.statusCode = 400;
+            throw error;
+        }
+        const result = await accountingModel.accountingWrite.upsertDepartmentGroup(requestId, data, user.id);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const deleteDepartmentGroup = async (req, res, next) => {
+    try {
+        const { requestId } = req;
+        const { id } = req.params;
+        validationUtils.validateNumericParam(id, 'id');
+        const result = await accountingModel.accountingWrite.deleteDepartmentGroup(requestId, id);
         res.json(result);
     } catch (err) {
         next(err);
@@ -221,6 +252,34 @@ const deleteMapping = async (req, res, next) => {
     }
 };
 
+const upsertSubAccount = async (req, res, next) => {
+    try {
+        const { requestId, user } = req;
+        const data = req.body;
+        if (!data.account_code_id || !data.name) {
+            const error = new Error('Account Code ID and Name are required');
+            error.statusCode = 400;
+            throw error;
+        }
+        const result = await accountingModel.accountingWrite.upsertSubAccount(requestId, data, user.id);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const deleteSubAccount = async (req, res, next) => {
+    try {
+        const { requestId } = req;
+        const { id } = req.params;
+        validationUtils.validateNumericParam(id, 'id');
+        const result = await accountingModel.accountingWrite.deleteSubAccount(requestId, id);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     getSettings,
     upsertCode,
@@ -231,6 +290,10 @@ module.exports = {
     deleteTaxClass,
     upsertDepartment,
     deleteDepartment,
+    upsertDepartmentGroup,
+    deleteDepartmentGroup,
     upsertMapping,
-    deleteMapping
+    deleteMapping,
+    upsertSubAccount,
+    deleteSubAccount
 };
