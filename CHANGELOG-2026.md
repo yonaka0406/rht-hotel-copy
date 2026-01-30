@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.8] - 2026-01-30
+
+- Bug Fix: Fixed the accumulated date-based filtering capability to sales and occupancy reporting views
+- New Feature: Implemented intelligent data source prioritization for Occupancy metrics in Reports module
+- Performance: Improved data loading speed through parallel fetching operations in Monthly Report
+
+
+---
+
 ## [1.4.7] - 2026-01-29
 
 - Bug Fix: Resolved plan linking issues where plan IDs were missing or incorrectly mapped.
