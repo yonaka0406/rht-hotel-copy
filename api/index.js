@@ -6,6 +6,7 @@ const appConfig = require('./config/appConfig'); // Import appConfig
 
 const path = require('path');
 const express = require('express');
+const helmet = require('helmet');
 const cors = require('cors');
 const http = require('http');
 const https = require('https');
@@ -27,6 +28,22 @@ const { startOtaXmlPoller, stopOtaXmlPoller, POLL_INTERVAL } = require('./jobs/o
 const { defaultMonitor: otaTriggerMonitor } = require('./jobs/otaTriggerMonitorJob.js');
 
 const app = express();
+
+// Security Middleware: Helmet helps secure Express apps by setting various HTTP headers.
+// The default configuration is enhanced with a slightly relaxed CSP to ensure
+// compatibility with frontend libraries like PrimeVue and ECharts that may use inline styles/eval.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "style-src": ["'self'", "'unsafe-inline'"],
+      "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      "img-src": ["'self'", "data:", "blob:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Disabled to avoid issues with loading external assets
+}));
+
 const { closeSingletonBrowser } = require('./services/playwrightService');
 app.locals.logger = logger; // Make logger globally available
 app.set('trust proxy', 1);
