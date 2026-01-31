@@ -231,6 +231,7 @@ const isUpdating = ref(false);
 const isLoading = ref(true);
 const centerDate = ref(formatDate(new Date()));
 const pinnedRowIndex = ref(null);
+const tableContainer = ref(null);
 
 const hoveredRow = ref(null);
 const hoveredCol = ref(null);
@@ -300,6 +301,7 @@ const {
   handleDrop,
   handleCellClick,
   applyReorganization,
+  isSelectedRoomByDay,
   endDrag,
   highlightDropZone,
   removeHighlight
@@ -320,8 +322,18 @@ const {
   setReservationRoom,
   setCalendarFreeChange,
   fetchReservations: async (start, end) => {
-    await fetchReservedRooms(selectedHotelId.value, start, end);
-    tempReservations.value = reservedRooms.value;
+    try {
+      await fetchReservedRooms(selectedHotelId.value, start, end);
+      tempReservations.value = reservedRooms.value;
+    } catch (error) {
+      console.error('Error fetching reservations in dragDrop:', error);
+      toast.add({
+        severity: 'error',
+        summary: 'エラー',
+        detail: '予約情報の取得に失敗しました。' + (error.message || ''),
+        life: 5000
+      });
+    }
   },
   dateRange,
   isUpdating,
@@ -373,6 +385,12 @@ const fetchReservations = async (startDate, endDate) => {
     tempReservations.value = reservedRooms.value;
   } catch (error) {
     console.error('Error fetching reservations:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'エラー',
+      detail: '予約情報の取得に失敗しました。' + (error.message || ''),
+      life: 5000
+    });
   }
 };
 
@@ -616,15 +634,14 @@ onMounted(async () => {
   nextTick(async () => {
     await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
 
-    const tableContainer = document.querySelector(".table-container");
-    if (tableContainer) {
-      const totalScrollHeight = tableContainer.scrollHeight;
+    if (tableContainer.value) {
+      const totalScrollHeight = tableContainer.value.scrollHeight;
       const scrollPosition = totalScrollHeight / 5;
-      tableContainer.scrollTo({
+      tableContainer.value.scrollTo({
         top: scrollPosition,
         behavior: "smooth",
       });
-      tableContainer.addEventListener("scroll", handleScroll);
+      tableContainer.value.addEventListener("scroll", handleScroll);
     }
 
   });
@@ -702,10 +719,9 @@ watch(centerDate, async (newVal, _oldVal) => {
   isLoading.value = false;
   // Scroll to the row for the selected date after table is rendered
   nextTick(() => {
-    const tableContainer = document.querySelector('.table-container');
-    if (tableContainer) {
+    if (tableContainer.value) {
       // Find the row for the day before the selected date
-      const rows = tableContainer.querySelectorAll('tbody tr');
+      const rows = tableContainer.value.querySelectorAll('tbody tr');
       let targetRow = null;
       // Calculate the day before
       const selectedDate = new Date(newVal);
@@ -729,10 +745,10 @@ watch(centerDate, async (newVal, _oldVal) => {
         });
       }
       if (targetRow) {
-        const containerRect = tableContainer.getBoundingClientRect();
+        const containerRect = tableContainer.value.getBoundingClientRect();
         const rowRect = targetRow.getBoundingClientRect();
         // Scroll so the row is near the top (with a small offset)
-        tableContainer.scrollTop += (rowRect.top - containerRect.top) - 16;
+        tableContainer.value.scrollTop += (rowRect.top - containerRect.top) - 16;
       }
     }
   });

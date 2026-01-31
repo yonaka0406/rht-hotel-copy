@@ -347,6 +347,10 @@ export function useDragDrop(dependencies) {
     removeHighlight();
   };
 
+  const isSelectedRoomByDay = (roomId, date) => {
+    return selectedRoomByDay.value.some(item => item.key === `${roomId}_${date}`);
+  };
+
   const handleCellClick = async (room, date) => {
     const key = `${room.room_id}_${date}`;
     if (dragMode.value === 'reservation') {
@@ -507,6 +511,7 @@ export function useDragDrop(dependencies) {
     handleDrop: onDrop,
     handleCellClick,
     applyReorganization,
+    isSelectedRoomByDay,
     endDrag,
     highlightDropZone,
     removeHighlight
