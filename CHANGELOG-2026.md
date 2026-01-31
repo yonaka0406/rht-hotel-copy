@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.9] - 2026-02-01
 
+- New Feature: Modern calendar view for room reservations with responsive per-room columns, sticky left date sidebar, and a dual-mode toggle to switch between classic and modern views.
 - Improvement: Enhanced performance and accuracy of client duplication detection using Japanese character normalization and corporate prefix stripping.
 - New Feature: Added a "Merge" tab to the client edit page for streamlined CRM record consolidation.
 - UI Improvement: Responsive Dashboard dialog layout with improved spacing and readability.
