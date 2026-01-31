@@ -59,77 +59,27 @@
                 </div>
 
               </td>
-              <td v-for="(room, roomIndex) in selectedHotelRooms" :key="roomIndex"
-                @dblclick="handleCellClick(room, date)" @dragstart="handleDragStart($event, room.room_id, date)"
-                @dragend="endDrag()" @dragover.prevent @dragenter="highlightDropZone($event, room.room_id, date)"
-                @dragleave="removeHighlight($event, room.room_id, date)" @drop="handleDrop($event, room.room_id, date)"
-                @contextmenu.prevent="showContextMenu($event, room, date)"
-                draggable="true" :style="getCellStyle(room.room_id, date, dragMode === 'reorganizeRooms')" :class="[
-                  'px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis border b-4 cell-with-hover',
-                  isCellFirst(room.room_id, fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms')?.reservation_id, date, dragMode === 'reorganizeRooms') ? 'cell-first' : '',
-                  isCellLast(room.room_id, fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms')?.reservation_id, date, dragMode === 'reorganizeRooms') ? 'cell-last' : '',
-                  'cursor-pointer',
-                  headerState.isCompactView ? 'compact-cell' : '',
-                  isSelectedRoomByDay(room.room_id, date) ? 'selected-room-by-day' : '',
-                  !isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms') ? 'dark:bg-gray-800 dark:text-gray-100' : ''
-                ]" @mouseover="applyHover(roomIndex, dateIndex)" @mouseleave="removeHover(roomIndex, dateIndex)">
-                
-                <div v-if="isLoading && !isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms')">
-                  <Skeleton class="mb-2 dark:bg-gray-700"></Skeleton>
-                </div>
-                <div v-else>
-                  <div v-if="isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms')"
-                    class="flex">
-                    <div class="flex flex-col">
-                      <div>
-                        <template
-                          v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').type === 'employee'">
-                          <i class="pi pi-id-card bg-purple-200 p-1 rounded dark:bg-purple-800"></i>
-                        </template>
-                        <template
-                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'hold'">
-                          <i class="pi pi-pause bg-yellow-100 p-1 rounded dark:bg-yellow-800"></i>
-                        </template>
-                        <template
-                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'provisory'">
-                          <i class="pi pi-clock bg-cyan-200 p-1 rounded dark:bg-cyan-800"></i>
-                        </template>
-                        <template
-                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'confirmed'">
-                          <i class="pi pi-check-circle bg-sky-300 p-1 rounded dark:bg-sky-800"></i>
-                        </template>
-                        <template
-                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_in'">
-                          <i class="pi pi-user bg-green-400 p-1 rounded dark:bg-green-800"></i>
-                        </template>
-                        <template
-                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_out'">
-                          <i class="pi pi-sign-out bg-gray-300 p-1 rounded dark:bg-gray-700"></i>
-                        </template>
-                        <template
-                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block' && fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_id === '11111111-1111-1111-1111-111111111111'">
-                          <i class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>
-                        </template>
-                        <template
-                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block' && fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_id === '22222222-2222-2222-2222-222222222222'">
-                          <i class="pi pi-lock bg-orange-100 p-1 rounded dark:bg-orange-800"></i>
-                        </template>
-                      </div>
-                      <div>
-                        <template v-if="isGlobe(room, date)">
-                          <i class="pi pi-globe bg-blue-200 p-1 rounded dark:bg-blue-800"></i>
-                        </template>                        
-                      </div>
-                    </div>
-                    <div class="ml-1 dark:text-gray-100 flex items-center">
-                      {{ fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_name || '予約情報あり' }}
-                    </div>
-                  </div>
-                  <div v-else>
-                    <i class="pi pi-circle"></i> <span class="dark:text-gray-100">空室</span>
-                  </div>
-                </div>
-            </td>
+              <ReservationsCalendarCell
+                v-for="(room, roomIndex) in selectedHotelRooms"
+                :key="roomIndex"
+                :room="room"
+                :date="date"
+                :reservation-info="getReservationForCell(room.room_id, date)"
+                :is-compact="headerState.isCompactView"
+                :is-selected="isSelectedRoomByDay(room.room_id, date)"
+                :is-loading="isLoading"
+                :drag-mode="dragMode"
+                :is-modified="isCellModified(room.room_id, date)"
+                @dblclick="handleCellClick(room, date)"
+                @dragstart="handleDragStart($event, room.room_id, date)"
+                @dragend="endDrag()"
+                @dragenter="highlightDropZone($event, room.room_id, date)"
+                @dragleave="removeHighlight($event, room.room_id, date)"
+                @drop="handleDrop($event, room.room_id, date)"
+                @contextmenu="showContextMenu($event, room, date)"
+                @mouseover="applyHover(roomIndex, dateIndex)"
+                @mouseleave="removeHover(roomIndex, dateIndex)"
+              />
             </tr>
           </tbody>
         </table>
@@ -251,6 +201,7 @@ const ReservationAddRoom = defineAsyncComponent(() => import('./components/Reser
 const ClientForReservationDialog = defineAsyncComponent(() => import('./components/Dialogs/ClientForReservationDialog.vue'));
 import ReservationsCalendarHeader from './components/ReservationsCalendarHeader.vue';
 import ReservationsCalendarLegend from './components/ReservationsCalendarLegend.vue';
+import ReservationsCalendarCell from './components/ReservationsCalendarCell.vue';
 //import ReservationsCalendarGrid from './components/ReservationsCalendarGrid.vue';
 
 //Websocket
@@ -263,7 +214,7 @@ const toast = useToast();
 import { useConfirm } from "primevue/useconfirm";
 const confirm = useConfirm();
 const confirmRoomMode = useConfirm();
-import { Panel, Drawer, Card, Skeleton, ConfirmDialog, SpeedDial, ContextMenu, Button, Badge, OverlayBadge } from 'primevue';
+import { Panel, Drawer, Card, ConfirmDialog, SpeedDial, ContextMenu, Button, Badge, OverlayBadge } from 'primevue';
 
 // Stores  
 import { useHotelStore } from '@/composables/useHotelStore';
@@ -292,10 +243,6 @@ const formatDateWithDay = (date) => {
 const goToReservation = () => {
   router.push({ name: 'ReservationEdit', params: { reservation_id: reservationId.value } });
 }
-const isGlobe = (room, date) => {
-  const roomInfo = fillRoomInfo(room.room_id, date, dragMode.value === 'reorganizeRooms');
-  return roomInfo && (roomInfo.type === 'ota' || roomInfo.type === 'web');
-};
 
 // State
 const headerState = ref({
@@ -439,10 +386,20 @@ const formatClientName = (name) => {
 const reservedRoomsMap = computed(() => {
   const map = {};
   reservedRooms.value.forEach(reservation => {
-    const key = `${reservation.room_id}_${formatDate(new Date(reservation.date))}`;
+    const dateStr = formatDate(new Date(reservation.date));
+    const key = `${reservation.room_id}_${dateStr}`;
+
+    // Check if first/last
+    const checkInDate = formatDate(new Date(reservation.check_in));
+    const checkOutDate = new Date(reservation.check_out);
+    checkOutDate.setDate(checkOutDate.getDate() - 1);
+    const lastDate = formatDate(checkOutDate);
+
     map[key] = {
       ...reservation,
-      client_name: formatClientName(reservation.client_name)
+      client_name: formatClientName(reservation.client_name),
+      isFirst: dateStr === checkInDate,
+      isLast: dateStr === lastDate
     };
   });
   return map;
@@ -450,10 +407,20 @@ const reservedRoomsMap = computed(() => {
 const tempReservationsMap = computed(() => {
   const map = {};
   tempReservations.value.forEach(reservation => {
-    const key = `${reservation.room_id}_${formatDate(new Date(reservation.date))}`;
+    const dateStr = formatDate(new Date(reservation.date));
+    const key = `${reservation.room_id}_${dateStr}`;
+
+    // Check if first/last
+    const checkInDate = formatDate(new Date(reservation.check_in));
+    const checkOutDate = new Date(reservation.check_out);
+    checkOutDate.setDate(checkOutDate.getDate() - 1);
+    const lastDate = formatDate(checkOutDate);
+
     map[key] = {
       ...reservation,
-      client_name: formatClientName(reservation.client_name)
+      client_name: formatClientName(reservation.client_name),
+      isFirst: dateStr === checkInDate,
+      isLast: dateStr === lastDate
     };
   });
   return map;
@@ -462,134 +429,39 @@ const tempReservationsMap = computed(() => {
 // Count of available rooms
 const availableRoomsByDate = computed(() => {
   const availability = {};
-  dateRange.value.forEach(date => {
-    const roomsForSale = selectedHotelRooms.value.filter(room => room.room_for_sale_idc === true);
-    const reservedCount = roomsForSale.filter(room =>
-      reservedRoomsMap.value[`${room.room_id}_${date}`]
-    ).length;
+  const roomsForSale = selectedHotelRooms.value.filter(room => room.room_for_sale_idc === true);
+  const totalRoomsForSaleCount = roomsForSale.length;
+  const roomsForSaleIds = new Set(roomsForSale.map(room => room.room_id));
 
-    availability[date] = roomsForSale.length * 1 - reservedCount * 1;
+  // Initialize availability for each date in the range
+  dateRange.value.forEach(date => {
+    availability[date] = totalRoomsForSaleCount;
+  });
+
+  // Subtract reserved rooms that are currently in the map (non-cancelled and for sale)
+  Object.keys(reservedRoomsMap.value).forEach(key => {
+    const [roomId, date] = key.split('_');
+    if (availability[date] !== undefined && roomsForSaleIds.has(Number(roomId))) {
+      availability[date]--;
+    }
   });
 
   return availability;
 });
 
 // Fill & Format the table 
-const isRoomReserved = (roomId, date, useTemp = false) => {
+const getReservationForCell = (roomId, date) => {
   const key = `${roomId}_${date}`;
-  return useTemp ? !!tempReservationsMap.value[key] : !!reservedRoomsMap.value[key];
-};
-const fillRoomInfo = (room_id, date, useTemp = false) => {
-  const key = `${room_id}_${date}`;
-  return useTemp ? tempReservationsMap.value[key] || { status: 'available', client_name: '', reservation_id: null } : reservedRoomsMap.value[key] || { status: 'available', client_name: '', reservation_id: null };
-};
-const getCellStyle = (room_id, date, useTemp = false) => {
-  const roomInfo = fillRoomInfo(room_id, date, dragMode.value === 'reorganizeRooms');
-  const room = selectedHotelRooms.value.find(r => r.room_id === room_id);
-  let roomColor = '#d3063d';
-  let style = {};
-
-  if (room && room.is_staff_room && (!roomInfo || roomInfo.status === 'available')) {
-    style = { backgroundColor: '#f3e5f5' };
-  } else if (roomInfo && roomInfo.type === 'employee') {
-    roomColor = '#f3e5f5';
-    style = { backgroundColor: roomColor };
-  } else if (roomInfo && roomInfo.status === 'provisory') {
-    roomColor = '#ead59f';
-    style = { backgroundColor: `${roomColor}` };
-  } else if (roomInfo && roomInfo.status === 'block' && roomInfo.client_id === '22222222-2222-2222-2222-222222222222') {
-    roomColor = '#fed7aa';
-    style = { backgroundColor: `${roomColor}` };
-  } else if (roomInfo && roomInfo.status === 'block') {
-    roomColor = '#fca5a5';
-    style = { backgroundColor: `${roomColor}` };
-  } else if (roomInfo && (roomInfo.type === 'ota' || roomInfo.type === 'web')) {
-    roomColor = roomInfo.plan_color || '#9fead5';
-    style = { backgroundColor: `${roomColor}` };
-  } else if (roomInfo && roomInfo.plan_color) {
-    roomColor = roomInfo.plan_color;
-    style = { backgroundColor: `${roomColor}` };
-  } else if (roomInfo && roomInfo.status !== 'available') {
-    style = { color: `${roomColor}`, fontWeight: 'bold' };
-  }
-
-  if (useTemp) {
-    const originalReservation = reservedRooms.value.find(r => r.room_id === room_id && formatDate(new Date(r.date)) === date);
-    const tempReservation = tempReservations.value.find(r => r.room_id === room_id && formatDate(new Date(r.date)) === date);
-
-    if (originalReservation?.id !== tempReservation?.id) {
-      style.border = '2px solid red'; // Highlight modified cells
-    }
-  }
-
-  return style;
-};
-const firstCellMap = computed(() => {
-  const firstMap = {};
-  reservedRooms.value.forEach(room => {
-    const checkInDate = formatDate(new Date(room.check_in));
-    const key = `${room.room_id}_${room.reservation_id}_${checkInDate}`;
-    firstMap[key] = true;
-  });
-  return firstMap;
-});
-
-const lastCellMap = computed(() => {
-  const lastMap = {};
-  reservedRooms.value.forEach(room => {
-    const checkOutDate = new Date(room.check_out);
-    checkOutDate.setDate(checkOutDate.getDate() - 1);
-    const formattedDate = formatDate(checkOutDate);
-    const key = `${room.room_id}_${room.reservation_id}_${formattedDate}`;
-    lastMap[key] = true;
-  });
-  return lastMap;
-});
-const firstCellTempMap = computed(() => {
-  const firstMap = {};
-  tempReservations.value.forEach(room => {
-    // Format date for consistent comparison
-    const checkInDate = formatDate(new Date(room.check_in));
-    const key = `${room.room_id}_${checkInDate}`;
-    firstMap[key] = true;
-  });
-  return firstMap;
-});
-
-const lastCellTempMap = computed(() => {
-  const lastMap = {};
-  tempReservations.value.forEach(room => {
-    // Create date object and subtract one day
-    const checkOutDate = new Date(room.check_out);
-    checkOutDate.setDate(checkOutDate.getDate() - 1);
-    
-    // Format the modified date
-    const formattedDate = formatDate(checkOutDate);
-    const key = `${room.room_id}_${formattedDate}`;
-    lastMap[key] = true;
-  });
-  return lastMap;
-});
-const isCellFirst = (room_id, reservation_id, date, useTemp = false) => {
-  if (useTemp) {
-    // Logic for temporary map
-    const key = `${room_id}_${date}`;
-    return !!firstCellTempMap.value[key];
-  } else {
-    // Logic for main map
-    const key = `${room_id}_${reservation_id}_${date}`;
-    return !!firstCellMap.value[key];
-  }
+  const res = dragMode.value === 'reorganizeRooms' ? tempReservationsMap.value[key] : reservedRoomsMap.value[key];
+  return res || { status: 'available', client_name: '', reservation_id: null };
 };
 
-const isCellLast = (room_id, reservation_id, date, useTemp = false) => {
-  if (useTemp) {
-    const key = `${room_id}_${date}`;
-    return !!lastCellTempMap.value[key];
-  } else {
-    const key = `${room_id}_${reservation_id}_${date}`;
-    return !!lastCellMap.value[key];
-  }
+
+const isCellModified = (roomId, date) => {
+  if (dragMode.value !== 'reorganizeRooms') return false;
+  const original = reservedRoomsMap.value[`${roomId}_${date}`];
+  const temp = tempReservationsMap.value[`${roomId}_${date}`];
+  return original?.id !== temp?.id;
 };
 const applyHover = (roomIndex, dateIndex) => {
   // Highlight the entire row
@@ -639,7 +511,8 @@ const selectedRoom = ref(null);
 const selectedDate = ref(null);
 const openDrawer = (roomId, date) => {
   // Check for CRUD permissions before opening the drawer for a new reservation
-  if (!fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').reservation_id) {
+  const res = getReservationForCell(roomId, date);
+  if (!res.reservation_id) {
     if (!logged_user.value || !logged_user.value.length || logged_user.value[0]?.permissions?.crud_ok !== true) {
       toast.add({ severity: 'warn', summary: '権限エラー', detail: '予約作成の権限がありません。', life: 3000 });
       return;
@@ -651,11 +524,11 @@ const openDrawer = (roomId, date) => {
   selectedDate.value = date;
 
   if (selectedRoom.value) {
-    if (!fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').reservation_id) {
+    if (!res.reservation_id) {
       setReservationId(null);
       drawerVisible.value = true;
     } else {
-      setReservationId(fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').reservation_id);
+      setReservationId(res.reservation_id);
       drawerVisible.value = true;
     }
   } else {
@@ -697,22 +570,6 @@ const draggingCheckIn = ref(null);
 const draggingCheckOut = ref(null);
 const draggingRoomNumber = ref(null);
 const selectedRoomByDay = ref([]);
-const selectedRoomByDayDateRange = computed(() => {
-  if (!selectedRoomByDay.value || selectedRoomByDay.value.length === 0) {
-    return { minDate: null, maxDate: null };
-  }
-
-  const dates = selectedRoomByDay.value.map(item => new Date(item.key.split('_')[1]));
-
-  if (dates.length === 0) {
-    return { minDate: null, maxDate: null };
-  }
-
-  const minDate = new Date(Math.min(...dates));
-  const maxDate = new Date(Math.max(...dates));
-
-  return { minDate: minDate, maxDate: maxDate };
-});
 const tempRoomData = ref([]);
 const hasChanges = ref(false);
 const dragMode = ref('reservation');
@@ -1140,31 +997,10 @@ const applyReorganization = async () => {
 const isSelectedRoomByDay = (roomId, date) => {
   return selectedRoomByDay.value?.some(item => item.key === `${roomId}_${date}`);
 };
-const isContiguous = (selected, key) => {
-  // Check if the key is already in the array
-  if (selected.some(item => item.key === key)) {
-    return false;
-  }
-
-  // Check day difference between items
-  const newRoomId = key.split('_')[0];
-  const newDate = new Date(key.split('_')[1]);
-
-  for (const selectedItem of selected) {
-    const selectedKey = selectedItem.key;
-    const selectedRoomId = selectedKey.split('_')[0];
-    const selectedDate = new Date(selectedKey.split('_')[1]);
-    if (newRoomId === selectedRoomId && Math.abs(selectedDate - newDate) === 86400000) {
-      return true;
-    }
-  }
-
-  return false;
-};
 
 const startDrag = (event, roomId, date) => {
   // console.log('startDrag')
-  const reservation = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms');
+  const reservation = getReservationForCell(roomId, date);
   if (reservation.reservation_id) {
     draggingReservation.value = true;
     draggingRoomId.value = roomId;
@@ -1267,15 +1103,16 @@ const onDragStart = async (event, roomId, date) => {
   // console.log('onDragStart')
   dragFrom.value = null;
 
-  const reservation_id = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').reservation_id;
+  const reservation = getReservationForCell(roomId, date);
+  const reservation_id = reservation.reservation_id;
 
   if (reservation_id) {
-    const check_in = formatDate(new Date(fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').check_in));
-    const check_out = formatDate(new Date(fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').check_out));
-    const room_id = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').room_id;
-    const room_number = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').room_number;
-    const room_type_name = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').room_type_name;
-    const number_of_people = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').number_of_people;
+    const check_in = formatDate(new Date(reservation.check_in));
+    const check_out = formatDate(new Date(reservation.check_out));
+    const room_id = reservation.room_id;
+    const room_number = reservation.room_number;
+    const room_type_name = reservation.room_type_name;
+    const number_of_people = reservation.number_of_people;
     // Check if we need to use total_number_of_people from the reservation object (aliased in backend query)
     const days = Math.floor((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
     dragFrom.value = { reservation_id, room_id, room_number, room_type_name, number_of_people, check_in, check_out, days };
@@ -1390,55 +1227,28 @@ const showConfirmationPrompt = async () => {
   });
 };
 const checkForConflicts = (from, to) => {
-  //console.log('Checking for conflicts...');
+  if (!reservationDetails.value.reservation) return false;
+
+  const dateDiffDays = (new Date(to.check_in) - new Date(from.check_in)) / (1000 * 60 * 60 * 24);
 
   for (const reservation of reservationDetails.value.reservation) {
-    //console.log('Checking reservation:', reservation);
+    let targetDateStr;
 
-    if (from.room_number === to.room_number) {
-      //console.log('Same room number');
-      const dateDiff = new Date(to.check_in) - new Date(from.check_in);
+    if (from.room_number === to.room_number || (from.check_in !== to.check_in || from.check_out !== to.check_out)) {
       const newDate = new Date(reservation.date);
-      newDate.setDate(newDate.getDate() + dateDiff / (1000 * 60 * 60 * 24));
-
-      if (reservedRooms.value.some(
-        r =>
-          r.room_id === to.room_id
-          && formatDate(new Date(r.date)) === formatDate(new Date(newDate))
-          && r.reservation_id !== reservation.reservation_id
-      )) {
-        //console.log('Conflict found'); 
-        return true;
-      }
-    } else if (from.check_in === to.check_in && from.check_out === to.check_out) {
-      //console.log('Same check-in and check-out dates');
-      if (reservedRooms.value.some(
-        r =>
-          r.room_id === to.room_id
-          && formatDate(new Date(r.date)) === reservation.date
-      )) {
-        //console.log('Conflict found'); 
-        return true;
-      }
+      newDate.setDate(newDate.getDate() + dateDiffDays);
+      targetDateStr = formatDate(newDate);
     } else {
-      //console.log('Different room number and dates');
-      const dateDiff = new Date(to.check_in) - new Date(from.check_in);
-      const newDate = new Date(reservation.date);
-      newDate.setDate(newDate.getDate() + dateDiff / (1000 * 60 * 60 * 24));
+      // Same check-in and check-out, different room
+      targetDateStr = reservation.date;
+    }
 
-      if (reservedRooms.value.some(
-        r =>
-          r.room_id === to.room_id
-          && formatDate(new Date(r.date)) === formatDate(new Date(newDate))
-          && r.reservation_id !== reservation.reservation_id
-      )) {
-        //console.log('Conflict found'); 
-        return true;
-      }
+    const conflictRes = reservedRoomsMap.value[`${to.room_id}_${targetDateStr}`];
+    if (conflictRes && conflictRes.reservation_id !== reservation.reservation_id) {
+      return true;
     }
   }
 
-  // console.log('No conflicts found');
   return false;
 };
 
