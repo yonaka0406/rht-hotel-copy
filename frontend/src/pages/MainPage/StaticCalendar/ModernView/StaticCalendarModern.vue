@@ -1,86 +1,87 @@
 <template>
-  <div class="modern-calendar flex flex-col h-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-    <!-- Header (Room Numbers) -->
-    <div class="flex-none border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30 bg-white dark:bg-gray-900 pl-24 shadow-sm">
-      <div class="flex overflow-hidden" :style="{ width: totalGridWidth + 'px' }">
-        <div v-for="room in headerRoomsData.roomNumbers" :key="room.room_id"
-             class="flex-none border-r border-gray-100 dark:border-gray-800 p-2 flex flex-col items-center justify-center h-16"
-             :style="{ width: roomColumnWidth + 'px' }">
-          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate w-full text-center">{{ getRoomTypeName(room.room_id) }}</span>
-          <h3 class="text-lg font-bold">{{ room.room_number }}</h3>
-          <div class="flex gap-1 mt-0.5">
-            <span v-if="room.smoking" class="text-[10px]">🚬</span>
-            <span v-if="room.is_staff_room" class="text-[10px] bg-purple-100 dark:bg-purple-900 px-1 rounded text-purple-700 dark:text-purple-300">STAFF</span>
+  <div class="modern-calendar flex flex-col h-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">
+    <!-- Main Scrollable Container -->
+    <div class="flex-1 overflow-auto relative" ref="scrollContainer">
+      <div class="relative flex flex-col" :style="{ width: (96 + totalGridWidth) + 'px' }">
+
+        <!-- Header Row (Room Numbers) -->
+        <div class="flex sticky top-0 z-30 bg-white dark:bg-gray-900">
+          <!-- Top-Left Corner (Toggle & Header) -->
+          <div class="sticky left-0 z-40 w-24 h-12 bg-gray-100 dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 flex items-center justify-center">
+            <span class="text-[10px] font-bold">日付</span>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Scrollable Area -->
-    <div class="flex-1 overflow-auto flex relative" ref="scrollContainer">
-      <!-- Date Sidebar (Sticky Left) -->
-      <div class="flex-none w-24 sticky left-0 z-20 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 shadow-md">
-        <!-- Toggle Button over the top cell -->
-        <div class="h-12 border-b border-gray-200 dark:border-gray-800 flex items-center justify-center bg-gray-50 dark:bg-gray-800">
-          <Button icon="pi pi-table" class="p-button-text p-button-sm" v-tooltip.right="'クラシック表示に切り替え'" @click="$emit('toggle-view')" />
-        </div>
-        <div v-for="date in dateRange" :key="date"
-             class="border-b border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center p-2"
-             :class="{ 'bg-blue-50/50 dark:bg-blue-900/20 border-l-4 border-l-primary': isToday(date) }"
-             :style="{ height: rowHeight + 'px' }">
-          <span class="text-[10px] text-gray-400 font-bold uppercase">{{ getDayName(date) }}</span>
-          <span class="text-lg font-bold leading-none my-1" :class="{ 'text-primary': isToday(date) }">{{ formatDateMonthDay(date) }}</span>
-          <div class="flex flex-col items-center gap-0.5 mt-1">
-            <div class="flex items-center gap-1" v-tooltip.right="'空室数'">
-              <span class="size-1.5 rounded-full" :class="availableRoomsByDate[date] > 0 ? 'bg-green-500' : 'bg-red-500'"></span>
-              <span class="text-[10px] font-medium" :class="availableRoomsByDate[date] === 0 ? 'text-red-500' : 'text-gray-500'">{{ availableRoomsByDate[date] }}</span>
-            </div>
-            <div class="flex items-center gap-1" v-tooltip.right="'駐車場空数'">
-              <i class="pi pi-car text-[8px] text-gray-400"></i>
-              <span class="text-[10px] text-gray-400">{{ availableParkingSpotsByDate[date] }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Grid Body -->
-      <div class="relative bg-striped-light dark:bg-striped-dark" :style="{ width: totalGridWidth + 'px', height: (dateRange.length * rowHeight) + 'px' }">
-        <!-- Grid Lines -->
-        <div class="absolute inset-0 pointer-events-none">
-          <div v-for="index in dateRange.length" :key="index"
-               class="border-b border-dashed border-gray-200 dark:border-gray-700 w-full"
-               :style="{ height: rowHeight + 'px' }"></div>
-        </div>
-
-        <!-- Room Columns -->
-        <div class="flex h-full">
-          <div v-for="room in headerRoomsData.roomNumbers" :key="room.room_id"
-               class="relative border-r border-gray-100 dark:border-gray-800 h-full"
-               :style="{ width: roomColumnWidth + 'px' }">
-
-            <!-- Reservation Blocks -->
-            <div v-for="block in getRoomBlocks(room.room_id)" :key="block.id"
-                 class="absolute left-1 right-1 rounded-lg overflow-hidden flex flex-col cursor-pointer transition-all hover:scale-[1.02] hover:z-10 shadow-sm border border-black/5"
-                 :style="getBlockStyle(block)"
-                 @click="handleBlockClick(block)"
-                 @dblclick="handleBlockDoubleClick(block)"
-                 @contextmenu.prevent="onContextMenu($event, block)"
-                 @mousemove="handleMouseMove($event, block)"
-                 @mouseleave="handleMouseLeave">
-              <!-- Sticky Header -->
-              <div class="sticky top-0 z-10 p-2 backdrop-blur-md bg-white/10 border-b border-black/5 flex flex-col gap-0.5">
-                <div class="flex justify-between items-start gap-1">
-                  <h4 class="font-bold text-xs leading-tight line-clamp-2" :style="{ color: block.textColor }">{{ block.client_name }}</h4>
-                  <i v-if="block.type === 'ota' || block.type === 'web'" class="pi pi-globe text-[10px] mt-0.5" :style="{ color: block.textColor }"></i>
-                </div>
-                <p class="text-[9px] font-medium opacity-80" :style="{ color: block.textColor }">{{ formatDateRange(block.check_in, block.check_out) }}</p>
+          <!-- Room Columns Header -->
+          <div class="flex">
+            <div v-for="room in headerRoomsData.roomNumbers" :key="room.room_id"
+                 class="flex-none border-b border-r border-gray-200 dark:border-gray-700 p-1 flex flex-col items-center justify-center h-12 bg-gray-50 dark:bg-gray-800"
+                 :style="{ width: roomColumnWidth + 'px' }">
+              <span class="text-[8px] font-bold text-gray-400 uppercase truncate w-full text-center">{{ getRoomTypeName(room.room_id) }}</span>
+              <h3 class="text-sm font-bold leading-none mt-0.5">{{ room.room_number }}</h3>
+              <div class="flex gap-1 mt-0.5 scale-75 origin-top">
+                <span v-if="room.smoking" class="text-[10px]">🚬</span>
+                <span v-if="room.is_staff_room" class="text-[10px] bg-purple-100 dark:bg-purple-900 px-1 rounded text-purple-700 dark:text-purple-300">STAFF</span>
               </div>
-              <!-- Body Content -->
-              <div class="p-2 flex flex-col gap-1 overflow-hidden" v-if="block.height > 60">
-                 <div class="flex flex-wrap gap-1">
-                    <span v-if="block.status === 'provisory'" class="text-[8px] bg-black/10 px-1 rounded font-bold">仮</span>
-                    <span class="text-[9px] opacity-70 truncate" :style="{ color: block.textColor }">{{ block.plan_name }}</span>
-                 </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Body Area -->
+        <div class="flex relative">
+          <!-- Date Sidebar (Sticky Left) -->
+          <div class="sticky left-0 z-20 w-24 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
+            <div v-for="date in dateRange" :key="date"
+             class="border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-1"
+             :class="{ 'bg-blue-50/50 dark:bg-blue-900/20 border-l-2 border-l-primary': isToday(date) }"
+                 :style="{ height: rowHeight + 'px' }">
+              <div class="flex flex-col items-start">
+                <span class="text-[8px] text-gray-400 font-bold uppercase leading-none">{{ getDayName(date) }}</span>
+                <span class="text-xs font-bold leading-tight" :class="{ 'text-primary': isToday(date) }">{{ formatDateMonthDay(date) }}</span>
+              </div>
+              <div class="flex flex-col items-end gap-0.5">
+                <div class="flex items-center gap-1" v-tooltip.right="'空室数'">
+                  <span class="text-[9px] font-bold" :class="availableRoomsByDate[date] === 0 ? 'text-red-500' : 'text-gray-400'">{{ availableRoomsByDate[date] }}</span>
+                </div>
+                <div class="flex items-center gap-1" v-tooltip.right="'駐車場'">
+                  <span class="text-[9px] text-gray-300">{{ availableParkingSpotsByDate[date] }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid Background & Blocks -->
+          <div class="relative bg-striped-light dark:bg-striped-dark" :style="{ width: totalGridWidth + 'px', height: (dateRange.length * rowHeight) + 'px' }">
+            <!-- Horizontal Grid Lines -->
+            <div class="absolute inset-0 pointer-events-none">
+              <div v-for="index in dateRange.length" :key="index"
+                   class="border-b border-gray-100 dark:border-gray-800 w-full"
+                   :style="{ height: rowHeight + 'px' }"></div>
+            </div>
+
+            <!-- Room Columns Containers -->
+            <div class="flex h-full">
+              <div v-for="room in headerRoomsData.roomNumbers" :key="room.room_id"
+                   class="relative border-r border-gray-100 dark:border-gray-800 h-full"
+                   :style="{ width: roomColumnWidth + 'px' }">
+
+                <!-- Reservation Blocks -->
+                <div v-for="block in getRoomBlocks(room.room_id)" :key="block.id"
+                     class="absolute left-0.5 right-0.5 rounded overflow-hidden flex flex-col cursor-pointer transition-all hover:z-10 shadow-sm border border-black/5"
+                     :style="getBlockStyle(block)"
+                     @click="handleBlockClick(block)"
+                     @dblclick="handleBlockDoubleClick(block)"
+                     @contextmenu.prevent="onContextMenu($event, block)"
+                     @mousemove="handleMouseMove($event, block)"
+                     @mouseleave="handleMouseLeave">
+                  <!-- Sticky Header for Guest Name -->
+                  <div class="sticky top-0 z-10 px-1 py-0.5 backdrop-blur-md bg-white/30 border-b border-black/5 overflow-hidden">
+                    <h4 class="font-bold text-[8px] leading-tight truncate" :style="{ color: block.textColor }">{{ block.client_name }}</h4>
+                  </div>
+                  <!-- Mini Plan Name (Only if block is tall enough) -->
+                  <div class="px-1 text-[7px] truncate opacity-80" v-if="block.height > 25" :style="{ color: block.textColor }">
+                    {{ block.plan_name }}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -122,7 +123,6 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import Button from 'primevue/button';
 import ContextMenu from 'primevue/contextmenu';
 import { formatDate } from '@/utils/dateUtils';
 
@@ -140,8 +140,8 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-view', 'cell-click', 'cell-double-click', 'show-tooltip', 'hide-tooltip']);
 
-const rowHeight = 100;
-const roomColumnWidth = 150;
+const rowHeight = 22;
+const roomColumnWidth = 50;
 
 const totalGridWidth = computed(() => props.headerRoomsData.roomNumbers.length * roomColumnWidth);
 
@@ -159,11 +159,6 @@ const formatDateMonthDay = (dateStr) => {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 };
 
-const formatDateRange = (start, end) => {
-  const s = new Date(start);
-  const e = new Date(end);
-  return `${s.getMonth()+1}/${s.getDate()} - ${e.getMonth()+1}/${e.getDate()}`;
-};
 
 const getRoomTypeName = (roomId) => {
   const room = props.selectedHotelRooms.find(r => r.room_id === roomId);
@@ -279,17 +274,17 @@ const getLuminance = (hex) => {
 const getBlockStyle = (block) => {
   const style = {
     top: block.top + 'px',
-    height: block.height - 4 + 'px', // Subtract small gap
+    height: block.height - 2 + 'px', // Smaller gap
     backgroundColor: block.backgroundColor,
     color: block.textColor
   };
 
   if (props.selectedClientId && block.client_id === props.selectedClientId) {
     if (props.cardSelectedReservationId && block.reservation_id === props.cardSelectedReservationId) {
-      style.outline = '3px solid #00FFFF';
+      style.outline = '2px solid #00FFFF';
       style.zIndex = 20;
     } else {
-      style.outline = '3px solid #FFFF33';
+      style.outline = '2px solid #FFFF33';
       style.zIndex = 15;
     }
   }
@@ -321,11 +316,9 @@ const handleMouseMove = (event, block) => {
   };
   tooltipVisible.value = true;
 
-  // Use clientX/Y for fixed positioning
   tooltipX.value = event.clientX + 15;
   tooltipY.value = event.clientY + 15;
 
-  // Prevent tooltip from going off screen
   const tooltipWidth = 180;
   const tooltipHeight = 120;
   if (tooltipX.value + tooltipWidth > window.innerWidth) {
@@ -382,18 +375,20 @@ const onContextMenu = (event, block) => {
 
 .bg-striped-light {
   background-image: linear-gradient(45deg, #f9fafb 25%, transparent 25%, transparent 50%, #f9fafb 50%, #f9fafb 75%, transparent 75%, transparent);
-  background-size: 20px 20px;
+  background-size: 16px 16px;
 }
 
 .dark .bg-striped-dark {
   background-image: linear-gradient(45deg, #111827 25%, transparent 25%, transparent 50%, #111827 50%, #111827 75%, transparent 75%, transparent);
-  background-size: 20px 20px;
+  background-size: 16px 16px;
 }
 
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+/* Hide scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 </style>
