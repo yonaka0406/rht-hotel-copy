@@ -67,10 +67,6 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  dragMode: {
-    type: String,
-    default: 'reservation'
-  },
   isModified: {
     type: Boolean,
     default: false
@@ -89,6 +85,9 @@ defineEmits([
   'mouseleave'
 ]);
 
+const CANCELLED_CLIENT_ID = '11111111-1111-1111-1111-111111111111';
+const SPECIAL_BLOCK_CLIENT_ID = '22222222-2222-2222-2222-222222222222';
+
 const isReserved = computed(() => !!props.reservationInfo && props.reservationInfo.status !== 'available');
 
 const isGlobe = computed(() => {
@@ -97,7 +96,7 @@ const isGlobe = computed(() => {
 
 const statusIcon = computed(() => {
   if (!props.reservationInfo) return null;
-  
+
   const status = props.reservationInfo.status;
   const type = props.reservationInfo.type;
   const clientId = props.reservationInfo.client_id;
@@ -121,10 +120,10 @@ const statusIcon = computed(() => {
     return { icon: 'pi pi-sign-out', bg: 'bg-gray-300 dark:bg-gray-700' };
   }
   if (status === 'block') {
-    if (clientId === '11111111-1111-1111-1111-111111111111') {
+    if (clientId === CANCELLED_CLIENT_ID) {
       return { icon: 'pi pi-times', bg: 'bg-red-100 dark:bg-red-800' };
     }
-    if (clientId === '22222222-2222-2222-2222-222222222222') {
+    if (clientId === SPECIAL_BLOCK_CLIENT_ID) {
       return { icon: 'pi pi-lock', bg: 'bg-orange-100 dark:bg-orange-800' };
     }
   }
@@ -142,7 +141,7 @@ const cellStyle = computed(() => {
     style = { backgroundColor: '#f3e5f5' };
   } else if (roomInfo && roomInfo.status === 'provisory') {
     style = { backgroundColor: '#ead59f' };
-  } else if (roomInfo && roomInfo.status === 'block' && roomInfo.client_id === '22222222-2222-2222-2222-222222222222') {
+  } else if (roomInfo && roomInfo.status === 'block' && roomInfo.client_id === SPECIAL_BLOCK_CLIENT_ID) {
     style = { backgroundColor: '#fed7aa' };
   } else if (roomInfo && roomInfo.status === 'block') {
     style = { backgroundColor: '#fca5a5' };
@@ -194,6 +193,10 @@ const cellClass = computed(() => {
   background-color: lightgray;
 }
 
+.dark .cell-with-hover:hover {
+  background-color: #374151;
+}
+
 .compact-cell {
   white-space: nowrap;
   overflow: hidden;
@@ -206,7 +209,8 @@ const cellClass = computed(() => {
 .selected-room-by-day {
   background-color: lightyellow !important;
   color: goldenrod !important;
-  border-top-width: 0.5cap;
-  border-bottom-width: 0.5cap;
+  --border-width: 4px;
+  border-top-width: var(--border-width);
+  border-bottom-width: var(--border-width);
 }
 </style>

@@ -68,7 +68,6 @@
                 :is-compact="headerState.isCompactView"
                 :is-selected="isSelectedRoomByDay(room.room_id, date)"
                 :is-loading="isLoading"
-                :drag-mode="dragMode"
                 :is-modified="isCellModified(room.room_id, date)"
                 @dblclick="handleCellClick(room, date)"
                 @dragstart="handleDragStart($event, room.room_id, date)"
@@ -196,9 +195,9 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 
 // Components
-const ReservationEdit = defineAsyncComponent(() => import('./Reservation/ReservationEdit.vue'));
-const ReservationAddRoom = defineAsyncComponent(() => import('./components/ReservationAddRoom.vue'));
-const ClientForReservationDialog = defineAsyncComponent(() => import('./components/Dialogs/ClientForReservationDialog.vue'));
+const ReservationEdit = defineAsyncComponent(() => import('../Reservation/ReservationEdit.vue'));
+const ReservationAddRoom = defineAsyncComponent(() => import('../components/ReservationAddRoom.vue'));
+const ClientForReservationDialog = defineAsyncComponent(() => import('../components/Dialogs/ClientForReservationDialog.vue'));
 import ReservationsCalendarHeader from './components/ReservationsCalendarHeader.vue';
 import ReservationsCalendarLegend from './components/ReservationsCalendarLegend.vue';
 import ReservationsCalendarCell from './components/ReservationsCalendarCell.vue';
@@ -382,49 +381,33 @@ const formatClientName = (name) => {
   return result;
 };
 
+const buildReservationMap = (reservations) => {
+  const map = {};
+  if (!reservations) return map;
+
+  reservations.forEach(reservation => {
+    const dateStr = formatDate(new Date(reservation.date));
+    const key = `${reservation.room_id}_${dateStr}`;
+
+    // Check if first/last
+    const checkInDate = formatDate(new Date(reservation.check_in));
+    const checkOutDate = new Date(reservation.check_out);
+    checkOutDate.setDate(checkOutDate.getDate() - 1);
+    const lastDate = formatDate(checkOutDate);
+
+    map[key] = {
+      ...reservation,
+      client_name: formatClientName(reservation.client_name),
+      isFirst: dateStr === checkInDate,
+      isLast: dateStr === lastDate
+    };
+  });
+  return map;
+};
+
 // Hash map for faster lookups
-const reservedRoomsMap = computed(() => {
-  const map = {};
-  reservedRooms.value.forEach(reservation => {
-    const dateStr = formatDate(new Date(reservation.date));
-    const key = `${reservation.room_id}_${dateStr}`;
-
-    // Check if first/last
-    const checkInDate = formatDate(new Date(reservation.check_in));
-    const checkOutDate = new Date(reservation.check_out);
-    checkOutDate.setDate(checkOutDate.getDate() - 1);
-    const lastDate = formatDate(checkOutDate);
-
-    map[key] = {
-      ...reservation,
-      client_name: formatClientName(reservation.client_name),
-      isFirst: dateStr === checkInDate,
-      isLast: dateStr === lastDate
-    };
-  });
-  return map;
-});
-const tempReservationsMap = computed(() => {
-  const map = {};
-  tempReservations.value.forEach(reservation => {
-    const dateStr = formatDate(new Date(reservation.date));
-    const key = `${reservation.room_id}_${dateStr}`;
-
-    // Check if first/last
-    const checkInDate = formatDate(new Date(reservation.check_in));
-    const checkOutDate = new Date(reservation.check_out);
-    checkOutDate.setDate(checkOutDate.getDate() - 1);
-    const lastDate = formatDate(checkOutDate);
-
-    map[key] = {
-      ...reservation,
-      client_name: formatClientName(reservation.client_name),
-      isFirst: dateStr === checkInDate,
-      isLast: dateStr === lastDate
-    };
-  });
-  return map;
-});
+const reservedRoomsMap = computed(() => buildReservationMap(reservedRooms.value));
+const tempReservationsMap = computed(() => buildReservationMap(tempReservations.value));
 
 // Count of available rooms
 const availableRoomsByDate = computed(() => {
@@ -1692,13 +1675,6 @@ thead th:last-child {
   font-size: 10px;
 }
 
-.selected-room-by-day {
-  background-color: lightyellow !important;
-  color: goldenrod !important;
-
-  border-top-width: 0.5cap;
-  border-bottom-width: 0.5cap;
-}
 
 .cell-with-hover {
   position: relative;
