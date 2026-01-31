@@ -1,12 +1,19 @@
 <template>
   <div class="p-2 bg-white dark:bg-gray-900 dark:text-gray-100 min-h-screen">
     <StaticCalendarHeader
-      :hotel-name="selectedHotel?.name"
-      :legend-items="uniqueLegendItems"
-      :room-type-options="roomTypeOptions"
-      v-model="headerModel"
+      :selected-hotel="selectedHotel"
+      :unique-legend-items="uniqueLegendItems"
+      v-model:current-month="currentMonth"
     />
     <Panel>
+      <template #header>
+        <div class="flex justify-between w-full items-center">
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-bold opacity-70">表示モード:</h3>
+            <SelectButton v-model="viewMode" :options="viewOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" />
+          </div>
+        </div>
+      </template>
       <div v-if="viewMode === 'classic'" class="table-container bg-white dark:bg-gray-900">
         <table class="mb-2" :style="{ width: totalTableWidth }">
           <thead>
@@ -69,7 +76,7 @@
                   {{ availableParkingSpotsByDate[date] }}
                 </div>
               </td>
-              <td v-for="(room, roomIndex) in filteredHotelRooms" :key="roomIndex"
+              <td v-for="(room, roomIndex) in selectedHotelRooms" :key="roomIndex"
                 :style="getCellStyle(room.room_id, date)"
                 :class="['text-xs border text-left']" style="height: 19px; width: 50px; left: 180px;"
                 @mouseover="showTooltip($event, room.room_id, date)" @mouseleave="hideTooltip()"
@@ -97,7 +104,7 @@
         class="table-container"
         :date-range="dateRange"
         :header-rooms-data="headerRoomsData"
-        :selected-hotel-rooms="filteredHotelRooms"
+        :selected-hotel-rooms="selectedHotelRooms"
         :reserved-rooms="reservedRooms"
         :available-rooms-by-date="availableRoomsByDate"
         :available-parking-spots-by-date="availableParkingSpotsByDate"
@@ -134,6 +141,7 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 
 import Panel from 'primevue/panel';
+import SelectButton from 'primevue/selectbutton';
 import Skeleton from 'primevue/skeleton';
 import StaticCalendarHeader from './components/StaticCalendarHeader.vue';
 import StaticCalendarModern from './ModernView/StaticCalendarModern.vue';
@@ -202,12 +210,11 @@ const { socket } = useSocket();
 // State
 const isLoading = ref(true);
 const isUpdating = ref(false);
-const headerModel = ref({
-  date: formatDate(new Date()),
-  isCompactView: true,
-  selectedRoomTypes: []
-});
-const viewMode = computed(() => headerModel.value.isCompactView ? 'modern' : 'classic');
+const viewMode = ref('classic');
+const viewOptions = ref([
+  { label: 'クラシック', value: 'classic' },
+  { label: 'モダン', value: 'modern' }
+]);
 const currentMonth = ref(new Date());
 const selectedRowIndex = ref(null);
 const tooltipContent = ref('');
@@ -504,20 +511,6 @@ const selectedClientReservations = computed(() => {
   return processed.sort((a, b) => a.check_in.localeCompare(b.check_in));
 });
   
-const roomTypeOptions = computed(() => {
-  const types = [...new Set(selectedHotelRooms.value.map(room => room.room_type_name))];
-  return types.map(type => ({ label: type, value: type }));
-});
-
-const filteredHotelRooms = computed(() => {
-  if (!headerModel.value.selectedRoomTypes || headerModel.value.selectedRoomTypes.length === 0) {
-    return selectedHotelRooms.value;
-  }
-  return selectedHotelRooms.value.filter(room =>
-    headerModel.value.selectedRoomTypes.includes(room.room_type_name)
-  );
-});
-
 // Count of available rooms
 const headerRoomsData = computed(() => {
   const roomTypes = [];
@@ -525,7 +518,7 @@ const headerRoomsData = computed(() => {
   let currentRoomType = null;
   let currentColspan = 0;
 
-  filteredHotelRooms.value.forEach(room => {
+  selectedHotelRooms.value.forEach(room => {
     if (room.room_type_name !== currentRoomType) {
       if (currentRoomType !== null) {
         roomTypes.push({ name: currentRoomType, colspan: currentColspan, ...getRoomTypeColor(currentRoomType) });
@@ -547,7 +540,7 @@ const headerRoomsData = computed(() => {
 const availableRoomsByDate = computed(() => {
   const availability = {};
   dateRange.value.forEach(date => {
-    const roomsForSale = filteredHotelRooms.value.filter(room => room.room_for_sale_idc === true);
+    const roomsForSale = selectedHotelRooms.value.filter(room => room.room_for_sale_idc === true);
     const reservedCount = roomsForSale.filter(room =>
       reservedRoomsMap.value[`${room.room_id}_${date}`]
     ).length;
@@ -597,7 +590,7 @@ const isOTA = (room_id, date) => {
 };
 const getCellStyle = (room_id, date) => {
   const roomInfo = fillRoomInfo(room_id, date);
-  const room = filteredHotelRooms.value.find(r => r.room_id === room_id);
+  const room = selectedHotelRooms.value.find(r => r.room_id === room_id);
   let roomColor = '#d3063d';
   let style = {};
 
@@ -677,13 +670,6 @@ watch(socket, (newSocket, oldSocket) => {
     newSocket.on('tableUpdate', handleTableUpdate);
   }
 }, { immediate: true });
-
-watch(() => headerModel.value.date, (newDate) => {
-  if (newDate) {
-    const d = new Date(newDate);
-    currentMonth.value = new Date(d.getFullYear(), d.getMonth(), 1);
-  }
-});
 
 watch(currentMonth, async (newMonth) => {
   isLoading.value = true;
