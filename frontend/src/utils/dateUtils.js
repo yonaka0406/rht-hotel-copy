@@ -180,3 +180,18 @@ export function getDaysInMonth(year, month) {
   if (typeof year !== 'number' || typeof month !== 'number') return 0;
   return new Date(year, month, 0).getDate();
 }
+
+/**
+ * Formats a date to a compact string: M/D(weekday)
+ * @param {Date|string} date
+ * @returns {string}
+ */
+export const formatCompactDate = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  const weekday = d.toLocaleDateString('ja-JP', { weekday: 'short' });
+  return `${month}/${day}(${weekday})`;
+};

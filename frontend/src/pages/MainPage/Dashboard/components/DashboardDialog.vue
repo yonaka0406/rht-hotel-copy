@@ -1,13 +1,13 @@
 <template>
     <Dialog :visible="visible" @update:visible="$emit('update:visible', $event)" modal header="ダッシュボードデータ"
-        :style="{ width: '60vw' }">
+        :style="{ width: '95vw', maxWidth: '800px' }">
         <div class="flex flex-col justify-center items-center text-center w-full">
             <div class="relative flex items-center justify-center w-full">
                 <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="name" optionValue="value"
                     aria-labelledby="basic" class="" />
-                <Button class="absolute right-0 p-button-text p-button-lg" @click="copyReportToClipboard">
+                <Button class="absolute right-0 p-button-text" @click="copyReportToClipboard" v-tooltip.bottom="'レポートをコピー'">
                     <span class="pi pi-copy"></span>
-                    <span>レポートをコピー</span>
+                    <span class="hidden sm:inline ml-2 text-sm">レポートをコピー</span>
                 </Button>
             </div>
             <p class="mt-4 text-lg font-bold">{{ hotelName }} {{ formattedDate }}</p>
@@ -16,7 +16,16 @@
                 <div v-if="selectedView === '当日'">
                     <h3 class="text-lg font-bold mb-2">チェックイン・チェックアウト</h3>
                     <DataTable :value="displayReportData.dailyCheckInOut" class="mb-4" size="small">
-                        <Column field="date" header="日付"></Column>
+                        <Column field="date">
+                            <template #header>
+                                <span class="hidden sm:inline">日付</span>
+                                <span class="inline sm:hidden text-xs">日</span>
+                            </template>
+                            <template #body="slotProps">
+                                <span class="hidden sm:block text-xs md:text-sm">{{ slotProps.data.date }}</span>
+                                <span class="block sm:hidden font-medium text-xs">{{ formatCompactDate(slotProps.data.originalDate) }}</span>
+                            </template>
+                        </Column>
                         <Column field="checkin" header="イン"></Column>
                         <Column field="checkout" header="アウト"></Column>
                         <Column field="remarks" header="備考"></Column>
@@ -24,17 +33,50 @@
 
                     <h3 class="text-lg font-bold mb-2">食事数</h3>
                     <DataTable :value="displayReportData.dailyMeal" size="small">
-                        <Column field="date" header="日付"></Column>
-                        <Column field="breakfast" header="朝食"></Column>
-                        <Column field="lunch" header="昼食"></Column>
-                        <Column field="dinner" header="夕食"></Column>
+                        <Column field="date">
+                            <template #header>
+                                <span class="hidden sm:inline">日付</span>
+                                <span class="inline sm:hidden text-xs">日</span>
+                            </template>
+                            <template #body="slotProps">
+                                <span class="hidden sm:block text-xs md:text-sm">{{ slotProps.data.date }}</span>
+                                <span class="block sm:hidden font-medium text-xs">{{ formatCompactDate(slotProps.data.originalDate) }}</span>
+                            </template>
+                        </Column>
+                        <Column field="breakfast">
+                            <template #header>
+                                <span class="hidden sm:inline">朝食</span>
+                                <span class="inline sm:hidden text-xs">朝</span>
+                            </template>
+                        </Column>
+                        <Column field="lunch">
+                            <template #header>
+                                <span class="hidden sm:inline">昼食</span>
+                                <span class="inline sm:hidden text-xs">昼</span>
+                            </template>
+                        </Column>
+                        <Column field="dinner">
+                            <template #header>
+                                <span class="hidden sm:inline">夕食</span>
+                                <span class="inline sm:hidden text-xs">夕</span>
+                            </template>
+                        </Column>
                     </DataTable>
                 </div>
 
                 <div v-else-if="selectedView === '週間'">
                     <h3 class="text-lg font-bold mb-2">日別内訳</h3>
                     <DataTable :value="displayReportData.weeklyCheckInOut" class="mb-4" size="small">
-                        <Column field="date" header="日付"></Column>
+                        <Column field="date">
+                            <template #header>
+                                <span class="hidden sm:inline">日付</span>
+                                <span class="inline sm:hidden text-xs">日</span>
+                            </template>
+                            <template #body="slotProps">
+                                <span class="hidden sm:block text-xs md:text-sm">{{ slotProps.data.date }}</span>
+                                <span class="block sm:hidden font-medium text-xs">{{ formatCompactDate(slotProps.data.originalDate) }}</span>
+                            </template>
+                        </Column>
                         <Column field="checkin" header="イン"></Column>
                         <Column field="checkout" header="アウト"></Column>
                         <Column field="remarks" header="備考"></Column>
@@ -42,10 +84,34 @@
 
                     <h3 class="text-lg font-bold mb-2">食事数</h3>
                     <DataTable :value="displayReportData.weeklyMeal" size="small">
-                        <Column field="date" header="日付"></Column>
-                        <Column field="breakfast" header="朝食"></Column>
-                        <Column field="lunch" header="昼食"></Column>
-                        <Column field="dinner" header="夕食"></Column>
+                        <Column field="date">
+                            <template #header>
+                                <span class="hidden sm:inline">日付</span>
+                                <span class="inline sm:hidden text-xs">日</span>
+                            </template>
+                            <template #body="slotProps">
+                                <span class="hidden sm:block text-xs md:text-sm">{{ slotProps.data.date }}</span>
+                                <span class="block sm:hidden font-medium text-xs">{{ formatCompactDate(slotProps.data.originalDate) }}</span>
+                            </template>
+                        </Column>
+                        <Column field="breakfast">
+                            <template #header>
+                                <span class="hidden sm:inline">朝食</span>
+                                <span class="inline sm:hidden text-xs">朝</span>
+                            </template>
+                        </Column>
+                        <Column field="lunch">
+                            <template #header>
+                                <span class="hidden sm:inline">昼食</span>
+                                <span class="inline sm:hidden text-xs">昼</span>
+                            </template>
+                        </Column>
+                        <Column field="dinner">
+                            <template #header>
+                                <span class="hidden sm:inline">夕食</span>
+                                <span class="inline sm:hidden text-xs">夕</span>
+                            </template>
+                        </Column>
                     </DataTable>
                 </div>
             </div>
@@ -58,6 +124,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { Dialog, SelectButton, Button, DataTable, Column } from 'primevue';
 import { useToast } from "primevue/usetoast";
+import { formatCompactDate } from '@/utils/dateUtils';
 
 const toast = useToast();
 const reportContentForCopy = ref(null);
@@ -168,10 +235,10 @@ const plainTextReportContent = computed(() => {
             const dateStr = formatDate(date);
             const dayData = props.checkInOutReportData.find(day => formatDate(new Date(day.date)) === dateStr);
             
-            report += `  - ${formatReportDate(date.toISOString())}:    イン ${String(dayData?.checkin_room_count || 0).padStart(2, '0')}室 (${String(dayData?.total_checkins || 0).padStart(2, '0')}人);    アウト ${String(dayData?.checkout_room_count || 0).padStart(2, '0')}室 (${String(dayData?.total_checkouts || 0).padStart(2, '0')}人)\n`;
+            report += `  - ${formatCompactDate(date)}: イン ${dayData?.checkin_room_count || 0}室(${dayData?.total_checkins || 0}人) / アウト ${dayData?.checkout_room_count || 0}室(${dayData?.total_checkouts || 0}人)\n`;
             const checkinFemale = formatGender(dayData?.female_checkins);
             if (checkinFemale) {
-                report += `    インのうち: ${checkinFemale}\n`;
+                report += `    (インのうち: ${checkinFemale})\n`;
             }
         });
     }
@@ -181,9 +248,9 @@ const plainTextReportContent = computed(() => {
         report += `\n🍴 食事数\n`;
 
         if (selectedView.value === '当日') {
-            const todayFormatted = formatReportDate(props.dashboardSelectedDate.toISOString());
+            const todayFormatted = formatCompactDate(props.dashboardSelectedDate);
             const mealDataToday = props.mealReportData[formatDate(new Date(props.dashboardSelectedDate))];
-            report += `  - ${todayFormatted}:    朝食 ${String(mealDataToday?.breakfast || 0).padStart(2, '0')}食    昼食 ${String(mealDataToday?.lunch || 0).padStart(2, '0')}食    夕食 ${String(mealDataToday?.dinner || 0).padStart(2, '0')}食\n`;
+            report += `  - ${todayFormatted}: 朝食 ${mealDataToday?.breakfast || 0}食 / 昼食 ${mealDataToday?.lunch || 0}食 / 夕食 ${mealDataToday?.dinner || 0}食\n`;
         } else if (selectedView.value === '週間') {
             // Reuse the same date range logic as above
             const weekStartDate = getMidnight(props.dashboardSelectedDate);
@@ -200,7 +267,7 @@ const plainTextReportContent = computed(() => {
             datesInWeek.forEach(date => {
                 const dateStr = formatDate(date);
                 const mealData = props.mealReportData[dateStr];
-                report += `  - ${formatReportDate(date.toISOString())}:    朝食 ${String(mealData?.breakfast || 0).padStart(2, '0')}食    昼食 ${String(mealData?.lunch || 0).padStart(2, '0')}食    夕食 ${String(mealData?.dinner || 0).padStart(2, '0')}食\n`;
+                report += `  - ${formatCompactDate(date)}: 朝食 ${mealData?.breakfast || 0}食 / 昼食 ${mealData?.lunch || 0}食 / 夕食 ${mealData?.dinner || 0}食\n`;
             });
         }
     }
@@ -243,6 +310,7 @@ const displayReportData = computed(() => {
         if (dailyData) {
             data.dailyCheckInOut.push({
                 date: formatReportDate(props.dashboardSelectedDate.toISOString()),
+                originalDate: props.dashboardSelectedDate,
                 checkin: `${dailyData.checkin_room_count || 0}室 (${dailyData.total_checkins || 0}人)`,
                 checkout: `${dailyData.checkout_room_count || 0}室 (${dailyData.total_checkouts || 0}人)`,                
                 remarks: dailyData.female_checkins > 0 ? `インのうち：${formatGender(dailyData.female_checkins)}` : ''
@@ -253,6 +321,7 @@ const displayReportData = computed(() => {
             const mealDataToday = props.mealReportData[formatDate(new Date(props.dashboardSelectedDate))];
             data.dailyMeal.push({
                 date: formatReportDate(props.dashboardSelectedDate.toISOString()),
+                originalDate: props.dashboardSelectedDate,
                 breakfast: `${mealDataToday?.breakfast || 0}食`,
                 lunch: `${mealDataToday?.lunch || 0}食`,
                 dinner: `${mealDataToday?.dinner || 0}食`
@@ -278,6 +347,7 @@ const displayReportData = computed(() => {
             
             data.weeklyCheckInOut.push({
                 date: formatReportDate(date.toISOString()),
+                originalDate: date,
                 checkin: `${dayData?.checkin_room_count || 0}室 (${dayData?.total_checkins || 0}人)`,
                 checkout: `${dayData?.checkout_room_count || 0}室 (${dayData?.total_checkouts || 0}人)`,                
                 remarks: (dayData?.female_checkins > 0) ? `インのうち：${formatGender(dayData.female_checkins)}` : ''
@@ -290,6 +360,7 @@ const displayReportData = computed(() => {
                 const mealData = props.mealReportData[dateStr];
                 data.weeklyMeal.push({
                     date: formatReportDate(date.toISOString()),
+                    originalDate: date,
                     breakfast: `${mealData?.breakfast || 0}食`,
                     lunch: `${mealData?.lunch || 0}食`,
                     dinner: `${mealData?.dinner || 0}食`

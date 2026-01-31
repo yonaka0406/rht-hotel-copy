@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatDateMonth, normalizeDate } from '../dateUtils';
+import { formatDateMonth, normalizeDate, formatCompactDate } from '../dateUtils';
 
 describe('dateUtils', () => {
   describe('formatDateMonth', () => {
@@ -26,6 +26,24 @@ describe('dateUtils', () => {
 
     it('should return null for invalid Date object', () => {
       expect(formatDateMonth(new Date('invalid'))).toBeNull();
+    });
+  });
+
+  describe('formatCompactDate', () => {
+    it('should format a date to M/D(weekday)', () => {
+      const date = new Date(2025, 0, 16); // 2025-01-16 (Thursday)
+      // Note: toLocaleDateString might depend on the environment locale,
+      // but 'ja-JP' is explicitly used in the function.
+      expect(formatCompactDate(date)).toBe('1/16(木)');
+    });
+
+    it('should handle string input', () => {
+      expect(formatCompactDate('2025-01-16')).toBe('1/16(木)');
+    });
+
+    it('should return empty string for invalid input', () => {
+      expect(formatCompactDate(null)).toBe('');
+      expect(formatCompactDate('invalid')).toBe('');
     });
   });
 
