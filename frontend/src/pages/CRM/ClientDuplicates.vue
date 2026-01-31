@@ -162,7 +162,6 @@ const calculateDuplicates = async () => {
 
     try {
         // Use the optimized utility to find duplicates
-        // Bolt: This algorithm is optimized to O(N log N) for prefixes via sorting
         duplicatePairs.value = findDuplicates(clients.value);
     } catch (error) {
         console.error('[ClientDuplicates] Calculation error:', error);

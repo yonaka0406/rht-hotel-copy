@@ -16,31 +16,22 @@
           <thead>
             <tr>
               <th
-                class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky top-0 left-0 z-30 border-b"
-                :class="headerState.isCompactView ? 'w-20 h-12' : 'w-32 h-20'"
-                rowspan="2">
+                class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky top-0 left-0 z-20 border-b"
+                :class="headerState.isCompactView ? 'w-20 h-12' : 'w-32 h-16'">
                 日付</th>
 
-              <th v-for="(type, typeIndex) in headerRoomsData.roomTypes" :key="typeIndex"
-                :colspan="type.colspan"
-                v-tooltip="type.name"
-                class="px-2 py-1 text-center bg-gray-50 dark:bg-gray-700 dark:text-gray-100 sticky top-0 z-20 border-b border-l first:border-l-0">
-                <div class="truncate text-2xs font-bold opacity-80">{{ type.name }}</div>
-              </th>
-            </tr>
-            <tr>
               <th v-for="(room, roomIndex) in filteredRooms" :key="roomIndex"
                 v-tooltip="`${room.room_type_name} (${room.room_number})`"
-                :class="['px-2 py-1 text-center bg-white dark:bg-gray-800 dark:text-gray-100 sticky z-10 border-l',
+                :class="['px-2 py-1 text-center bg-white dark:bg-gray-800 dark:text-gray-100 sticky top-0 z-10 border-b border-l',
                         { 'title-cell-highlight': hoveredCol === roomIndex },
-                        headerState.isCompactView ? 'w-10 h-8' : 'w-32 h-12']"
-                :style="{ top: headerState.isCompactView ? '24px' : '32px' }">
-                <div class="flex justify-center items-center gap-1">
+                        headerState.isCompactView ? 'w-10 h-12' : 'w-32 h-16']">
+                <div class="truncate w-full text-[10px] font-normal opacity-70 leading-tight">{{ room.room_type_name }}</div>
+                <div class="flex justify-center items-center gap-1 my-0.5">
                   <span v-if="room.room_smoking_idc" class="text-[10px]">🚬</span>
                   <span v-if="room.room_has_wet_area_idc" class="text-[10px]">🚿</span>
-                  <span v-if="room.room_capacity > 1" class="capacity-badge text-[8px]">{{ room.room_capacity }}</span>
+                  <span v-if="room.room_capacity > 1" class="capacity-badge text-[8px] leading-none">{{ room.room_capacity }}</span>
                 </div>
-                <span :class="headerState.isCompactView ? 'text-xs' : 'text-lg font-bold'">{{ room.room_number }}</span>
+                <div :class="headerState.isCompactView ? 'text-xs' : 'text-lg font-bold'" class="leading-none">{{ room.room_number }}</div>
               </th>
             </tr>
           </thead>
@@ -49,7 +40,9 @@
 
               <td
                 @click="pinRow(dateIndex)"
-                :class="['cursor-pointer px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 aspect-square w-32 h-16 sticky left-0 z-10', { 'title-cell-highlight': hoveredRow === dateIndex }]">
+                :class="['cursor-pointer px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky left-0 z-10',
+                        { 'title-cell-highlight': hoveredRow === dateIndex },
+                        headerState.isCompactView ? 'w-20 h-12' : 'w-32 h-16']">
 
                 <span class="text-xs dark:text-gray-100">{{ formatDateWithDay(date) }}</span>
 
@@ -373,30 +366,6 @@ const filteredRooms = computed(() => {
   return selectedHotelRooms.value.filter(room =>
     headerState.value.selectedRoomTypes.includes(room.room_type_name)
   );
-});
-
-const headerRoomsData = computed(() => {
-  const roomTypes = [];
-  let currentRoomType = null;
-  let currentColspan = 0;
-
-  filteredRooms.value.forEach(room => {
-    if (room.room_type_name !== currentRoomType) {
-      if (currentRoomType !== null) {
-        roomTypes.push({ name: currentRoomType, colspan: currentColspan });
-      }
-      currentRoomType = room.room_type_name;
-      currentColspan = 1;
-    } else {
-      currentColspan++;
-    }
-  });
-
-  if (currentRoomType !== null) {
-    roomTypes.push({ name: currentRoomType, colspan: currentColspan });
-  }
-
-  return { roomTypes };
 });
 
 const uniqueLegendItems = computed(() => {
