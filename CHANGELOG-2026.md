@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.4.9] - 2026-02-02
+## [1.4.9] - 2026-02-01
 
+- Improvement: Enhanced performance and accuracy of client duplication detection using Japanese character normalization and corporate prefix stripping.
+- New Feature: Added a "Merge" tab to the client edit page for streamlined CRM record consolidation.
 - UI Improvement: Responsive Dashboard dialog layout with improved spacing and readability.
 - Refactor: Restructured reservations calendar cell rendering architecture for improved responsiveness and faster display with large date ranges and room counts.
 - Refactor: Enhanced cell interaction handling with expanded event support for drag and navigation operations.
