@@ -11,13 +11,17 @@
           <!-- The h2 and the div with Calendar and Button are moved outside -->
         </div>
       </template>
-      <div class="table-container bg-white dark:bg-gray-900">
+      <div v-if="viewMode === 'classic'" class="table-container bg-white dark:bg-gray-900">
         <table class="mb-2" :style="{ width: totalTableWidth }">
           <thead>
             <tr>
               <th
                 class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky top-0 left-0 z-20" style="height: 19px; width: 100px;" rowspan="3">
-                日付</th>
+                <div class="flex items-center justify-between">
+                  <span>日付</span>
+                  <Button icon="pi pi-th-large" class="p-button-text p-button-sm p-0" v-tooltip.top="'モダン表示に切り替え'" @click="viewMode = 'modern'" />
+                </div>
+              </th>
               <th
                 class="px-2 py-2 text-center font-bold bg-white dark:text-gray-100 sticky top-0 z-30" style="height: 19px; width: 40px; left: 100px;" rowspan="3">
                 空室</th>
@@ -95,6 +99,21 @@
           </tbody>
         </table>
       </div>
+      <StaticCalendarModern
+        v-else
+        :date-range="dateRange"
+        :header-rooms-data="headerRoomsData"
+        :selected-hotel-rooms="selectedHotelRooms"
+        :reserved-rooms="reservedRooms"
+        :available-rooms-by-date="availableRoomsByDate"
+        :available-parking-spots-by-date="availableParkingSpotsByDate"
+        :selected-client-id="selectedClientId"
+        :card-selected-reservation-id="cardSelectedReservationId"
+        :is-loading="isLoading"
+        @toggle-view="viewMode = 'classic'"
+        @cell-click="handleCellClick"
+        @cell-double-click="handleCellDoubleClick"
+      />
       <template #footer>
         <StaticCalendarFooter @addMonths="handleAddMonths" :loading="isAddingMonths" />
       </template>
@@ -121,8 +140,10 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 
 import Panel from 'primevue/panel';
+import Button from 'primevue/button';
 import Skeleton from 'primevue/skeleton';
 import StaticCalendarHeader from './components/StaticCalendarHeader.vue';
+import StaticCalendarModern from './ModernView/StaticCalendarModern.vue';
 
 // Components
 import StaticCalendarDrawer from './components/StaticCalendarDrawer.vue';
@@ -188,6 +209,7 @@ const { socket } = useSocket();
 // State
 const isLoading = ref(true);
 const isUpdating = ref(false);
+const viewMode = ref('classic');
 const currentMonth = ref(new Date());
 const selectedRowIndex = ref(null);
 const tooltipContent = ref('');
@@ -614,7 +636,7 @@ onMounted(async () => {
   // Initial data fetch is handled by the watch(currentMonth) which is triggered on mount
 });
 
-const handleTableUpdate = async (data) => {
+const handleTableUpdate = async (_data) => {
   if (isUpdating.value) {
     //console.log('Skipping fetchReservation because update is still running');
     return;
