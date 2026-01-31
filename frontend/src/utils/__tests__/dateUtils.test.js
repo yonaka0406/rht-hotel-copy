@@ -43,6 +43,7 @@ describe('dateUtils', () => {
 
     it('should return empty string for invalid input', () => {
       expect(formatCompactDate(null)).toBe('');
+      expect(formatCompactDate(undefined)).toBe('');
       expect(formatCompactDate('invalid')).toBe('');
     });
   });

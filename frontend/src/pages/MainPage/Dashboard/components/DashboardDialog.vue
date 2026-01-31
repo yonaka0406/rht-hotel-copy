@@ -16,16 +16,7 @@
                 <div v-if="selectedView === '当日'">
                     <h3 class="text-lg font-bold mb-2">チェックイン・チェックアウト</h3>
                     <DataTable :value="displayReportData.dailyCheckInOut" class="mb-4" size="small">
-                        <Column field="date">
-                            <template #header>
-                                <span class="hidden sm:inline">日付</span>
-                                <span class="inline sm:hidden text-xs">日</span>
-                            </template>
-                            <template #body="slotProps">
-                                <span class="hidden sm:block text-xs md:text-sm">{{ slotProps.data.date }}</span>
-                                <span class="block sm:hidden font-medium text-xs">{{ formatCompactDate(slotProps.data.originalDate) }}</span>
-                            </template>
-                        </Column>
+                        <DateColumn compactValueField="originalDate" />
                         <Column field="checkin" header="イン"></Column>
                         <Column field="checkout" header="アウト"></Column>
                         <Column field="remarks" header="備考"></Column>
@@ -33,16 +24,7 @@
 
                     <h3 class="text-lg font-bold mb-2">食事数</h3>
                     <DataTable :value="displayReportData.dailyMeal" size="small">
-                        <Column field="date">
-                            <template #header>
-                                <span class="hidden sm:inline">日付</span>
-                                <span class="inline sm:hidden text-xs">日</span>
-                            </template>
-                            <template #body="slotProps">
-                                <span class="hidden sm:block text-xs md:text-sm">{{ slotProps.data.date }}</span>
-                                <span class="block sm:hidden font-medium text-xs">{{ formatCompactDate(slotProps.data.originalDate) }}</span>
-                            </template>
-                        </Column>
+                        <DateColumn compactValueField="originalDate" />
                         <Column field="breakfast">
                             <template #header>
                                 <span class="hidden sm:inline">朝食</span>
@@ -67,16 +49,7 @@
                 <div v-else-if="selectedView === '週間'">
                     <h3 class="text-lg font-bold mb-2">日別内訳</h3>
                     <DataTable :value="displayReportData.weeklyCheckInOut" class="mb-4" size="small">
-                        <Column field="date">
-                            <template #header>
-                                <span class="hidden sm:inline">日付</span>
-                                <span class="inline sm:hidden text-xs">日</span>
-                            </template>
-                            <template #body="slotProps">
-                                <span class="hidden sm:block text-xs md:text-sm">{{ slotProps.data.date }}</span>
-                                <span class="block sm:hidden font-medium text-xs">{{ formatCompactDate(slotProps.data.originalDate) }}</span>
-                            </template>
-                        </Column>
+                        <DateColumn compactValueField="originalDate" />
                         <Column field="checkin" header="イン"></Column>
                         <Column field="checkout" header="アウト"></Column>
                         <Column field="remarks" header="備考"></Column>
@@ -84,16 +57,7 @@
 
                     <h3 class="text-lg font-bold mb-2">食事数</h3>
                     <DataTable :value="displayReportData.weeklyMeal" size="small">
-                        <Column field="date">
-                            <template #header>
-                                <span class="hidden sm:inline">日付</span>
-                                <span class="inline sm:hidden text-xs">日</span>
-                            </template>
-                            <template #body="slotProps">
-                                <span class="hidden sm:block text-xs md:text-sm">{{ slotProps.data.date }}</span>
-                                <span class="block sm:hidden font-medium text-xs">{{ formatCompactDate(slotProps.data.originalDate) }}</span>
-                            </template>
-                        </Column>
+                        <DateColumn compactValueField="originalDate" />
                         <Column field="breakfast">
                             <template #header>
                                 <span class="hidden sm:inline">朝食</span>
@@ -125,6 +89,7 @@ import { ref, computed, onMounted } from 'vue';
 import { Dialog, SelectButton, Button, DataTable, Column } from 'primevue';
 import { useToast } from "primevue/usetoast";
 import { formatCompactDate } from '@/utils/dateUtils';
+import DateColumn from './DateColumn.vue';
 
 const toast = useToast();
 const reportContentForCopy = ref(null);
