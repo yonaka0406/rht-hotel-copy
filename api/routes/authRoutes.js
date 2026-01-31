@@ -6,11 +6,12 @@ const {
   passwordLoginValidation,
   passwordResetValidation,
 } = require('../middleware/validators');
+const { authLimiter } = require('../middleware/rateLimiter');
 
-router.post('/login', emailValidation, passwordLoginValidation, login);
-router.post('/forgot-password', emailValidation, forgot);
-router.post('/forgot-password-admin', emailValidation, forgotAdmin); // Added email validation for admin too
-router.post('/reset-password', passwordResetValidation, reset);
+router.post('/login', authLimiter, emailValidation, passwordLoginValidation, login);
+router.post('/forgot-password', authLimiter, emailValidation, forgot);
+router.post('/forgot-password-admin', authLimiter, emailValidation, forgotAdmin); // Added email validation for admin too
+router.post('/reset-password', authLimiter, passwordResetValidation, reset);
 router.get('/active-users', getActiveUsers);
 
 const { setupRequestContext } = require('../config/database'); // Import the middleware
