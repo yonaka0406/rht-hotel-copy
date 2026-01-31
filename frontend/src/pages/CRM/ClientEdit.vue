@@ -34,6 +34,12 @@
         <Tab value="6" as="div" class="flex items-center gap-2">
           <span class="font-bold whitespace-nowrap">変更履歴</span>
         </Tab>
+        <Tab value="7" as="div" class="flex items-center gap-2">
+          <span class="font-bold whitespace-nowrap">合流</span>
+          <Badge v-if="candidateCount > 0" severity="warn">
+            {{ candidateCount }}
+          </Badge>
+        </Tab>
       </TabList>
       <TabPanels>
         <TabPanel value="0" as="p" class="m-0 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
@@ -60,6 +66,9 @@
         <TabPanel value="6" as="p" class="m-0 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
           <ClientEditHistory />
         </TabPanel>
+        <TabPanel value="7" as="p" class="m-0 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
+          <ClientMergeTab :client-id="clientId" @update-badge="candidateCount = $event" />
+        </TabPanel>
       </TabPanels>
     </Tabs>
   </div>
@@ -78,6 +87,7 @@ import ClientEditHistory from './components/ClientEditHistory.vue';
 import ClientRelated from './components/ClientRelated.vue';
 import RelatedProjectsList from './components/RelatedProjectsList.vue';
 import ClientImpedimentsTab from './components/ClientImpedimentsTab.vue';
+import ClientMergeTab from './components/ClientMergeTab.vue';
 
 // Stores
 import { useClientStore } from '@/composables/useClientStore';
@@ -92,6 +102,7 @@ import { Badge } from 'primevue';
 
 const clientId = ref(route.params.clientId);
 const loadingBasicInfo = ref(false);
+const candidateCount = ref(0);
 
 const addressCount = computed(() => {
   if (!selectedClientAddress.value) {
