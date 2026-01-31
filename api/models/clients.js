@@ -1116,15 +1116,21 @@ const updateImpediment = async (requestId, impedimentId, updatedFields, userId) 
   const values = [];
   let paramIndex = 1;
 
-  // Fields that are managed by the server, not by the client
-  const serverManagedFields = ['updated_by', 'updated_at'];
+  // Security: Use a whitelist of allowed fields to prevent SQL injection through keys
+  const allowedFields = [
+    'impediment_type',
+    'restriction_level',
+    'description',
+    'is_active',
+    'start_date',
+    'end_date'
+  ];
 
-  // Dynamically build the SET clause
-  for (const [key, value] of Object.entries(updatedFields)) {
-    // Skip server-managed fields from updatedFields since we set them explicitly
-    if (value !== undefined && !serverManagedFields.includes(key)) {
-      fields.push(`${key} = $${paramIndex++}`);
-      values.push(value);
+  // Dynamically build the SET clause using only allowed fields
+  for (const field of allowedFields) {
+    if (updatedFields.hasOwnProperty(field) && updatedFields[field] !== undefined) {
+      fields.push(`${field} = $${paramIndex++}`);
+      values.push(updatedFields[field]);
     }
   }
 
