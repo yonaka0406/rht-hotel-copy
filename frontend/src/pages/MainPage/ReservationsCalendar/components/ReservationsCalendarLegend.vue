@@ -1,32 +1,8 @@
 <template>
   <Fieldset legend="アイコン凡例" class="mt-2 text-xs dark:text-gray-100">
     <div class="flex flex-wrap items-center gap-4">
-      <span class="flex items-center gap-1">
-        <i class="pi pi-pause bg-yellow-100 p-1 rounded dark:bg-yellow-800"></i>保留中
-      </span>
-      <span class="flex items-center gap-1">
-        <i class="pi pi-clock bg-cyan-200 p-1 rounded dark:bg-cyan-800"></i>仮予約
-      </span>
-      <span class="flex items-center gap-1">
-        <i class="pi pi-check-circle bg-sky-300 p-1 rounded dark:bg-sky-800"></i>確定予約
-      </span>
-      <span class="flex items-center gap-1">
-        <i class="pi pi-user bg-green-400 p-1 rounded dark:bg-green-800"></i>チェックイン済み
-      </span>
-      <span class="flex items-center gap-1">
-        <i class="pi pi-sign-out bg-gray-300 p-1 rounded dark:bg-gray-700"></i>チェックアウト済み
-      </span>
-      <span class="flex items-center gap-1">
-        <i class="pi pi-id-card bg-purple-200 p-1 rounded dark:bg-purple-800"></i>社員
-      </span>
-      <span class="flex items-center gap-1">
-        <i class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>ブロック
-      </span>
-      <span class="flex items-center gap-1">
-        <i class="pi pi-lock bg-orange-100 p-1 rounded dark:bg-orange-800"></i>仮ブロック
-      </span>
-      <span class="flex items-center gap-1">
-        <i class="pi pi-circle"></i>空き
+      <span v-for="item in legendItems" :key="item.label" class="flex items-center gap-1">
+        <i :class="['pi', item.icon, item.bgClass, 'p-1', 'rounded']" aria-hidden="true"></i>{{ item.label }}
       </span>
     </div>
   </Fieldset>
@@ -34,4 +10,16 @@
 
 <script setup>
 import { Fieldset } from 'primevue';
+
+const legendItems = [
+  { icon: 'pi-pause', bgClass: 'bg-yellow-100 dark:bg-yellow-800', label: '保留中' },
+  { icon: 'pi-clock', bgClass: 'bg-cyan-200 dark:bg-cyan-800', label: '仮予約' },
+  { icon: 'pi-check-circle', bgClass: 'bg-sky-300 dark:bg-sky-800', label: '確定予約' },
+  { icon: 'pi-user', bgClass: 'bg-green-400 dark:bg-green-800', label: 'チェックイン済み' },
+  { icon: 'pi-sign-out', bgClass: 'bg-gray-300 dark:bg-gray-700', label: 'チェックアウト済み' },
+  { icon: 'pi-id-card', bgClass: 'bg-purple-200 dark:bg-purple-800', label: '社員' },
+  { icon: 'pi-times', bgClass: 'bg-red-100 dark:bg-red-800', label: 'ブロック' },
+  { icon: 'pi-lock', bgClass: 'bg-orange-100 dark:bg-orange-800', label: '仮ブロック' },
+  { icon: 'pi-circle', bgClass: '', label: '空き' },
+];
 </script>

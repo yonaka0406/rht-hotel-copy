@@ -44,3 +44,34 @@ export function translateReservationType(type) {
     const option = reservationTypeOptions.find(opt => opt.value === type);
     return option ? option.label : type;
 }
+
+export const formatClientName = (name) => {
+    if (!name) return '';
+
+    const replacements = {
+      '株式会社': '㈱',
+      '合同会社': '(同)',
+      '有限会社': '(有)',
+      '合名会社': '(名)',
+      '合資会社': '(資)',
+      '一般社団法人': '(一社)',
+      '一般財団法人': '(一財)',
+      '公益社団法人': '(公社)',
+      '公益財団法人': '(公財)',
+      '学校法人': '(学)',
+      '医療法人': '(医)',
+      '社会福祉法人': '(福)',
+      '特定非営利活動法人': '(特非)',
+      'NPO法人': '(NPO)',
+      '宗教法人': '(宗)'
+    };
+
+    let result = name;
+    for (const [key, value] of Object.entries(replacements)) {
+      result = result.replace(new RegExp(key, 'g'), value);
+    }
+    return result;
+  };
+
+export const CANCELLED_CLIENT_ID = '11111111-1111-1111-1111-111111111111';
+export const SPECIAL_BLOCK_CLIENT_ID = '22222222-2222-2222-2222-222222222222';

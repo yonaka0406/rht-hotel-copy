@@ -9,7 +9,7 @@
     @drop="$emit('drop', $event)"
     @contextmenu.prevent="$emit('contextmenu', $event)"
     :style="cellStyle"
-    :class="cellClass"
+    :class="[cellClass, 'hover:bg-gray-100 dark:hover:bg-gray-700']"
     @mouseover="$emit('mouseover')"
     @mouseleave="$emit('mouseleave')"
     draggable="true"
@@ -41,6 +41,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Skeleton } from 'primevue';
+import { CANCELLED_CLIENT_ID, SPECIAL_BLOCK_CLIENT_ID } from '@/utils/reservationUtils';
 
 const props = defineProps({
   room: {
@@ -84,9 +85,6 @@ defineEmits([
   'mouseover',
   'mouseleave'
 ]);
-
-const CANCELLED_CLIENT_ID = '11111111-1111-1111-1111-111111111111';
-const SPECIAL_BLOCK_CLIENT_ID = '22222222-2222-2222-2222-222222222222';
 
 const isReserved = computed(() => !!props.reservationInfo && props.reservationInfo.status !== 'available');
 
@@ -189,13 +187,6 @@ const cellClass = computed(() => {
   transition: background-color 0.3s ease;
 }
 
-.cell-with-hover:hover {
-  background-color: lightgray;
-}
-
-.dark .cell-with-hover:hover {
-  background-color: #374151;
-}
 
 .compact-cell {
   white-space: nowrap;
