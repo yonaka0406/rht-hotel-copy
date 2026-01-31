@@ -7,7 +7,7 @@
 <script setup>
 import Button from 'primevue/button';
 
-const props = defineProps({
+defineProps({
     loading: {
         type: Boolean,
         default: false
