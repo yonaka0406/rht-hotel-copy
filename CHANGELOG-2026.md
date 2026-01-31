@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.9] - 2026-02-02
 
 - UI Improvement: Responsive Dashboard dialog layout with improved spacing and readability.
+- Refactor: Restructured reservations calendar cell rendering architecture for improved responsiveness and faster display with large date ranges and room counts.
+- Refactor: Enhanced cell interaction handling with expanded event support for drag and navigation operations.
 - Security Improvement: Added rate limiting to authentication endpoints (login, password reset) to prevent brute-force attacks.
 - Security Improvement: Enhanced security headers for improved protection against common web vulnerabilities.
 - Bug Fix: Fixed a critical SQL injection vulnerability in the updateImpediment model function within api/models/clients.js. The fix involves implementing a whitelist for allowed database fields when building dynamic UPDATE queries. This prevents attackers from injecting malicious SQL through object keys in the request body.
