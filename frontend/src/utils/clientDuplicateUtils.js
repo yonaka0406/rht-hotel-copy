@@ -41,10 +41,17 @@ export const normalizeClientName = (name) => {
 export const findDuplicates = (allClients) => {
     if (!allClients || allClients.length === 0) return [];
 
+    // Bolt: De-duplicate input clients by ID to prevent duplicate key warnings in UI
+    const uniqueClientsMap = new Map();
+    allClients.forEach(c => {
+        if (c && c.id) uniqueClientsMap.set(c.id, c);
+    });
+    const clients = Array.from(uniqueClientsMap.values());
+
     // 1. Group clients by exact matches (Email, Phone, Normalized Name)
     const exactGroups = new Map();
 
-    allClients.forEach(client => {
+    clients.forEach(client => {
         const keys = new Set();
         if (client.email) keys.add(`email:${client.email.toLowerCase()}`);
         if (client.phone) {
@@ -74,7 +81,7 @@ export const findDuplicates = (allClients) => {
         if (rootI !== rootJ) parent.set(rootI, rootJ);
     };
 
-    allClients.forEach(c => parent.set(c.id, c.id));
+    clients.forEach(c => parent.set(c.id, c.id));
     for (const ids of exactGroups.values()) {
         const idArray = [...ids];
         for (let i = 1; i < idArray.length; i++) {
@@ -84,7 +91,7 @@ export const findDuplicates = (allClients) => {
 
     // Consolidate exact groups
     const consolidatedExactGroups = new Map();
-    allClients.forEach(client => {
+    clients.forEach(client => {
         const root = find(client.id);
         if (!consolidatedExactGroups.has(root)) consolidatedExactGroups.set(root, []);
         consolidatedExactGroups.get(root).push(client);
@@ -145,7 +152,14 @@ export const findDuplicates = (allClients) => {
                     }
                 });
             } else {
-                finalPairs.push({ earliest: current.client, duplicates: candidates, type: 'similarity' });
+                // Bolt: Ensure unique candidates within the pair
+                const uniqueCandidatesMap = new Map();
+                candidates.forEach(c => uniqueCandidatesMap.set(c.id, c));
+                finalPairs.push({
+                    earliest: current.client,
+                    duplicates: Array.from(uniqueCandidatesMap.values()),
+                    type: 'similarity'
+                });
             }
         }
     }
@@ -159,11 +173,18 @@ export const findDuplicates = (allClients) => {
 export const findCandidatesForClient = (targetClient, allClients) => {
     if (!targetClient || !allClients) return [];
 
+    // Bolt: De-duplicate input clients by ID
+    const uniqueClientsMap = new Map();
+    allClients.forEach(c => {
+        if (c && c.id) uniqueClientsMap.set(c.id, c);
+    });
+    const clients = Array.from(uniqueClientsMap.values());
+
     const targetSearchName = normalizeClientName(targetClient.name_kanji || targetClient.name_kana || targetClient.name);
     const targetEmail = targetClient.email?.toLowerCase();
     const targetPhoneDigits = targetClient.phone?.replace(/\D/g, '');
 
-    return allClients.filter(client => {
+    return clients.filter(client => {
         if (client.id === targetClient.id) return false;
 
         // Exact match on Email or Phone

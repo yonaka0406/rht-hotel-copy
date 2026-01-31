@@ -33,6 +33,7 @@
 
                     <DataTable class="dark:bg-gray-800 dark:text-gray-200 p-datatable-sm"
                         :value="filteredDuplicatePairs" :paginator="true" :rows="5" :rowsPerPageOptions="[5, 10, 20]"
+                        dataKey="earliest.id"
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
                         v-if="filteredDuplicatePairs.length > 0">

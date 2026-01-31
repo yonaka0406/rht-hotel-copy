@@ -27,6 +27,23 @@ ReferenceError: requestId is not defined
     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
     at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
     at Module.require (node:internal/modules/cjs/loader:1463:12)
+    at require (node:internal/module[32m[nodemon] restarting due to [32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] s[dotenv@17.2.3] injecting env (0) from api/.env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+WARNING: SESSION_SECRET WARNING: SESSION_SECRET environment variable not set. Generating a random session secret. Sessions will not p[dotenv@17.2.3] injecting env (0) from api/.env --[dotenv@17.2.3] injecting env (0) from api/.env -- tip: 🔐 e[dotenv@17.2.3] injecting env (0) from ap[dotenv@17.2.3] injecting env (0) from api/.env -- tip: 🔄 add secrets lifecy[dotenv@17.2.3] injecting env (0) from .[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file [dotenv@17.2.3] injecting env (0) fr[dot[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  enable debug logging with[dotenv@17.2.3] i[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 encrypt with Dotenvx: https://dote/app/api/utils/jwtUtils.js:6
+  throw ne[dotenv@17.2.3] injecting env (0) from api/.env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+/app/api/config/oauth.js:13
+  console.error(`[GoogleCalendarUtils][getCalendarService] Missing Google OAuth2 client environment variables. requestId: ${requestId}`);
+                                                                                                                            ^
+
+ReferenceError: requestId is not defined
+    at Object.<anonymous> (/app/api/config/oauth.js:13:125)
+    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+    at Object..js (node:internal/modules/cjs/loader:1839:10)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Module.require (node:internal/modules/cjs/loader:1463:12)
     at require (node:internal/modules/helpers:147:16)
     at Object.<anonymous> (/app/api/controllers/authController.js:12:35)
 
