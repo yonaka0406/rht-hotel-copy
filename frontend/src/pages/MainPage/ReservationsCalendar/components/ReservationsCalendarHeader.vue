@@ -19,16 +19,21 @@
                 <span>{{ legendItem.plan_name }}</span>
             </div>
         </div>
-        <div class="flex justify-end">
+        <div class="flex justify-end items-center gap-2">
             <SelectButton optionLabel="label" optionValue="value" :options="viewOptions"
                 :model-value="modelValue.isCompactView" @update:modelValue="updateViewMode"
                 class="dark:bg-gray-800 dark:text-gray-100" />
+
+            <MultiSelect v-model="localSelectedRoomTypes" :options="roomTypeOptions"
+                placeholder="部屋タイプ選択" :maxSelectedLabels="1"
+                class="w-full md:w-48 dark:bg-gray-800 dark:text-gray-100" />
         </div>
     </div>
 </template>
 
 <script setup>
-import { SelectButton, InputText, FloatLabel } from 'primevue';
+import { ref, watch } from 'vue';
+import { SelectButton, InputText, FloatLabel, MultiSelect } from 'primevue';
 
 const props = defineProps({
     modelValue: {
@@ -42,10 +47,27 @@ const props = defineProps({
     hotelName: {
         type: String,
         default: ''
+    },
+    roomTypeOptions: {
+        type: Array,
+        default: () => []
     }
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'update:selectedRoomTypes']);
+
+const localSelectedRoomTypes = ref([]);
+
+watch(() => props.modelValue.selectedRoomTypes, (newVal) => {
+    localSelectedRoomTypes.value = newVal || [];
+}, { immediate: true });
+
+watch(localSelectedRoomTypes, (newVal) => {
+    emit('update:modelValue', {
+        ...props.modelValue,
+        selectedRoomTypes: newVal
+    });
+});
 
 const viewOptions = [
     { label: '縮小', value: true },
