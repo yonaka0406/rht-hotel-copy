@@ -139,7 +139,7 @@ const formatAddress = (address) => {
 // Helper functions remain the same.
 const formatDate = (date) => {
     if (!(date instanceof Date) || isNaN(date.getTime())) {
-        return 'Invalid Date';
+        return '-';
     }
     return date.toLocaleDateString('ja-JP', {
         year: 'numeric',
@@ -149,7 +149,9 @@ const formatDate = (date) => {
 }
 
 const formatDateTime = (dateString) => {
+    if (!dateString) return '更新なし';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
     return date.toLocaleDateString('ja-JP', {
         year: 'numeric',
         month: '2-digit',
