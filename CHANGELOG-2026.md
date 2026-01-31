@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.9] - 2026-02-02
+
+- UI Improvement: Responsive Dashboard dialog layout with improved spacing and readability.
+- Bug Fix: Fixed a critical SQL injection vulnerability in the updateImpediment model function within api/models/clients.js. The fix involves implementing a whitelist for allowed database fields when building dynamic UPDATE queries. This prevents attackers from injecting malicious SQL through object keys in the request body.
+
+---
+
 ## [1.4.8] - 2026-01-30
 
 - New Feature: Added department group management capabilities for accounting settings

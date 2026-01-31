@@ -7,3 +7,4 @@
 **Vulnerability:** Sensitive authentication routes (login, password reset) were unprotected from brute-force attacks, allowing unlimited attempts.
 **Learning:** Publicly accessible auth endpoints are high-value targets for automated brute-force and credential stuffing.
 **Prevention:** Implement rate limiting on all sensitive endpoints. Use `express-rate-limit` to restrict attempts per IP address and window of time.
+
