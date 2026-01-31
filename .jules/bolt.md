@@ -1,0 +1,3 @@
+## 2025-05-22 - Extracting Grid Cells for Performance
+**Learning:** In large grid components like `ReservationsCalendar.vue`, inline rendering logic with multiple $O(N)$ searches per cell causes severe performance degradation as the date range or room count grows. Consolidating all flags (isFirst, isLast, status icons) into a single pre-calculated Map lookup significantly reduces script execution time during render.
+**Action:** Always extract complex grid cells into dedicated components and pass pre-calculated data via props to leverage Vue's reactivity optimization and maintain O(1) lookup speeds within the render loop.
