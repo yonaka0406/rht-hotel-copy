@@ -1,5 +1,13 @@
 <template>
     <div class="p-4">
+        <!-- Client Header consistent with other tabs -->
+        <div class="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+            <p class="text-xl font-bold dark:text-gray-100">
+                {{ selectedClient?.client?.name || 'クライアント' }}
+            </p>
+            <small class="text-gray-500 dark:text-gray-400">{{ selectedClient?.client?.name_kana }}</small>
+        </div>
+
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold">顧客合流候補</h3>
             <Button label="候補を再検索" icon="pi pi-refresh" @click="searchCandidates" :loading="isCalculating" severity="secondary" class="p-button-sm" />
