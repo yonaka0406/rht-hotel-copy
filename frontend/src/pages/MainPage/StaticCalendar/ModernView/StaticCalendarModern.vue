@@ -38,12 +38,14 @@
                 <span class="text-[8px] text-gray-400 font-bold uppercase leading-none">{{ getDayName(date) }}</span>
                 <span class="text-xs font-bold leading-tight" :class="{ 'text-primary': isToday(date) }">{{ formatDateMonthDay(date) }}</span>
               </div>
-              <div class="flex flex-col items-end gap-0.5">
-                <div class="flex items-center gap-1" v-tooltip.right="'空室数'">
-                  <span class="text-[9px] font-bold" :class="availableRoomsByDate[date] === 0 ? 'text-red-500' : 'text-gray-400'">{{ availableRoomsByDate[date] }}</span>
+              <div class="flex items-center gap-1.5 ml-auto">
+                <div class="flex items-center gap-0.5" v-tooltip.top="'空室'">
+                  <i class="pi pi-home text-[9px] text-gray-400"></i>
+                  <span class="text-[9px] font-bold" :class="availableRoomsByDate[date] === 0 ? 'text-red-500' : 'text-gray-500'">{{ availableRoomsByDate[date] }}</span>
                 </div>
-                <div class="flex items-center gap-1" v-tooltip.right="'駐車場'">
-                  <span class="text-[9px] text-gray-300">{{ availableParkingSpotsByDate[date] }}</span>
+                <div class="flex items-center gap-0.5" v-tooltip.top="'駐車場'">
+                  <i class="pi pi-car text-[9px] text-gray-400"></i>
+                  <span class="text-[9px] font-bold text-gray-500">{{ availableParkingSpotsByDate[date] }}</span>
                 </div>
               </div>
             </div>
@@ -150,7 +152,7 @@ const isToday = (dateStr) => {
 };
 
 const getDayName = (dateStr) => {
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const days = ['日', '月', '火', '水', '木', '金', '土'];
   return days[new Date(dateStr).getDay()];
 };
 
@@ -163,6 +165,21 @@ const formatDateMonthDay = (dateStr) => {
 const getRoomTypeName = (roomId) => {
   const room = props.selectedHotelRooms.find(r => r.room_id === roomId);
   return room ? room.room_type_name : '';
+};
+
+const formatClientName = (name) => {
+  if (!name) return '';
+  const replacements = {
+    '株式会社': '㈱', '合同会社': '(同)', '有限会社': '(有)', '合名会社': '(名)', '合資会社': '(資)',
+    '一般社団法人': '(一社)', '一般財団法人': '(一財)', '公益社団法人': '(公社)', '公益財団法人': '(公財)',
+    '学校法人': '(学)', '医療法人': '(医)', '社会福祉法人': '(福)', '特定非営利活動法人': '(特非)',
+    'NPO法人': '(NPO)', '宗教法人': '(宗)'
+  };
+  let result = name;
+  for (const [key, value] of Object.entries(replacements)) {
+    result = result.replace(new RegExp(key, 'g'), value);
+  }
+  return result;
 };
 
 const getRoomBlocks = (roomId) => {
@@ -178,20 +195,21 @@ const getRoomBlocks = (roomId) => {
   for (const [resId, allItems] of Object.entries(grouped)) {
     allItems.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Split into consecutive subgroups
+    // Split into subgroups based on continuity AND plan_color/status consistency
     const subgroups = [];
     if (allItems.length > 0) {
       let currentSubgroup = [allItems[0]];
       for (let i = 1; i < allItems.length; i++) {
-        const prevDate = new Date(allItems[i-1].date);
-        const currDate = new Date(allItems[i].date);
-        const diffDays = Math.round((currDate - prevDate) / (1000 * 60 * 60 * 24));
+        const prev = allItems[i-1];
+        const curr = allItems[i];
+        const diffDays = Math.round((new Date(curr.date) - new Date(prev.date)) / (1000 * 60 * 60 * 24));
 
-        if (diffDays === 1) {
-          currentSubgroup.push(allItems[i]);
+        // Split if not consecutive OR if plan/status color would change
+        if (diffDays === 1 && prev.plan_color === curr.plan_color && prev.status === curr.status) {
+          currentSubgroup.push(curr);
         } else {
           subgroups.push(currentSubgroup);
-          currentSubgroup = [allItems[i]];
+          currentSubgroup = [curr];
         }
       }
       subgroups.push(currentSubgroup);
@@ -211,7 +229,7 @@ const getRoomBlocks = (roomId) => {
         id: `${resId}-${firstItem.date}`,
         reservation_id: resId,
         client_id: firstItem.client_id,
-        client_name: firstItem.client_name,
+        client_name: formatClientName(firstItem.client_name),
         check_in: firstItem.check_in,
         check_out: firstItem.check_out,
         plan_name: firstItem.plan_name,
@@ -293,11 +311,11 @@ const getBlockStyle = (block) => {
 };
 
 const handleBlockClick = (block) => {
-  emit('cell-click', block.items[0].room_id, block.items[0].date);
+  emit('cell-click', block.items[0].room_id, formatDate(new Date(block.items[0].date)));
 };
 
 const handleBlockDoubleClick = (block) => {
-  emit('cell-double-click', block.items[0].room_id, block.items[0].date);
+  emit('cell-double-click', block.items[0].room_id, formatDate(new Date(block.items[0].date)));
 };
 
 // Tooltip Logic
@@ -354,7 +372,7 @@ const contextMenuItems = computed(() => [
     icon: 'pi pi-external-link',
     command: () => {
       if (selectedBlock.value) {
-         const url = `/reservations/${selectedBlock.value.reservation_id}/edit`;
+         const url = `/reservations/edit/${selectedBlock.value.reservation_id}`;
          window.open(url, '_blank');
       }
     }
