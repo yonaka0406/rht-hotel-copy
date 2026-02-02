@@ -1437,19 +1437,12 @@ const getClientCandidates = async (requestId, clientId) => {
 
 const getNextCustomerId = async (requestId) => {
   const pool = getPool(requestId);
-  // Matches pure numeric IDs or 'C' followed by numbers, extracted as integer
+  // customer_id is type INTEGER in the database.
+  // We simply find the maximum value and increment it.
   const query = `
-    SELECT MAX(numeric_id) as max_id
-    FROM (
-      SELECT
-        CASE
-          WHEN customer_id ~ '^[0-9]+$' THEN customer_id::integer
-          WHEN customer_id ~ '^C[0-9]+$' THEN substring(customer_id from 2)::integer
-          ELSE NULL
-        END as numeric_id
-      FROM clients
-      WHERE customer_id IS NOT NULL
-    ) AS extracted_ids;
+    SELECT MAX(customer_id) as max_id
+    FROM clients
+    WHERE customer_id IS NOT NULL;
   `;
   try {
     const result = await pool.query(query);
