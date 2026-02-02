@@ -1164,10 +1164,9 @@ const updateImpediment = async (requestId, impedimentId, updatedFields, userId) 
     }
   }
 
-  // Add updated_by and updated_at
+  // Add updated_by
   fields.push(`updated_by = $${paramIndex++}`);
   values.push(userId);
-  fields.push(`updated_at = CURRENT_TIMESTAMP`);
 
   if (fields.length === 0) {
     throw new Error("No fields provided for update.");
@@ -1490,7 +1489,7 @@ const findAllDuplicates = async (requestId) => {
   const query = `
     SELECT
         id, name, name_kana, name_kanji, email, phone, fax,
-        date_of_birth, created_at, updated_at,
+        date_of_birth, created_at,
         legal_or_natural_person, gender
     FROM clients
     WHERE id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')

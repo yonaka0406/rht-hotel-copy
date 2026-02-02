@@ -218,12 +218,12 @@
     };
 
     const handleClientCreated = () => {
-        fetchClients(); // Refresh the client list
+        fetchClients(1, null, 5000); // Refresh the client list
     };
 
     onMounted( async () => {
         try {
-            await fetchClients();
+            await fetchClients(1, null, 5000);
         } catch (error) {
             console.error('Failed to fetch clients on mount:', error);
             toast.add({ severity: 'error', summary: 'エラー', detail: '顧客データの読み込みに失敗しました。', life: 3000 });

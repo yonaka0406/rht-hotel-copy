@@ -172,18 +172,10 @@ const goToEdit = (id) => {
     window.open(routeData.href, '_blank');
 };
 
-onMounted(() => {
-    searchCandidates();
-});
-
-// Re-search if selectedClient changes (after initial fetch)
-watch(() => selectedClient.value, (newVal) => {
-    if (newVal && newVal.client) {
+// BOLT PERFORMANCE: Consolidate watchers to prevent infinite request loops
+watch(() => props.clientId, (newId) => {
+    if (newId) {
         searchCandidates();
     }
 }, { immediate: true });
-
-watch(() => props.clientId, () => {
-    searchCandidates();
-});
 </script>
