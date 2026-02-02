@@ -89,43 +89,101 @@
             </div>
         </template>
     </Card>
-    <!-- Optional: Show a loading or not found message -->
-    <div v-else>
-        Client data not found or is loading...
+    <!-- Optional: Show a loading message while initially finding client -->
+    <div v-else-if="isLoading" class="p-4 text-center text-gray-500">
+        <i class="pi pi-spin pi-spinner mr-2"></i> 顧客情報を読み込み中...
+    </div>
+    <div v-else class="p-4 text-center text-gray-500">
+        顧客データが見つかりません。
     </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import Card from 'primevue/card';
 import Divider from 'primevue/divider';
 import { useClientStore } from '@/composables/useClientStore';
 
-// The component now accepts a 'clientId' prop instead of the whole object.
+// The component now accepts a 'clientId' prop or a 'client' object directly.
 const props = defineProps({
     clientId: {
         type: [String, Number], // Accepts string or number for the ID
-        required: true
+        required: false
+    },
+    client: {
+        type: Object,
+        required: false,
+        default: null
     }
 });
 
 // Instantiate the store to access its state.
 const clientStore = useClientStore();
+const { fetchClient } = clientStore;
 
-// Create a computed property to reactively find the client from the store's 'clients' ref.
+const fetchedClientData = ref(null);
+const isLoading = ref(false);
+
+const loadClientData = async () => {
+    if (props.client) {
+        // If client object is provided but missing addresses, fetch them
+        if (!props.client.addresses && props.client.id) {
+            isLoading.value = true;
+            try {
+                const result = await fetchClient(props.client.id);
+                // result is { client: {client, addresses, group}, addresses, group }
+                fetchedClientData.value = {
+                    ...result.client.client,
+                    addresses: result.addresses,
+                    group: result.group
+                };
+            } catch (e) {
+                console.error('Failed to fetch additional client data:', e);
+            } finally {
+                isLoading.value = false;
+            }
+        }
+        return;
+    }
+
+    if (props.clientId) {
+        const found = clientStore.clients.value.find(c => c.id === props.clientId);
+        if (found && found.addresses) {
+            fetchedClientData.value = found;
+            return;
+        }
+
+        isLoading.value = true;
+        try {
+            const result = await fetchClient(props.clientId);
+            if (result && result.client) {
+                fetchedClientData.value = {
+                    ...result.client.client,
+                    addresses: result.addresses,
+                    group: result.group
+                };
+            }
+        } catch (e) {
+            console.error('Failed to fetch client data for ClientCard:', e);
+        } finally {
+            isLoading.value = false;
+        }
+    }
+};
+
+onMounted(loadClientData);
+watch(() => [props.clientId, props.client], loadClientData);
+
+// Create a computed property to reactively find the client.
 const selectedClient = computed(() => {
+    if (fetchedClientData.value) return fetchedClientData.value;
+    if (props.client) return props.client;
     return clientStore.clients.value.find(client => client.id === props.clientId);
 });
 
 // Create a computed property for the client's addresses.
 const selectedClientAddresses = computed(() => {
     if (!selectedClient.value) return [];
-    // Assuming the store has a way to get addresses by client ID,
-    // or they are part of the client object.
-    // For this example, let's assume they are fetched and stored separately
-    // or passed in somehow. Let's assume a function getAddressesByClientId exists.
-    // A better approach would be to have addresses nested in the client object.
-    // Let's assume selectedClient.value.addresses exists.
     return selectedClient.value.addresses || [];
 });
 

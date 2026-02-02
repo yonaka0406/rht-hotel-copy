@@ -187,7 +187,7 @@ import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil,
 
 // HTML pattern attributes (simplified for HTML validity)
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phonePattern = /^[\d\s()+\-]*$/;
+const phonePattern = /^[\d\s()+-]*$/;
 
 const personTypeOptions = [
     { label: '法人', value: 'legal' },

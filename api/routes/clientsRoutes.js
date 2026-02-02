@@ -6,6 +6,7 @@ const { authMiddleware, authMiddlewareCRUDAccess, authMiddleware_manageClients }
 
 router.get('/client-list/:page', authMiddleware, clientsController.getClients);
 router.get('/clients/stats', authMiddleware, clientsController.getClientStats);
+router.get('/clients/duplicates', authMiddleware, clientsController.getDuplicates);
 router.get('/clients/next-customer-id', authMiddleware, clientsController.getNextCustomerId);
 router.get('/client/:id', authMiddleware, clientsController.getClient);
 router.get('/clients/:id/candidates', authMiddleware, clientsController.getClientCandidates);

@@ -21,3 +21,7 @@
 ## 2025-05-23 - Aggregating Dashboard Metrics on the Server
 **Learning:** Computing dashboard statistics (like counts and distributions) on the frontend by processing a full dump of the database (e.g., 5000+ clients) is highly inefficient and creates a bottleneck during initial load. Implementing a specialized `/stats` API endpoint that uses PostgreSQL aggregate functions moves the computation to the database and reduces the payload from megabytes to bytes.
 **Action:** Always prefer server-side aggregation for dashboard metrics over client-side processing of large raw datasets.
+
+## 2026-02-02 - Server-side Duplication Detection for Performance
+**Learning:** Finding duplicate client records by transferring all 5,000+ records to the frontend and running an O(N²) or O(N log N) comparison in the browser causes the UI to freeze and memory usage to spike. Moving the duplication logic to the backend using an O(N log N) prefix-sorting algorithm reduces the data transfer to only the clusters of candidates and keeps the main thread free.
+**Action:** Implement heavy data-processing algorithms like duplication detection on the backend and expose the results via specialized endpoints.

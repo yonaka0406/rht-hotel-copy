@@ -10,7 +10,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-  console.error(`[GoogleCalendarUtils][getCalendarService] Missing Google OAuth2 client environment variables. requestId: ${requestId}`);
+  console.error(`[GoogleCalendarUtils][getCalendarService] Missing Google OAuth2 client environment variables.`);
   throw new Error('Google OAuth2 client configuration is incomplete.');
 }
 

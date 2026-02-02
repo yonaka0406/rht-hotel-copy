@@ -604,8 +604,19 @@ const getNextCustomerId = async (req, res) => {
   }
 };
 
+const getDuplicates = async (req, res) => {
+  try {
+    const duplicates = await clientsModel.findAllDuplicates(req.requestId);
+    res.status(200).json(duplicates);
+  } catch (error) {
+    console.error('Error getting duplicates:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 module.exports = {
+  getDuplicates,
   getNextCustomerId,
   getClients,
   getClient,

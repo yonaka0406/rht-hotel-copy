@@ -1369,6 +1369,35 @@ const getClientStats = async (requestId) => {
 };
 
 
+const normalizeClientNameForMatching = (name) => {
+  if (!name) return '';
+  let normalized = name.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+
+  const noise = [
+    '株式会社', '有限会社', '合資会社', '合同会社',
+    '特定非営利活動法人', 'npo法人',
+    '一般社団法人', '公益社団法人', '一般財団法人', '公益財団法人',
+    '(株)', '(有)', '（株）', '（有）'
+  ];
+
+  let searchName = normalized;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const term of noise) {
+      if (searchName.startsWith(term)) {
+        searchName = searchName.substring(term.length);
+        changed = true;
+      }
+      if (searchName.endsWith(term)) {
+        searchName = searchName.substring(0, searchName.length - term.length);
+        changed = true;
+      }
+    }
+  }
+  return searchName || normalized;
+};
+
 const getClientCandidates = async (requestId, clientId) => {
   const pool = getPool(requestId);
 
@@ -1377,13 +1406,13 @@ const getClientCandidates = async (requestId, clientId) => {
   if (targetResult.rows.length === 0) return [];
   const target = targetResult.rows[0];
 
-  const targetName = (target.name_kanji || target.name_kana || target.name || '').normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+  const targetSearchName = normalizeClientNameForMatching(target.name_kanji || target.name_kana || target.name);
   const targetEmail = target.email ? target.email.toLowerCase() : null;
   const targetPhone = target.phone ? target.phone.replace(/\D/g, '') : null;
 
   // 2. Search for candidates
-  // We use a broad SQL query and then refine in JS to match frontend logic exactly
-  // Or we can try to do more in SQL.
+  // We use a broad SQL query and then refine in JS to match frontend logic exactly.
+  // We search for candidates with same email, similar phone, or similar name.
 
   let query = `
     SELECT
@@ -1399,12 +1428,12 @@ const getClientCandidates = async (requestId, clientId) => {
         OR (LOWER(name_kana) ILIKE $4)
         OR (LOWER(name_kanji) ILIKE $4)
       )
-    LIMIT 100
+    LIMIT 200
   `;
 
-  // For name search, we'll look for similar names.
-  // This is a bit loose but helps find potential matches.
-  const searchPattern = `%${targetName.substring(0, 4)}%`;
+  // For name search pattern, use a shorter prefix to catch variants
+  const nameBase = targetSearchName.substring(0, 4);
+  const searchPattern = nameBase.length >= 2 ? `%${nameBase}%` : null;
 
   const values = [clientId, targetEmail, targetPhone, searchPattern];
 
@@ -1412,20 +1441,20 @@ const getClientCandidates = async (requestId, clientId) => {
     const result = await pool.query(query, values);
 
     const candidates = result.rows.filter(client => {
-        // Exact match on Email or Phone
-        if (targetEmail && client.email && client.email.toLowerCase() === targetEmail) return true;
-        if (targetPhone && targetPhone.length >= 7 && client.phone && client.phone.replace(/\D/g, '') === targetPhone) return true;
+      // Exact match on Email or Phone
+      if (targetEmail && client.email && client.email.toLowerCase() === targetEmail) return true;
+      if (targetPhone && targetPhone.length >= 7 && client.phone && client.phone.replace(/\D/g, '') === targetPhone) return true;
 
-        const clientName = (client.name_kanji || client.name_kana || client.name || '').normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+      const searchName = normalizeClientNameForMatching(client.name_kanji || client.name_kana || client.name);
 
-        // Exact match on normalized name
-        if (clientName === targetName) return true;
+      // Exact match on normalized name
+      if (searchName === targetSearchName) return true;
 
-        // Prefix similarity (either direction)
-        if (targetName.length >= 4 && clientName.startsWith(targetName)) return true;
-        if (clientName.length >= 4 && targetName.startsWith(clientName)) return true;
+      // Prefix similarity (either direction)
+      if (targetSearchName.length >= 4 && searchName.startsWith(targetSearchName)) return true;
+      if (searchName.length >= 4 && targetSearchName.startsWith(searchName)) return true;
 
-        return false;
+      return false;
     });
 
     return candidates;
@@ -1456,7 +1485,146 @@ const getNextCustomerId = async (requestId) => {
   }
 };
 
+const findAllDuplicates = async (requestId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+        id, name, name_kana, name_kanji, email, phone, fax,
+        date_of_birth, created_at, updated_at,
+        legal_or_natural_person, gender
+    FROM clients
+    WHERE id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')
+  `;
+  try {
+    const result = await pool.query(query);
+    const clients = result.rows;
+
+    if (!clients || clients.length === 0) return [];
+
+    // BOLT PERFORMANCE: Move duplication grouping logic to backend to avoid bulk transfer of raw data.
+    // 1. Group clients by exact matches (Email, Phone, Normalized Name)
+    const exactGroups = new Map();
+
+    clients.forEach(client => {
+      const keys = new Set();
+      if (client.email) keys.add(`email:${client.email.toLowerCase()}`);
+      if (client.phone) {
+        const digits = client.phone.replace(/\D/g, '');
+        if (digits.length >= 7) keys.add(`phone:${digits}`);
+      }
+      const searchName = normalizeClientNameForMatching(client.name_kanji || client.name_kana || client.name);
+      if (searchName.length >= 2) keys.add(`name:${searchName}`);
+
+      keys.forEach(key => {
+        if (!exactGroups.has(key)) exactGroups.set(key, new Set());
+        exactGroups.get(key).add(client.id);
+      });
+    });
+
+    // Union-Find for exact groups
+    const parent = new Map();
+    const find = (i) => {
+      if (parent.get(i) === i) return i;
+      const root = find(parent.get(i));
+      parent.set(i, root);
+      return root;
+    };
+    const union = (i, j) => {
+      const rootI = find(i);
+      const rootJ = find(j);
+      if (rootI !== rootJ) parent.set(rootI, rootJ);
+    };
+
+    clients.forEach(c => parent.set(c.id, c.id));
+    for (const ids of exactGroups.values()) {
+      const idArray = [...ids];
+      for (let i = 1; i < idArray.length; i++) {
+        union(idArray[0], idArray[i]);
+      }
+    }
+
+    // Consolidate exact groups
+    const consolidatedExactGroups = new Map();
+    clients.forEach(client => {
+      const root = find(client.id);
+      if (!consolidatedExactGroups.has(root)) consolidatedExactGroups.set(root, []);
+      consolidatedExactGroups.get(root).push(client);
+    });
+
+    // Leaders of exact groups
+    const leaders = [];
+    const finalPairs = [];
+
+    consolidatedExactGroups.forEach(group => {
+      // Sort by created_at to find the earliest
+      group.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      const earliest = group[0];
+      const duplicates = group.slice(1);
+
+      leaders.push(earliest);
+
+      if (duplicates.length > 0) {
+        finalPairs.push({ earliest, duplicates, type: 'exact' });
+      }
+    });
+
+    // 2. Similarity (Prefix) matching between leaders - O(N log N)
+    const sortedLeaders = leaders.map(l => ({
+      client: l,
+      searchName: normalizeClientNameForMatching(l.name_kanji || l.name_kana || l.name)
+    })).sort((a, b) => a.searchName.localeCompare(b.searchName));
+
+    for (let i = 0; i < sortedLeaders.length; i++) {
+      const current = sortedLeaders[i];
+      if (current.searchName.length < 4) continue; // Min length for prefix match
+
+      const candidates = [];
+      for (let j = i + 1; j < sortedLeaders.length; j++) {
+        const other = sortedLeaders[j];
+
+        // Check if current is a prefix of other
+        if (other.searchName.startsWith(current.searchName)) {
+          if (other.searchName !== current.searchName) {
+            const otherGroup = consolidatedExactGroups.get(find(other.client.id));
+            candidates.push(...otherGroup);
+          }
+        } else {
+          // Since they are sorted, no more candidates for current start name
+          break;
+        }
+      }
+
+      if (candidates.length > 0) {
+        const existingPair = finalPairs.find(p => p.earliest.id === current.client.id);
+        if (existingPair) {
+          const currentDupIds = new Set(existingPair.duplicates.map(d => d.id));
+          candidates.forEach(c => {
+            if (!currentDupIds.has(c.id)) {
+              existingPair.duplicates.push(c);
+              currentDupIds.add(c.id);
+            }
+          });
+        } else {
+          const uniqueCandidatesMap = new Map();
+          candidates.forEach(c => uniqueCandidatesMap.set(c.id, c));
+          finalPairs.push({
+            earliest: current.client,
+            duplicates: Array.from(uniqueCandidatesMap.values()),
+            type: 'similarity'
+          });
+        }
+      }
+    }
+
+    return finalPairs;
+  } catch (err) {
+    console.error('Error finding duplicates on server:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
+  findAllDuplicates,
   getNextCustomerId,
   toFullWidthKana,
   processNameString,

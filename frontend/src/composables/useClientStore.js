@@ -596,6 +596,27 @@ export function useClientStore() {
         }
     };
 
+    const fetchDuplicates = async () => {
+        clientsIsLoading.value = true;
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/clients/duplicates', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) throw new Error('Failed to fetch duplicates');
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to fetch duplicates:', error);
+            return [];
+        } finally {
+            clientsIsLoading.value = false;
+        }
+    };
+
     async function fetchRelatedCompanies(clientId) {
         isLoadingRelatedCompanies.value = true;
         try {
@@ -822,5 +843,6 @@ export function useClientStore() {
         fetchExportClientsCount,
         downloadClients,
         fetchNextCustomerId,
+        fetchDuplicates,
     };
 }

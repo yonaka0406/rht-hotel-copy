@@ -40,7 +40,7 @@
 
                         <Column header="元顧客情報" style="width: 50%;">
                             <template #body="{ data }">
-                                <ClientCard :client-id="data.earliest.id" />
+                                <ClientCard :client="data.earliest" />
                                 <div class="mt-2">
                                     <Button @click="goToEditClientPage(data.earliest.id)" label="顧客編集"
                                         icon="pi pi-pencil" severity="info" class="p-button-sm w-full" />
@@ -61,7 +61,7 @@
                                             </div>
                                         </AccordionHeader>
                                         <AccordionContent>
-                                            <ClientCard :client-id="duplicate.id" />
+                                            <ClientCard :client="duplicate" />
                                             <div class="mt-2 grid grid-cols-2 gap-2">
                                                 <Button @click="goToEditClientPage(duplicate.id)" label="編集"
                                                     icon="pi pi-pencil" severity="secondary" class="p-button-sm" />
@@ -90,10 +90,9 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from 'vue-router';
 import { useClientStore } from '@/composables/useClientStore';
-import { findDuplicates } from '@/utils/clientDuplicateUtils';
 
 import ClientCard from './components/ClientCard.vue';
 import ClientMerge from './components/ClientMerge.vue';
@@ -113,12 +112,7 @@ import AccordionContent from 'primevue/accordioncontent';
 
 
 const router = useRouter();
-const { clients, clientsIsLoading, fetchAllClientsForFiltering } = useClientStore();
-
-onMounted(async () => {
-    // Ensure we have all clients for a thorough duplication check
-    await fetchAllClientsForFiltering();
-});
+const { clientsIsLoading, fetchDuplicates } = useClientStore();
 
 // --- State Refs ---
 const duplicatePairs = ref([]);
@@ -126,6 +120,11 @@ const isCalculating = ref(false);
 const showDrawer = ref(false);
 const drawerProps = ref({});
 const filterText = ref('');
+
+onMounted(async () => {
+    // BOLT PERFORMANCE: Move duplication detection to backend to avoid loading all clients (5000+) into memory.
+    duplicatePairs.value = await fetchDuplicates();
+});
 
 // --- Filter Logic ---
 const filteredDuplicatePairs = computed(() => {
@@ -145,39 +144,6 @@ const filteredDuplicatePairs = computed(() => {
         );
     });
 });
-
-
-// --- Optimized Duplicate Calculation ---
-
-const calculateDuplicates = async () => {
-    if (!clients.value || clients.value.length === 0) {
-        duplicatePairs.value = [];
-        return;
-    }
-
-    isCalculating.value = true;
-
-    // Yield to main thread to allow UI to update
-    await new Promise(resolve => setTimeout(resolve, 0));
-
-    try {
-        // Use the optimized utility to find duplicates
-        duplicatePairs.value = findDuplicates(clients.value);
-    } catch (error) {
-        console.error('[ClientDuplicates] Calculation error:', error);
-        duplicatePairs.value = [];
-    } finally {
-        isCalculating.value = false;
-    }
-};
-
-// --- Watcher ---
-// Only trigger calculation when loading is finished and clients data is available
-watch(clientsIsLoading, (isLoading) => {
-    if (!isLoading && clients.value.length > 0) {
-        calculateDuplicates();
-    }
-}, { immediate: true });
 
 
 // --- Component Actions ---

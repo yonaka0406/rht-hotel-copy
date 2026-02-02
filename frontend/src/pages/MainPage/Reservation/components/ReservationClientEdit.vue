@@ -127,8 +127,6 @@ const props = defineProps({
   },
 });
 
-import ClientAddresses from '@/pages/CRM/components/ClientAddresses.vue';
-
 // Components
 import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
 import ClientAddresses from '@/pages/CRM/components/ClientAddresses.vue';

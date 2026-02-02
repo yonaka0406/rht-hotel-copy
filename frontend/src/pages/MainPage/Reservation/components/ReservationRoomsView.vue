@@ -529,7 +529,7 @@ const { clientImpediments, fetchImpedimentsByClientId } = useCRMStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
 import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+const { clients } = useClientStore();
 import { useParkingStore } from '@/composables/useParkingStore';
 const { parkingLots, fetchParkingLots, fetchParkingReservations } = useParkingStore();
 
@@ -1015,7 +1015,7 @@ import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil 
 
 // HTML pattern attributes
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phonePattern = /^[\d\s()+\-]*$/;
+const phonePattern = /^[\d\s()+-]*$/;
 
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);

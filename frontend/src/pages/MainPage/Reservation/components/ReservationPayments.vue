@@ -454,13 +454,11 @@ const openMoveDialog = async (payment) => {
         candidateReservations.value = reservationsArray.filter(res => {
             if (res.id === payment.reservation_id) return false;
 
-            // Only show reservations that contain the same room as the payment
-            if (!res.room_ids || !res.room_ids.includes(payment.room_id)) return false;
-
             // Use details_min_date and details_max_date from eff join
             const checkIn = new Date(res.details_min_date);
             const checkOut = new Date(res.details_max_date);
 
+            // Requirement: same client (checked in getReservationsByClient) and within +- 1 month of target reservation in or out date
             return (paymentDate >= new Date(checkIn.getTime() - oneMonthInMs)) &&
                    (paymentDate <= new Date(checkOut.getTime() + oneMonthInMs));
         });

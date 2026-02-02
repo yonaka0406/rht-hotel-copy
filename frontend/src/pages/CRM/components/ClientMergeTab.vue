@@ -21,7 +21,7 @@
             <div v-for="candidate in candidates" :key="candidate.id" class="mb-4 border rounded-lg p-4 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
                 <div class="flex flex-col md:flex-row justify-between items-start">
                     <div class="flex-grow w-full">
-                        <ClientCard :client-id="candidate.id" />
+                        <ClientCard :client="candidate" />
                     </div>
                     <div class="mt-4 md:mt-0 md:ml-4 flex flex-col gap-2 w-full md:w-auto">
                         <Button label="この顧客に合流" icon="pi pi-sync" severity="warning" class="p-button-sm w-full" @click="confirmMerge(candidate.id)" />
