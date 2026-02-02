@@ -25,3 +25,7 @@
 ## 2026-02-02 - Server-side Duplication Detection for Performance
 **Learning:** Finding duplicate client records by transferring all 5,000+ records to the frontend and running an O(N²) or O(N log N) comparison in the browser causes the UI to freeze and memory usage to spike. Moving the duplication logic to the backend using an O(N log N) prefix-sorting algorithm reduces the data transfer to only the clusters of candidates and keeps the main thread free.
 **Action:** Implement heavy data-processing algorithms like duplication detection on the backend and expose the results via specialized endpoints.
+
+## 2026-02-02 - Implementing Lazy Loading for Massive DataTables
+**Learning:** Even with server-side sorting and searching, rendering a list of 5,000+ items at once (or trying to fetch them all) in a DataTable can overwhelm the browser and the backend. Using PrimeVue's `lazy` mode to fetch only the current page (e.g., 10-50 rows) and total count from the server ensures consistent performance regardless of total dataset size (e.g., 20,000+ records).
+**Action:** Use `lazy` loading for all primary list views expected to grow beyond 500 records.

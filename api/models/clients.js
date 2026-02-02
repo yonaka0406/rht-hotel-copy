@@ -129,7 +129,7 @@ const processNameString = async (nameString) => {
   return { name, nameKana, nameKanji };
 };
 
-const getAllClients = async (requestId, limit, offset, searchTerm = null, personType = null) => {
+const getAllClients = async (requestId, limit, offset, searchTerm = null, personType = null, sortField = null, sortOrder = null) => {
   const pool = getPool(requestId);
   let query = `
     SELECT
@@ -155,7 +155,24 @@ const getAllClients = async (requestId, limit, offset, searchTerm = null, person
     paramIndex++;
   }
 
-  query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC LIMIT $1 OFFSET $2`;
+  // BOLT PERFORMANCE: Dynamic sorting on server
+  if (sortField) {
+    const allowedSortFields = ['name', 'customer_id', 'loyalty_tier', 'email', 'phone'];
+    if (allowedSortFields.includes(sortField)) {
+        const order = sortOrder === -1 ? 'DESC' : 'ASC';
+        if (sortField === 'name') {
+            query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ${order}`;
+        } else {
+            query += ` ORDER BY ${sortField} ${order}`;
+        }
+    } else {
+        query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC`;
+    }
+  } else {
+    query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC`;
+  }
+
+  query += ` LIMIT $1 OFFSET $2`;
 
   try {
     const result = await pool.query(query, values);

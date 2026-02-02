@@ -3,6 +3,7 @@ import { ref } from 'vue';
 const groups = ref([]);
 const selectedGroup = ref(null);
 const clients = ref([]);
+const totalClients = ref(0);
 const clientsIsLoading = ref(false);
 const selectedClient = ref(null);
 const selectedClientAddress = ref(null);
@@ -59,7 +60,7 @@ export function useClientStore() {
     };
 
     // Fetch the list of clients
-    const fetchClients = async (pageInput, searchTerm = null, limit = 100) => {
+    const fetchClients = async (pageInput, searchTerm = null, limit = 100, personType = null, sortField = null, sortOrder = null) => {
         const page = Math.max(1, parseInt(pageInput) || 1);
         clientsIsLoading.value = true;
         try {
@@ -67,6 +68,15 @@ export function useClientStore() {
             let url = `/api/client-list/${page}?limit=${limit}`;
             if (searchTerm) {
                 url += `&search=${encodeURIComponent(searchTerm)}`;
+            }
+            if (personType) {
+                url += `&personType=${encodeURIComponent(personType)}`;
+            }
+            if (sortField) {
+                url += `&sortField=${encodeURIComponent(sortField)}`;
+            }
+            if (sortOrder) {
+                url += `&sortOrder=${sortOrder}`;
             }
             const response = await fetch(url, {
                 method: 'GET',
@@ -84,6 +94,7 @@ export function useClientStore() {
             // console.log('From Client Store => fetchClients data:', data);
 
             if (data && data.clients) {
+                totalClients.value = data.total || 0;
                 if (page === 1 || page === undefined) {
                     setClients(data.clients);
                     return data.totalPages;
@@ -571,17 +582,16 @@ export function useClientStore() {
     const fetchAllClientsForFiltering = async () => {
         clientsIsLoading.value = true;
         try {
-            // Fetch the first page to get totalPages and initial client set
-            const totalPages = await fetchClients(1); // fetchClients already sets clients.value for page 1
+            // BOLT PERFORMANCE: Use a larger limit for bulk fetching to minimize network round-trips
+            const limit = 5000;
+            const totalPages = await fetchClients(1, null, limit);
 
             if (totalPages && totalPages > 1) {
                 const pagePromises = [];
                 for (let page = 2; page <= totalPages; page++) {
-                    // N.B.: fetchClients appends for page > 1
-                    pagePromises.push(fetchClients(page));
+                    pagePromises.push(fetchClients(page, null, limit));
                 }
                 await Promise.all(pagePromises);
-                // All clients are now appended to clients.value
             }
             // clients.value now contains all clients
         } catch (error) {
@@ -804,6 +814,7 @@ export function useClientStore() {
         groups,
         selectedGroup,
         clients,
+        totalClients,
         clientsIsLoading,
         selectedClient,
         selectedClientAddress,

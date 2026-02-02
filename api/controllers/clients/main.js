@@ -11,9 +11,11 @@ const getClients = async (req, res) => {
   const offset = (page - 1) * limit;
   const searchTerm = req.query.search || null;
   const personType = req.query.personType || null;
+  const sortField = req.query.sortField || null;
+  const sortOrder = parseInt(req.query.sortOrder) || null;
 
   try {
-    const clients = await clientsModel.getAllClients(req.requestId, limit, offset, searchTerm, personType);
+    const clients = await clientsModel.getAllClients(req.requestId, limit, offset, searchTerm, personType, sortField, sortOrder);
     const totalClients = await clientsModel.getTotalClientsCount(req.requestId, searchTerm, personType);
     res.status(200).json({
       clients,
