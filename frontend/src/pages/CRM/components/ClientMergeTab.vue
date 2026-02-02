@@ -70,7 +70,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClientStore } from '@/composables/useClientStore';
 import ClientCard from './ClientCard.vue';
@@ -94,7 +94,7 @@ const emit = defineEmits(['update-badge']);
 
 const router = useRouter();
 const clientStore = useClientStore();
-const { setClientsIsLoading, selectedClient } = clientStore;
+const { selectedClient } = clientStore;
 
 const candidates = ref([]);
 const isCalculating = ref(false);

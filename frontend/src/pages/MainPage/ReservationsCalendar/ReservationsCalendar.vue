@@ -32,7 +32,7 @@
           </thead>
           <tbody @dragover.prevent>
             <tr v-for="(date, dateIndex) in dateRange" :key="dateIndex"
-              v-memo="[date, availableRoomsByDate[date], pinnedRowIndex === dateIndex, hoveredRow === dateIndex, headerState.isCompactView, reservedRoomsMap]"
+              v-memo="[date, availableRoomsByDate[date], pinnedRowIndex === dateIndex, hoveredRow === dateIndex, hoveredCol, headerState.isCompactView, reservedRoomsMap]"
               :class="{ 'row-is-pinned': dateIndex === pinnedRowIndex }">
 
               <td
