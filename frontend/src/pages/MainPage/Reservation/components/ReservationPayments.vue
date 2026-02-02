@@ -484,17 +484,11 @@ const filterClients = async (event) => {
         return;
     }
 
-    const hotelId = props.reservation_details?.[0]?.hotel_id;
-    if (!hotelId) {
-        console.error('Hotel ID not found in reservation details');
-        return;
-    }
-
     try {
         // Fetch matching clients from backend with a reasonable limit
         setClientsIsLoading(true);
         const authToken = localStorage.getItem('authToken');
-        const response = await fetch(`/api/client-list/${hotelId}?limit=20&search=${encodeURIComponent(query)}`, {
+        const response = await fetch(`/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${authToken}`,

@@ -4,7 +4,7 @@ const clientsController = require('../controllers/clients');
 const { handleGetClientProjects } = require('../controllers/projectsController');
 const { authMiddleware, authMiddlewareCRUDAccess, authMiddleware_manageClients } = require('../middleware/authMiddleware');
 
-router.get('/client-list/:hid', authMiddleware, clientsController.getClients);
+router.get('/client-list/:page', authMiddleware, clientsController.getClients);
 router.get('/client/:id', authMiddleware, clientsController.getClient);
 router.get('/client/group/:id', authMiddleware, clientsController.getGroup);
 router.get('/client/name/:name', authMiddleware, clientsController.getConvertedName);

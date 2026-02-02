@@ -88,12 +88,12 @@ export function useClientStore() {
     };
 
     // Fetch the list of clients
-    const fetchClients = async (pageInput, searchTerm = null, limit = 5000, hotelId = 0) => {
+    const fetchClients = async (pageInput, searchTerm = null, limit = 5000) => {
         const page = Math.max(1, parseInt(pageInput) || 1);
         clientsIsLoading.value = true;
         try {
             const authToken = localStorage.getItem('authToken');
-            let url = `/api/client-list/${hotelId}?page=${page}&limit=${limit}`;
+            let url = `/api/client-list/${page}?limit=${limit}`;
             if (searchTerm) {
                 url += `&search=${encodeURIComponent(searchTerm)}`;
             }

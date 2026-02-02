@@ -10,6 +10,10 @@
 **Learning:** Pre-loading thousands of client records on component mount for an `AutoComplete` component causes significant main-thread blocking (~seconds for 5000+ records) and high memory consumption. Moving to a server-side search pattern reduces the initial component payload and initialization time to near-zero.
 **Action:** Avoid bulk fetching lists for autocomplete/search components; implement and use server-side search with reasonable limits.
 
-## 2025-05-23 - Contextual Data Scoping for Accuracy and Performance
-**Learning:** Using global endpoints for context-specific lookups (like searching for clients in a specific hotel) can return irrelevant data and increase processing overhead. Scoping lookups by the relevant entity ID (e.g., `hotel_id`) at the API and database level improves both accuracy and query performance by reducing the search space.
-**Action:** Always scope data-heavy lookups by the appropriate context (hotel, organization, etc.) using path parameters and indexed database joins.
+## 2025-05-23 - Identifying and Resolving N+1 Database Patterns
+**Learning:** Sequential database queries within loops (e.g., during reservation split operations) create significant overhead as the number of entities (rooms/days) increases. Leveraging PostgreSQL aggregate functions with `FILTER` clauses and batch update operators like `ANY` allows for a constant number of queries regardless of operation scale.
+**Action:** Use batched updates and conditional aggregation to eliminate loop-dependent database round-trips.
+
+## 2025-05-23 - Server-side Search vs. Bulk Pre-loading
+**Learning:** Pre-loading large datasets (5000+ records) for client-side filtering causes noticeable UI lag and high memory usage. Transitioning to a server-side search pattern with a standard paginated route ensures the UI remains responsive and scales gracefully with data growth.
+**Action:** Replace bulk-fetch patterns with server-side search queries using reasonable result limits.
