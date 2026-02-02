@@ -17,3 +17,7 @@
 ## 2025-05-23 - Server-side Search vs. Bulk Pre-loading
 **Learning:** Pre-loading large datasets (5000+ records) for client-side filtering causes noticeable UI lag and high memory usage. Transitioning to a server-side search pattern with a standard paginated route ensures the UI remains responsive and scales gracefully with data growth.
 **Action:** Replace bulk-fetch patterns with server-side search queries using reasonable result limits.
+
+## 2025-05-23 - Aggregating Dashboard Metrics on the Server
+**Learning:** Computing dashboard statistics (like counts and distributions) on the frontend by processing a full dump of the database (e.g., 5000+ clients) is highly inefficient and creates a bottleneck during initial load. Implementing a specialized `/stats` API endpoint that uses PostgreSQL aggregate functions moves the computation to the database and reduces the payload from megabytes to bytes.
+**Action:** Always prefer server-side aggregation for dashboard metrics over client-side processing of large raw datasets.

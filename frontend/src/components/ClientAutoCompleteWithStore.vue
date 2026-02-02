@@ -6,7 +6,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import { useClientStore } from '@/composables/useClientStore';
 import ClientAutoComplete from './ClientAutoComplete.vue';
 
@@ -34,19 +34,31 @@ const selectedClientProxy = computed({
 });
 
 const filteredClients = ref([]);
+let debounceTimer = null;
 
-const handleComplete = async (event) => {
-  const query = event.query;
+const performSearch = async (query) => {
   if (!query) {
+    filteredClients.value = [];
+    return;
+  }
+
+  const authToken = localStorage.getItem('authToken');
+  if (!authToken) {
+    console.warn('[ClientAutoCompleteWithStore] No authToken found. Search aborted.');
     filteredClients.value = [];
     return;
   }
 
   try {
     setClientsIsLoading(true);
-    const authToken = localStorage.getItem('authToken');
-    // Fetch first page of search results with a reasonable limit
-    const response = await fetch(`/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`, {
+
+    // Build URL with search query and optional personType filter
+    let url = `/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`;
+    if (props.personTypeFilter) {
+      url += `&personType=${encodeURIComponent(props.personTypeFilter)}`;
+    }
+
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -57,12 +69,7 @@ const handleComplete = async (event) => {
     if (!response.ok) throw new Error('Search failed');
     const data = await response.json();
 
-    let results = data.clients || [];
-
-    // Apply person type filter if specified
-    if (props.personTypeFilter) {
-      results = results.filter(client => client.legal_or_natural_person === props.personTypeFilter);
-    }
+    const results = data.clients || [];
 
     filteredClients.value = results.map(client => ({
       ...client,
@@ -75,6 +82,17 @@ const handleComplete = async (event) => {
     setClientsIsLoading(false);
   }
 };
+
+const handleComplete = (event) => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    performSearch(event.query);
+  }, 300);
+};
+
+onBeforeUnmount(() => {
+  clearTimeout(debounceTimer);
+});
 const handleOptionSelect = (event) => {
   emit('option-select', event);
 };

@@ -129,7 +129,7 @@ const processNameString = async (nameString) => {
   return { name, nameKana, nameKanji };
 };
 
-const getAllClients = async (requestId, limit, offset, searchTerm = null) => {
+const getAllClients = async (requestId, limit, offset, searchTerm = null, personType = null) => {
   const pool = getPool(requestId);
   let query = `
     SELECT
@@ -141,10 +141,20 @@ const getAllClients = async (requestId, limit, offset, searchTerm = null) => {
     WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
   `;
   const values = [limit, offset];
+  let paramIndex = 3;
+
   if (searchTerm) {
-    query += ` AND (clients.name ILIKE $3 OR clients.name_kana ILIKE $3 OR clients.name_kanji ILIKE $3 OR clients.phone ILIKE $3 OR clients.email ILIKE $3)`;
+    query += ` AND (clients.name ILIKE $${paramIndex} OR clients.name_kana ILIKE $${paramIndex} OR clients.name_kanji ILIKE $${paramIndex} OR clients.phone ILIKE $${paramIndex} OR clients.email ILIKE $${paramIndex})`;
     values.push(`%${searchTerm}%`);
+    paramIndex++;
   }
+
+  if (personType) {
+    query += ` AND clients.legal_or_natural_person = $${paramIndex}`;
+    values.push(personType);
+    paramIndex++;
+  }
+
   query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC LIMIT $1 OFFSET $2`;
 
   try {
@@ -155,7 +165,7 @@ const getAllClients = async (requestId, limit, offset, searchTerm = null) => {
     throw new Error('Database error');
   }
 };
-const getTotalClientsCount = async (requestId, searchTerm = null) => {
+const getTotalClientsCount = async (requestId, searchTerm = null, personType = null) => {
   const pool = getPool(requestId);
   let query = `
     SELECT COUNT(*)
@@ -163,10 +173,20 @@ const getTotalClientsCount = async (requestId, searchTerm = null) => {
     WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
   `;
   const values = [];
+  let paramIndex = 1;
+
   if (searchTerm) {
-    query += ` AND (clients.name ILIKE $1 OR clients.name_kana ILIKE $1 OR clients.name_kanji ILIKE $1 OR clients.phone ILIKE $1 OR clients.email ILIKE $1)`;
+    query += ` AND (clients.name ILIKE $${paramIndex} OR clients.name_kana ILIKE $${paramIndex} OR clients.name_kanji ILIKE $${paramIndex} OR clients.phone ILIKE $${paramIndex} OR clients.email ILIKE $${paramIndex})`;
     values.push(`%${searchTerm}%`);
+    paramIndex++;
   }
+
+  if (personType) {
+    query += ` AND clients.legal_or_natural_person = $${paramIndex}`;
+    values.push(personType);
+    paramIndex++;
+  }
+
   try {
     const result = await pool.query(query, values);
     return parseInt(result.rows[0].count);
