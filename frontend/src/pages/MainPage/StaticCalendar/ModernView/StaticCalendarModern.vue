@@ -269,10 +269,12 @@ const darkenColor = (hex, percent = 20) => {
 };
 
 const getItemColor = (item) => {
+  if (item.type === 'employee') return '#f3e5f5';
   if (item.status === 'provisory') return '#ead59f';
   if (item.status === 'hold') return '#FFC107';
   if (item.status === 'block') return item.client_id === '22222222-2222-2222-2222-222222222222' ? '#fed7aa' : '#fca5a5';
-  return item.plan_color || (item.type === 'ota' || item.type === 'web' ? '#9fead5' : '#3b82f6');
+  if (item.type === 'ota' || item.type === 'web') return item.plan_color || '#9fead5';
+  return item.plan_color || '#3b82f6';
 };
 
 const getBlockStyle = (block) => {

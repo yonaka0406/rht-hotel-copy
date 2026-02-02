@@ -80,6 +80,63 @@ describe('StaticCalendarModern.vue - UX Improvement', () => {
     expect(clickableSegments[1].attributes('style')).toContain('background-color: rgb(0, 0, 255)');
   });
 
+  it('should respect status colors over plan colors', () => {
+    const reservedRoomsWithStatus = [
+      {
+        reservation_id: 'res_hold',
+        room_id: 'room1',
+        date: '2025-01-01',
+        client_name: 'Hold Guest',
+        plan_color: '#ff0000',
+        status: 'hold'
+      }
+    ];
+
+    const wrapper = mount(StaticCalendarModern, {
+      props: {
+        dateRange: ['2025-01-01'],
+        headerRoomsData: { roomNumbers: [{ room_id: 'room1', room_number: '101' }] },
+        selectedHotelRooms: [{ room_id: 'room1', room_number: '101' }],
+        reservedRooms: reservedRoomsWithStatus,
+        availableRoomsByDate: {},
+        availableParkingSpotsByDate: {}
+      },
+      global: { plugins: [mockPrimeVue] }
+    });
+
+    const segment = wrapper.find('.absolute.inset-0.flex.flex-col.z-0 div');
+    // Hold color is #FFC107 -> rgb(255, 193, 7)
+    expect(segment.attributes('style')).toContain('background-color: rgb(255, 193, 7)');
+  });
+
+  it('should respect employee type colors', () => {
+    const reservedRoomsEmployee = [
+      {
+        reservation_id: 'res_emp',
+        room_id: 'room1',
+        date: '2025-01-01',
+        client_name: 'Employee Guest',
+        type: 'employee'
+      }
+    ];
+
+    const wrapper = mount(StaticCalendarModern, {
+      props: {
+        dateRange: ['2025-01-01'],
+        headerRoomsData: { roomNumbers: [{ room_id: 'room1', room_number: '101' }] },
+        selectedHotelRooms: [{ room_id: 'room1', room_number: '101' }],
+        reservedRooms: reservedRoomsEmployee,
+        availableRoomsByDate: {},
+        availableParkingSpotsByDate: {}
+      },
+      global: { plugins: [mockPrimeVue] }
+    });
+
+    const segment = wrapper.find('.absolute.inset-0.flex.flex-col.z-0 div');
+    // Employee color is #f3e5f5 -> rgb(243, 229, 245)
+    expect(segment.attributes('style')).toContain('background-color: rgb(243, 229, 245)');
+  });
+
   it('should have a sticky header for the guest name', () => {
     const wrapper = mount(StaticCalendarModern, {
       props: {
