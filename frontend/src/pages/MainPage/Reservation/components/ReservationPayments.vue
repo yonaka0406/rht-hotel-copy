@@ -219,7 +219,7 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import { useConfirm } from "primevue/useconfirm";
 const confirm = useConfirm();
-import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button, ConfirmDialog, DataTable, Column } from 'primevue';
+import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button, ConfirmDialog, DataTable, Column, Dialog } from 'primevue';
 
 // Stores
 import { useSettingsStore } from '@/composables/useSettingsStore';
@@ -427,11 +427,14 @@ const openMoveDialog = async (payment) => {
         const clientId = props.reservation_details[0].client_id;
         const allReservations = await getReservationsByClient(hotelId, clientId);
 
+        // Ensure allReservations is an array
+        const reservationsArray = Array.isArray(allReservations) ? allReservations : [];
+
         // Filter by +- 1 month and exclude current reservation
         const paymentDate = new Date(payment.date);
         const oneMonthInMs = 30 * 24 * 60 * 60 * 1000;
 
-        candidateReservations.value = allReservations.filter(res => {
+        candidateReservations.value = reservationsArray.filter(res => {
             if (res.id === payment.reservation_id) return false;
 
             // Use details_min_date and details_max_date from eff join
@@ -481,11 +484,17 @@ const filterClients = async (event) => {
         return;
     }
 
+    const hotelId = props.reservation_details?.[0]?.hotel_id;
+    if (!hotelId) {
+        console.error('Hotel ID not found in reservation details');
+        return;
+    }
+
     try {
         // Fetch matching clients from backend with a reasonable limit
         setClientsIsLoading(true);
         const authToken = localStorage.getItem('authToken');
-        const response = await fetch(`/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`, {
+        const response = await fetch(`/api/client-list/${hotelId}?limit=20&search=${encodeURIComponent(query)}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${authToken}`,

@@ -6,14 +6,15 @@ const logger = require('../../config/logger');
 
 // GET
 const getClients = async (req, res) => {
-  const page = parseInt(req.params.page, 10) || 1; // Default to page 1 if not provided or invalid
+  const hotelId = parseInt(req.params.hid, 10) || 0;
+  const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 5000;
   const offset = (page - 1) * limit;
   const searchTerm = req.query.search || null;
 
   try {
-    const clients = await clientsModel.getAllClients(req.requestId, limit, offset, searchTerm);
-    const totalClients = await clientsModel.getTotalClientsCount(req.requestId, searchTerm);
+    const clients = await clientsModel.getAllClients(req.requestId, limit, offset, searchTerm, hotelId);
+    const totalClients = await clientsModel.getTotalClientsCount(req.requestId, searchTerm, hotelId);
     res.status(200).json({
       clients,
       total: totalClients,

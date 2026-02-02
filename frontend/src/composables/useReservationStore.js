@@ -966,7 +966,8 @@ export function useReservationStore() {
                 throw new Error('Failed to fetch reservations by client');
             }
 
-            return await response.json();
+            const data = await response.json();
+            return data.reservations || [];
 
         } catch (error) {
             console.error('Error fetching reservations by client:', error);

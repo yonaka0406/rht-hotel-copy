@@ -89,7 +89,7 @@ async function moveAssociatedPayments(targetReservationId, userId, originalReser
             MIN(date) FILTER (WHERE reservation_id = $2) AS min_moved_date,
             MAX(date) FILTER (WHERE reservation_id = $2) AS max_moved_date
         FROM reservation_details
-        WHERE room_id = ANY($3::uuid[]) AND hotel_id = $4 AND (reservation_id = $1 OR reservation_id = $2)
+        WHERE room_id = ANY($3::int[]) AND hotel_id = $4 AND (reservation_id = $1 OR reservation_id = $2)
         GROUP BY room_id;
     `;
     const roomStatusResult = await dbClient.query(roomStatusQuery, [originalReservationId, targetReservationId, movedRoomIds, hotelId]);
@@ -114,7 +114,7 @@ async function moveAssociatedPayments(targetReservationId, userId, originalReser
         const updateFullyMovedQuery = `
             UPDATE reservation_payments
             SET reservation_id = $1, updated_by = $2
-            WHERE reservation_id = $3 AND room_id = ANY($4::uuid[]);
+            WHERE reservation_id = $3 AND room_id = ANY($4::int[]);
         `;
         await dbClient.query(updateFullyMovedQuery, [targetReservationId, userId, originalReservationId, fullyMovedRoomIds]);
     }

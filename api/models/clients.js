@@ -129,22 +129,33 @@ const processNameString = async (nameString) => {
   return { name, nameKana, nameKanji };
 };
 
-const getAllClients = async (requestId, limit, offset, searchTerm = null) => {
+const getAllClients = async (requestId, limit, offset, searchTerm = null, hotelId = 0) => {
   const pool = getPool(requestId);
   let query = `
-    SELECT
+    SELECT DISTINCT
       clients.*,
       COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS name,
       CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key,
       CASE WHEN clients.legal_or_natural_person = 'legal' THEN TRUE ELSE FALSE END AS is_legal_person
     FROM clients
-    WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
   `;
   const values = [limit, offset];
-  if (searchTerm) {
-    query += ` AND (clients.name ILIKE $3 OR clients.name_kana ILIKE $3 OR clients.name_kanji ILIKE $3 OR clients.phone ILIKE $3 OR clients.email ILIKE $3)`;
-    values.push(`%${searchTerm}%`);
+  let whereClauses = ["clients.id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')"];
+  let paramIndex = 3;
+
+  if (hotelId && hotelId !== 0) {
+    query += ` JOIN reservations r ON r.reservation_client_id = clients.id `;
+    whereClauses.push(`r.hotel_id = $${paramIndex++}`);
+    values.push(hotelId);
   }
+
+  if (searchTerm) {
+    whereClauses.push(`(clients.name ILIKE $${paramIndex} OR clients.name_kana ILIKE $${paramIndex} OR clients.name_kanji ILIKE $${paramIndex} OR clients.phone ILIKE $${paramIndex} OR clients.email ILIKE $${paramIndex})`);
+    values.push(`%${searchTerm}%`);
+    paramIndex++;
+  }
+
+  query += ` WHERE ` + whereClauses.join(' AND ');
   query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC LIMIT $1 OFFSET $2`;
 
   try {
@@ -155,18 +166,30 @@ const getAllClients = async (requestId, limit, offset, searchTerm = null) => {
     throw new Error('Database error');
   }
 };
-const getTotalClientsCount = async (requestId, searchTerm = null) => {
+const getTotalClientsCount = async (requestId, searchTerm = null, hotelId = 0) => {
   const pool = getPool(requestId);
   let query = `
-    SELECT COUNT(*)
+    SELECT COUNT(DISTINCT clients.id)
     FROM clients
-    WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
   `;
   const values = [];
-  if (searchTerm) {
-    query += ` AND (clients.name ILIKE $1 OR clients.name_kana ILIKE $1 OR clients.name_kanji ILIKE $1 OR clients.phone ILIKE $1 OR clients.email ILIKE $1)`;
-    values.push(`%${searchTerm}%`);
+  let whereClauses = ["clients.id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')"];
+  let paramIndex = 1;
+
+  if (hotelId && hotelId !== 0) {
+    query += ` JOIN reservations r ON r.reservation_client_id = clients.id `;
+    whereClauses.push(`r.hotel_id = $${paramIndex++}`);
+    values.push(hotelId);
   }
+
+  if (searchTerm) {
+    whereClauses.push(`(clients.name ILIKE $${paramIndex} OR clients.name_kana ILIKE $${paramIndex} OR clients.name_kanji ILIKE $${paramIndex} OR clients.phone ILIKE $${paramIndex} OR clients.email ILIKE $${paramIndex})`);
+    values.push(`%${searchTerm}%`);
+    paramIndex++;
+  }
+
+  query += ` WHERE ` + whereClauses.join(' AND ');
+
   try {
     const result = await pool.query(query, values);
     return parseInt(result.rows[0].count);

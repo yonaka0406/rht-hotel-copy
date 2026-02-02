@@ -9,3 +9,7 @@
 ## 2025-05-23 - Server-side Search for Large Datasets
 **Learning:** Pre-loading thousands of client records on component mount for an `AutoComplete` component causes significant main-thread blocking (~seconds for 5000+ records) and high memory consumption. Moving to a server-side search pattern reduces the initial component payload and initialization time to near-zero.
 **Action:** Avoid bulk fetching lists for autocomplete/search components; implement and use server-side search with reasonable limits.
+
+## 2025-05-23 - Contextual Data Scoping for Accuracy and Performance
+**Learning:** Using global endpoints for context-specific lookups (like searching for clients in a specific hotel) can return irrelevant data and increase processing overhead. Scoping lookups by the relevant entity ID (e.g., `hotel_id`) at the API and database level improves both accuracy and query performance by reducing the search space.
+**Action:** Always scope data-heavy lookups by the appropriate context (hotel, organization, etc.) using path parameters and indexed database joins.
