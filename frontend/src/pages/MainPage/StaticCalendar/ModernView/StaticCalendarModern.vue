@@ -68,20 +68,28 @@
 
                 <!-- Reservation Blocks -->
                 <div v-for="block in getRoomBlocks(room.room_id)" :key="block.id"
-                     class="absolute left-0.5 right-0.5 rounded overflow-hidden flex flex-col cursor-pointer transition-all hover:z-10 shadow-sm border border-black/5"
+                     class="absolute left-0.5 right-0.5 rounded cursor-pointer transition-all hover:z-10 shadow-sm border border-black/5 overflow-hidden"
                      :style="getBlockStyle(block)"
-                     @click="handleBlockClick(block)"
-                     @dblclick="handleBlockDoubleClick(block)"
                      @contextmenu.prevent="onContextMenu($event, block)"
-                     @mousemove="handleMouseMove($event, block)"
                      @mouseleave="handleMouseLeave">
-                  <!-- Sticky Header for Guest Name -->
-                  <div class="sticky top-0 z-10 px-1 py-0.5 backdrop-blur-md bg-white/30 border-b border-black/5 overflow-hidden">
-                    <h4 class="font-bold text-[8px] leading-tight truncate" :style="{ color: block.textColor }">{{ block.client_name }}</h4>
+                  <!-- Clickable Day Segments (Absolute inset-0 ensures grid alignment) -->
+                  <div class="absolute inset-0 flex flex-col z-0">
+                    <div v-for="item in block.items" :key="item.date"
+                         class="w-full transition-colors hover:bg-black/5"
+                         :style="{ height: rowHeight + 'px' }"
+                         @click="handleDayClick(item)"
+                         @dblclick="handleDayDoubleClick(item)"
+                         @mousemove="handleDayMouseMove($event, item, block)">
+                    </div>
                   </div>
-                  <!-- Mini Plan Name (Only if block is tall enough) -->
-                  <div class="px-1 text-[7px] truncate opacity-80" v-if="block.height > 25" :style="{ color: block.textColor }">
-                    {{ block.plan_name }}
+                  <!-- Indicator Strip (Left side) -->
+                  <div class="absolute left-0 top-0 bottom-0 w-1 flex flex-col z-10 pointer-events-none">
+                    <div v-for="item in block.items" :key="item.date"
+                         :style="{ height: rowHeight + 'px', backgroundColor: getItemColor(item) }"></div>
+                  </div>
+                  <!-- Sticky Header for Guest Name -->
+                  <div class="sticky top-0 z-20 px-1 py-0.5 backdrop-blur-sm bg-white/40 dark:bg-black/20 border-b border-black/5 pointer-events-none">
+                    <h4 class="font-bold text-[8px] leading-tight truncate" :style="{ color: block.textColor }">{{ block.client_name }}</h4>
                   </div>
                 </div>
               </div>
@@ -195,7 +203,7 @@ const getRoomBlocks = (roomId) => {
   for (const [resId, allItems] of Object.entries(grouped)) {
     allItems.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Split into subgroups based on continuity AND plan_color/status consistency
+    // Split into subgroups based on continuity only
     const subgroups = [];
     if (allItems.length > 0) {
       let currentSubgroup = [allItems[0]];
@@ -204,8 +212,7 @@ const getRoomBlocks = (roomId) => {
         const curr = allItems[i];
         const diffDays = Math.round((new Date(curr.date) - new Date(prev.date)) / (1000 * 60 * 60 * 24));
 
-        // Split if not consecutive OR if plan/status color would change
-        if (diffDays === 1 && prev.plan_color === curr.plan_color && prev.status === curr.status) {
+        if (diffDays === 1) {
           currentSubgroup.push(curr);
         } else {
           subgroups.push(currentSubgroup);
@@ -219,11 +226,11 @@ const getRoomBlocks = (roomId) => {
       const firstItem = items[0];
       const startDateStr = formatDate(new Date(firstItem.date));
       const startIndex = props.dateRange.indexOf(startDateStr);
-
       if (startIndex === -1) continue;
 
       const numDays = items.length;
-      const styleInfo = getBlockBaseStyle(firstItem);
+      // For the merged block, use a neutral base color or status-based color
+      const styleInfo = getMergedBlockStyle(firstItem);
 
       blocks.push({
         id: `${resId}-${firstItem.date}`,
@@ -232,15 +239,10 @@ const getRoomBlocks = (roomId) => {
         client_name: formatClientName(firstItem.client_name),
         check_in: firstItem.check_in,
         check_out: firstItem.check_out,
-        plan_name: firstItem.plan_name,
-        plan_color: firstItem.plan_color,
-        status: firstItem.status,
-        type: firstItem.type,
         top: startIndex * rowHeight,
         height: numDays * rowHeight,
         backgroundColor: styleInfo.backgroundColor,
         textColor: styleInfo.textColor,
-        borderColor: styleInfo.borderColor,
         items: items
       });
     }
@@ -248,45 +250,24 @@ const getRoomBlocks = (roomId) => {
   return blocks;
 };
 
-const getBlockBaseStyle = (roomInfo) => {
+const getMergedBlockStyle = (roomInfo) => {
   const room = props.selectedHotelRooms.find(r => r.room_id === roomInfo.room_id);
   let backgroundColor = '#ffffff';
-  let textColor = '#1f2937';
-  let borderColor = 'transparent';
+  if (room && room.is_staff_room) backgroundColor = '#f3e5f5';
+  else if (roomInfo.type === 'employee') backgroundColor = '#f3e5f5';
+  else if (roomInfo.status === 'provisory') backgroundColor = '#fef3c7'; // Lighter amber
+  else if (roomInfo.status === 'hold') backgroundColor = '#fef3c7';
+  else if (roomInfo.status === 'block') backgroundColor = '#fee2e2'; // Lighter red
 
-  if (room && room.is_staff_room) {
-    backgroundColor = '#f3e5f5';
-  }
-
-  if (roomInfo.type === 'employee') {
-    backgroundColor = '#f3e5f5';
-  } else if (roomInfo.status === 'provisory') {
-    backgroundColor = '#ead59f';
-  } else if (roomInfo.status === 'hold') {
-    backgroundColor = '#FFC107';
-  } else if (roomInfo.status === 'block' && roomInfo.client_id === '22222222-2222-2222-2222-222222222222') {
-    backgroundColor = '#fed7aa';
-  } else if (roomInfo.status === 'block') {
-    backgroundColor = '#fca5a5';
-  } else if (roomInfo.type === 'ota' || roomInfo.type === 'web') {
-    backgroundColor = roomInfo.plan_color || '#9fead5';
-  } else if (roomInfo.plan_color) {
-    backgroundColor = roomInfo.plan_color;
-  }
-
-  // Determine text color based on background luminance
-  const luminance = getLuminance(backgroundColor);
-  textColor = luminance > 0.5 ? '#1f2937' : '#ffffff';
-
-  return { backgroundColor, textColor, borderColor };
+  const textColor = '#1f2937';
+  return { backgroundColor, textColor };
 };
 
-const getLuminance = (hex) => {
-  if (!hex || hex[0] !== '#') return 1;
-  const r = parseInt(hex.slice(1, 3), 16) || 0;
-  const g = parseInt(hex.slice(3, 5), 16) || 0;
-  const b = parseInt(hex.slice(5, 7), 16) || 0;
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+const getItemColor = (item) => {
+  if (item.status === 'provisory') return '#ead59f';
+  if (item.status === 'hold') return '#FFC107';
+  if (item.status === 'block') return item.client_id === '22222222-2222-2222-2222-222222222222' ? '#fed7aa' : '#fca5a5';
+  return item.plan_color || (item.type === 'ota' || item.type === 'web' ? '#9fead5' : '#3b82f6');
 };
 
 const getBlockStyle = (block) => {
@@ -310,12 +291,12 @@ const getBlockStyle = (block) => {
   return style;
 };
 
-const handleBlockClick = (block) => {
-  emit('cell-click', block.items[0].room_id, formatDate(new Date(block.items[0].date)));
+const handleDayClick = (item) => {
+  emit('cell-click', item.room_id, formatDate(new Date(item.date)));
 };
 
-const handleBlockDoubleClick = (block) => {
-  emit('cell-double-click', block.items[0].room_id, formatDate(new Date(block.items[0].date)));
+const handleDayDoubleClick = (item) => {
+  emit('cell-double-click', item.room_id, formatDate(new Date(item.date)));
 };
 
 // Tooltip Logic
@@ -324,13 +305,13 @@ const tooltipData = ref({});
 const tooltipX = ref(0);
 const tooltipY = ref(0);
 
-const handleMouseMove = (event, block) => {
+const handleDayMouseMove = (event, item, block) => {
   tooltipData.value = {
-    roomNumber: getRoomNumber(block.items[0].room_id),
+    roomNumber: getRoomNumber(item.room_id),
     clientName: block.client_name,
-    planName: block.plan_name,
+    planName: item.plan_name,
     range: `${formatDate(new Date(block.check_in))} - ${formatDate(new Date(block.check_out))}`,
-    isOTA: block.type === 'ota' || block.type === 'web'
+    isOTA: item.type === 'ota' || item.type === 'web'
   };
   tooltipVisible.value = true;
 
@@ -364,7 +345,7 @@ const contextMenuItems = computed(() => [
     label: '予約詳細を表示',
     icon: 'pi pi-info-circle',
     command: () => {
-      if (selectedBlock.value) handleBlockDoubleClick(selectedBlock.value);
+      if (selectedBlock.value) handleDayDoubleClick(selectedBlock.value.items[0]);
     }
   },
   {
