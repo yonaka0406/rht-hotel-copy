@@ -583,8 +583,30 @@ const getClientStats = async (req, res) => {
   }
 };
 
+const getClientCandidates = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const candidates = await clientsModel.getClientCandidates(req.requestId, id);
+    res.status(200).json(candidates);
+  } catch (error) {
+    console.error('Error getting client candidates:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getNextCustomerId = async (req, res) => {
+  try {
+    const nextId = await clientsModel.getNextCustomerId(req.requestId);
+    res.status(200).json({ nextId });
+  } catch (error) {
+    console.error('Error getting next customer ID:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 module.exports = {
+  getNextCustomerId,
   getClients,
   getClient,
   getGroup,
@@ -611,4 +633,5 @@ module.exports = {
   exportClients,
   getExportClientsCount,
   getClientStats,
+  getClientCandidates,
 };

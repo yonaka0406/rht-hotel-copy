@@ -1526,17 +1526,6 @@ const openRoomEditDialog = async (group) => {
     selectedGroup.value = group;
     tabsRoomEditDialog.value = 0;
     visibleRoomEditDialog.value = true;
-
-    // Load Clients
-    if (clients.value.length === 0) {
-        setClientsIsLoading(true);
-        const clientsTotalPages = await fetchClients(1);
-        // Fetch clients for all pages
-        for (let page = 2; page <= clientsTotalPages; page++) {
-            await fetchClients(page);
-        }
-        setClientsIsLoading(false);
-    }
 };
 const closeRoomEditDialog = () => {
     visibleRoomEditDialog.value = false;

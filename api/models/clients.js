@@ -1369,7 +1369,102 @@ const getClientStats = async (requestId) => {
 };
 
 
+const getClientCandidates = async (requestId, clientId) => {
+  const pool = getPool(requestId);
+
+  // 1. Fetch the target client details
+  const targetResult = await pool.query('SELECT * FROM clients WHERE id = $1', [clientId]);
+  if (targetResult.rows.length === 0) return [];
+  const target = targetResult.rows[0];
+
+  const targetName = (target.name_kanji || target.name_kana || target.name || '').normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+  const targetEmail = target.email ? target.email.toLowerCase() : null;
+  const targetPhone = target.phone ? target.phone.replace(/\D/g, '') : null;
+
+  // 2. Search for candidates
+  // We use a broad SQL query and then refine in JS to match frontend logic exactly
+  // Or we can try to do more in SQL.
+
+  let query = `
+    SELECT
+      *,
+      COALESCE(name_kanji, name_kana, name) as display_name
+    FROM clients
+    WHERE id <> $1
+      AND id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')
+      AND (
+        (email IS NOT NULL AND LOWER(email) = $2)
+        OR (phone IS NOT NULL AND regexp_replace(phone, '\\D', '', 'g') = $3 AND length(regexp_replace(phone, '\\D', '', 'g')) >= 7)
+        OR (LOWER(name) ILIKE $4)
+        OR (LOWER(name_kana) ILIKE $4)
+        OR (LOWER(name_kanji) ILIKE $4)
+      )
+    LIMIT 100
+  `;
+
+  // For name search, we'll look for similar names.
+  // This is a bit loose but helps find potential matches.
+  const searchPattern = `%${targetName.substring(0, 4)}%`;
+
+  const values = [clientId, targetEmail, targetPhone, searchPattern];
+
+  try {
+    const result = await pool.query(query, values);
+
+    const candidates = result.rows.filter(client => {
+        // Exact match on Email or Phone
+        if (targetEmail && client.email && client.email.toLowerCase() === targetEmail) return true;
+        if (targetPhone && targetPhone.length >= 7 && client.phone && client.phone.replace(/\D/g, '') === targetPhone) return true;
+
+        const clientName = (client.name_kanji || client.name_kana || client.name || '').normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+
+        // Exact match on normalized name
+        if (clientName === targetName) return true;
+
+        // Prefix similarity (either direction)
+        if (targetName.length >= 4 && clientName.startsWith(targetName)) return true;
+        if (clientName.length >= 4 && targetName.startsWith(clientName)) return true;
+
+        return false;
+    });
+
+    return candidates;
+  } catch (err) {
+    console.error('Error retrieving client candidates:', err);
+    throw new Error('Database error');
+  }
+};
+
+const getNextCustomerId = async (requestId) => {
+  const pool = getPool(requestId);
+  // Matches pure numeric IDs or 'C' followed by numbers, extracted as integer
+  const query = `
+    SELECT MAX(numeric_id) as max_id
+    FROM (
+      SELECT
+        CASE
+          WHEN customer_id ~ '^[0-9]+$' THEN customer_id::integer
+          WHEN customer_id ~ '^C[0-9]+$' THEN substring(customer_id from 2)::integer
+          ELSE NULL
+        END as numeric_id
+      FROM clients
+      WHERE customer_id IS NOT NULL
+    ) AS extracted_ids;
+  `;
+  try {
+    const result = await pool.query(query);
+    const maxId = result.rows[0].max_id;
+    // Default to 11833 if no IDs found, as per original frontend logic
+    const nextId = maxId ? parseInt(maxId) + 1 : 11833;
+    return nextId.toString();
+  } catch (err) {
+    console.error('Error calculating next customer ID:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
+  getNextCustomerId,
   toFullWidthKana,
   processNameString,
   getAllClients,
@@ -1405,4 +1500,5 @@ module.exports = {
   getAllClientsForExport,
   getClientsCountForExport,
   getClientStats,
+  getClientCandidates,
 };

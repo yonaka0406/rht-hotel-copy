@@ -203,8 +203,6 @@ import { useBillingStore } from '@/composables/useBillingStore';
 const { billableList, fetchBillableListView } = useBillingStore();
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
-import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 
 import { translateReservationPaymentTiming, reservationPaymentTimingOptions } from '@/utils/reservationUtils';
 
@@ -344,16 +342,6 @@ defineExpose({ loadTableData, applyDateFilters });
 onMounted(async () => {
     await fetchHotels();
     await fetchHotel();
-
-    if(clients.value.length === 0) {
-        setClientsIsLoading(true);
-        const clientsTotalPages = await fetchClients(1);
-        // Fetch clients for all pages
-        for (let page = 2; page <= clientsTotalPages; page++) {
-            await fetchClients(page);
-        }
-        setClientsIsLoading(false);            
-    }    
 });
 
 watch(() => [selectedHotelId.value], // Watch multiple values

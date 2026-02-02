@@ -218,14 +218,14 @@ const router = useRouter();
 
 // Stores
 import { useClientStore } from '@/composables/useClientStore';
-const { groups, selectedClient, selectedClientGroup, clients, nextAvailableCustomerId, fetchClient, fetchCustomerID, updateClientInfoCRM, fetchClientGroups, createClientGroup, updateClientGroup } = useClientStore();
+const { groups, selectedClient, selectedClientGroup, nextAvailableCustomerId, fetchClient, fetchCustomerID, updateClientInfoCRM, fetchClientGroups, createClientGroup, updateClientGroup, fetchNextCustomerId } = useClientStore();
 import { useCRMStore } from '@/composables/useCRMStore';
 const { clientImpediments } = useCRMStore();
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
-import { Card, Dialog, FloatLabel, InputText, InputNumber, DatePicker, Select, SelectButton, RadioButton, Textarea, Button, DataTable, Column, Tag } from 'primevue';
+import { Card, Dialog, FloatLabel, InputText, DatePicker, Select, SelectButton, RadioButton, Textarea, Button, DataTable, Column, Tag } from 'primevue';
 
 // Client
 const clientId = ref(route.params.clientId);
@@ -416,8 +416,11 @@ onMounted(async () => {
     try {
         loadingBasicInfo.value = true;
 
-        await fetchClient(clientId.value);
-        await fetchClientGroups();
+        await Promise.all([
+            fetchClient(clientId.value),
+            fetchClientGroups(),
+            fetchNextCustomerId()
+        ]);
 
         client.value = selectedClient.value.client;
         selectedGroupId.value = client.value.client_group_id;

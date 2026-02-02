@@ -447,18 +447,6 @@
             return; // Exit if no logged-in user
         }
 
-        // Fetch all clients for AutoComplete in dialog
-        if (!clients.value || clients.value.length === 0) {
-            if (setClientsIsLoading) setClientsIsLoading(true);
-            try {
-                await fetchClients(1);
-            } catch (error) {
-                console.error("Failed to fetch clients:", error);
-                toast.add({ severity: "error", summary: "クライアント取得失敗", detail: "クライアントリストの取得に失敗しました。", life: 3000 });
-            } finally {
-                if (setClientsIsLoading) setClientsIsLoading(false);
-            }
-        }
         await fetchData(); // Initial data fetch
     });
 

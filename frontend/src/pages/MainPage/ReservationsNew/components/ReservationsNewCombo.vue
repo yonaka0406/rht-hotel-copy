@@ -302,8 +302,6 @@ import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStor
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
-import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchAllClientsForFiltering } = useClientStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { availableRooms, fetchAvailableRooms, setReservationId, fetchMyHoldReservations, createHoldReservationCombo, blockMultipleRooms } = useReservationStore();
 import { useParkingStore } from '@/composables/useParkingStore';
@@ -1237,7 +1235,7 @@ const updateParkingSpots = async () => {
     }
 };
 
-watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboRow.value.check_out], async (newValues, oldValues) => {
+watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboRow.value.check_out], async (_newValues, _oldValues) => {
     //console.log('[ReservationsNewCombo] Watch triggered:', {
     //    newValues,
     //    oldValues,

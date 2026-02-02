@@ -120,7 +120,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useProjectStore } from '@/composables/useProjectStore';
-import { useClientStore } from '@/composables/useClientStore'; // Import useClientStore
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -149,9 +148,6 @@ const {
     fetchAllProjects,
     deleteProjectById
 } = projectStore;
-
-const clientStore = useClientStore();
-const { clients: allClientsList, fetchAllClientsForFiltering: fetchAllClientsListAction } = clientStore; // Destructure client list and fetch action
 
 const localSearchTerm = ref('');
 const currentPage = ref(1);

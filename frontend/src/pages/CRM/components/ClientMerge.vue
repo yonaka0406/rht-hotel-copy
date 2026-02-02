@@ -233,13 +233,6 @@ const saveChanges = async () => {
     try {
         await mergeClientsCRM(props.newID, props.oldID, payload);
 
-        setClientsIsLoading(true);
-        const clientsTotalPages = await fetchClients(1);
-        for (let page = 2; page <= clientsTotalPages; page++) {
-            await fetchClients(page);
-        }
-        setClientsIsLoading(false);
-
         toast.add({ severity: 'success', summary: '成功', detail: '顧客合流が完了しました。', life: 3000 });
         emit('close');
     } catch (_error) {
