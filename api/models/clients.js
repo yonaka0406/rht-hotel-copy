@@ -1331,18 +1331,25 @@ const getClientsCountForExport = async (requestId, filters = {}) => {
 const getClientStats = async (requestId) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT
-      COUNT(*) as total,
-      COUNT(*) FILTER (WHERE legal_or_natural_person = 'natural') as natural_count,
-      COUNT(*) FILTER (WHERE legal_or_natural_person = 'legal') as legal_count,
-      COUNT(*) FILTER (WHERE loyalty_tier IS NOT NULL AND loyalty_tier <> 'N/A') as loyalty_total,
-      jsonb_object_agg(loyalty_tier, tier_count) FILTER (WHERE loyalty_tier IS NOT NULL AND loyalty_tier <> 'N/A') as tier_distribution
-    FROM (
-      SELECT loyalty_tier, COUNT(*) as tier_count
+    WITH base_stats AS (
+      SELECT
+        legal_or_natural_person,
+        loyalty_tier
       FROM clients
       WHERE id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')
+    ),
+    tier_counts AS (
+      SELECT loyalty_tier, COUNT(*) as tier_count
+      FROM base_stats
+      WHERE loyalty_tier IS NOT NULL AND loyalty_tier <> 'N/A'
       GROUP BY loyalty_tier
-    ) AS tier_stats;
+    )
+    SELECT
+      (SELECT COUNT(*) FROM base_stats) as total,
+      (SELECT COUNT(*) FROM base_stats WHERE legal_or_natural_person = 'natural') as natural_count,
+      (SELECT COUNT(*) FROM base_stats WHERE legal_or_natural_person = 'legal') as legal_count,
+      (SELECT COUNT(*) FROM base_stats WHERE loyalty_tier IS NOT NULL AND loyalty_tier <> 'N/A') as loyalty_total,
+      (SELECT COALESCE(jsonb_object_agg(loyalty_tier, tier_count), '{}'::jsonb) FROM tier_counts) as tier_distribution;
   `;
 
   try {
