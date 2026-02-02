@@ -171,7 +171,10 @@
                 <DataTable :value="candidateReservations" scrollable scrollHeight="400px">
                     <Column field="id" header="予約ID">
                         <template #body="{ data }">
-                            <span class="text-xs">{{ data.id.substring(0, 8) }}...</span>
+                            <router-link :to="{ name: 'ReservationEdit', params: { reservation_id: data.id } }"
+                                target="_blank" class="text-sky-600 hover:underline text-xs">
+                                {{ data.id.substring(0, 8) }}...
+                            </router-link>
                         </template>
                     </Column>
                     <Column header="期間">
@@ -181,7 +184,12 @@
                         </template>
                     </Column>
                     <Column field="room_numbers" header="部屋"></Column>
-                    <Column field="status" header="ステータス"></Column>
+                    <Column field="status" header="ステータス">
+                        <template #body="{ data }">
+                            <Badge :value="translateReservationStatus(data.status)"
+                                :severity="getStatusSeverity(data.status)" />
+                        </template>
+                    </Column>
                     <Column header="選択">
                         <template #body="{ data }">
                             <Button label="選択" icon="pi pi-check" class="p-button-sm"
@@ -219,13 +227,14 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import { useConfirm } from "primevue/useconfirm";
 const confirm = useConfirm();
-import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button, ConfirmDialog, DataTable, Column, Dialog } from 'primevue';
+import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button, ConfirmDialog, DataTable, Column, Dialog, Badge } from 'primevue';
 
 // Stores
 import { useSettingsStore } from '@/composables/useSettingsStore';
 const { paymentTypes, fetchPaymentTypes } = useSettingsStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { reservationIsUpdating, fetchReservationClientIds, addReservationPayment, deleteReservationPayment, moveReservationPayment, getReservationsByClient } = useReservationStore();
+import { translateReservationStatus } from '@/utils/reservationUtils';
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
 import { useClientStore } from '@/composables/useClientStore';
@@ -460,6 +469,18 @@ const handleMovePayment = async (targetReservationId) => {
     } catch (error) {
         console.error('Error moving payment:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: error.message, life: 3000 });
+    }
+};
+
+const getStatusSeverity = (status) => {
+    switch (status) {
+        case 'confirmed': return 'success';
+        case 'checked_in': return 'info';
+        case 'checked_out': return 'secondary';
+        case 'cancelled': return 'danger';
+        case 'hold': return 'warn';
+        case 'provisory': return 'contrast';
+        default: return null;
     }
 };
 
