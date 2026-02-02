@@ -33,6 +33,8 @@
                     <Button v-if="data.dataType === 'reservation'"
                         icon="pi pi-eye"
                         class="p-button-text p-button-rounded p-button-sm"
+                        aria-label="予約詳細を表示"
+                        v-tooltip="'予約詳細を表示'"
                         @click="openReservationEdit(data.id)"
                     />
                     <Button v-else-if="data.dataType === 'action'"
@@ -41,6 +43,8 @@
                         @click="toggleActionMenu(data, $event)"
                         aria-haspopup="true"
                         aria-controls="overlay_menu"
+                        aria-label="アクションメニュー"
+                        v-tooltip="'アクションメニュー'"
                         class="p-button-text"
                     />
                 </template>
