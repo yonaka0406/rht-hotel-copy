@@ -189,10 +189,6 @@ const props = defineProps({
   initialSmokingPreference: String,
   initialNotes: String,
   hotelTotalRooms: Number,
-  allClients: {
-    type: Array,
-    default: () => []
-  },
   allRoomTypes: {
     type: Array,
     default: () => []

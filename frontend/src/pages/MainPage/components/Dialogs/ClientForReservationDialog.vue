@@ -101,7 +101,7 @@ import { ref, watch, onMounted } from 'vue';
 
 // Store
 import { useClientStore } from '@/composables/useClientStore';
-const { clients, clientsIsLoading, fetchClients, setClientsIsLoading } = useClientStore();
+const { clientsIsLoading } = useClientStore();
 import { useCRMStore } from '@/composables/useCRMStore';
 const { clientImpediments, fetchImpedimentsByClientId } = useCRMStore();
 
@@ -317,23 +317,7 @@ onMounted(async () => {
         localReservationDetails.value.legal_or_natural_person = 'legal';
         localReservationDetails.value.gender = 'other';
     }
-    try {
-        setClientsIsLoading(true);
-        const clientsTotalPages = await fetchClients(1);
-        for (let page = 2; page <= clientsTotalPages; page++) {
-            await fetchClients(page);
-        }
-        setClientsIsLoading(false);
-    } catch (error) {
-        console.error('Error fetching clients:', error);
-        // Optionally show an error message to the user
-        toast.add({
-            severity: 'error',
-            summary: 'エラー',
-            detail: '顧客データの取得中にエラーが発生しました。',
-            life: 3000,
-        });
-    }
+    // REMOVED: pre-loading of all clients to improve performance
 });
 
 // Initialize local client from props

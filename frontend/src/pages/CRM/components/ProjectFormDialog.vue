@@ -324,42 +324,34 @@ watch(() => [props.projectDataToEdit, allClientsList.value, hotelList.value], (v
     }
 }, { immediate: true, deep: true });
 
-const onPrimeSearchLocal = (event) => {
-    if (!event.query.trim().length) {
-        primeContractorSuggestions.value = allClientsList.value?.map(client => ({
+const searchClients = async (query) => {
+    const authToken = localStorage.getItem('authToken');
+    try {
+        const response = await fetch(`/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+        });
+        if (!response.ok) throw new Error('Search failed');
+        const data = await response.json();
+        return (data.clients || []).map(client => ({
             ...client,
             preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
-        })) || [];
-    } else {
-        const query = event.query.toLowerCase();
-        primeContractorSuggestions.value = allClientsList.value?.filter(client =>
-            (client.name?.toLowerCase().includes(query)) ||
-            (client.name_kana?.toLowerCase().includes(query)) ||
-            (client.name_kanji?.toLowerCase().includes(query))
-        ).map(client => ({
-            ...client,
-            preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
-        })) || [];
+        }));
+    } catch (error) {
+        console.error('Search failed:', error);
+        return [];
     }
 };
 
-const onSubSearchLocal = (event) => {
-    if (!event.query.trim().length) {
-        subContractorSuggestions.value = allClientsList.value?.map(client => ({
-            ...client,
-            preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
-        })) || [];
-    } else {
-        const query = event.query.toLowerCase();
-        subContractorSuggestions.value = allClientsList.value?.filter(client =>
-            (client.name?.toLowerCase().includes(query)) ||
-            (client.name_kana?.toLowerCase().includes(query)) ||
-            (client.name_kanji?.toLowerCase().includes(query))
-        ).map(client => ({
-            ...client,
-            preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
-        })) || [];
-    }
+const onPrimeSearchLocal = async (event) => {
+    primeContractorSuggestions.value = await searchClients(event.query);
+};
+
+const onSubSearchLocal = async (event) => {
+    subContractorSuggestions.value = await searchClients(event.query);
 };
 
 const validateForm = () => {
@@ -430,13 +422,9 @@ const handleSubmit = async () => {
 };
 
 onMounted(async () => {
-    // Fetch initial data required for the form, like hotel list or all clients list
-    // This might be better handled if data is already available from parent or fetched conditionally
+    // Fetch initial data required for the form, like hotel list
     if (!hotelList.value || hotelList.value.length === 0) {
         await fetchHotels();
-    }
-    if (!allClientsList.value || allClientsList.value.length === 0) {
-        await fetchAllClientsForFiltering();
     }
 });
 

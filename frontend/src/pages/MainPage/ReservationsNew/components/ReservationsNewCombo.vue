@@ -278,7 +278,7 @@
             :initialHotelName="selectedHotel ? selectedHotel.name : ''" :initialRoomTypeId="waitlistInitialRoomTypeId"
             :initialCheckInDate="waitlistInitialCheckInDate" :initialCheckOutDate="waitlistInitialCheckOutDate"
             :initialNumberOfGuests="waitlistInitialNumberOfGuests" :initialNotes="waitlistInitialNotes"
-            :allClients="clients" :allRoomTypes="roomTypes" @submitted="handleWaitlistSubmitted" />
+            :allRoomTypes="roomTypes" @submitted="handleWaitlistSubmitted" />
     </div>
 </template>
 <script setup>
@@ -1408,9 +1408,6 @@ onMounted(async () => {
     comboRow.value.room_type_id = roomTypes.value[0].room_type_id;
     reservationDetails.value.hotel_id = selectedHotelId.value;
 
-    if (clients.value.length === 0) {
-        fetchAllClientsForFiltering();
-    }
 });
 
 watch(() => comboRow.value.number_of_rooms,
