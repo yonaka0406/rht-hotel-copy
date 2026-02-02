@@ -88,12 +88,16 @@ export function useClientStore() {
     };
 
     // Fetch the list of clients
-    const fetchClients = async (pageInput) => {
+    const fetchClients = async (pageInput, searchTerm = null, limit = 5000) => {
         const page = Math.max(1, parseInt(pageInput) || 1);
         clientsIsLoading.value = true;
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/client-list/${page}`, {
+            let url = `/api/client-list/${page}?limit=${limit}`;
+            if (searchTerm) {
+                url += `&search=${encodeURIComponent(searchTerm)}`;
+            }
+            const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,

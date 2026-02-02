@@ -151,12 +151,51 @@
                     <span class="text-xs">{{ data.comment }}</span>
                 </template>
             </Column>
-            <Column header="削除" style="width: 100px; text-align: center;">
+            <Column header="操作" style="width: 120px; text-align: center;">
                 <template #body="{ data }">
-                    <Button icon="pi pi-trash" class="p-button-danger p-button-text" @click="deletePayment(data)" />
+                    <div class="flex justify-center gap-2">
+                        <Button icon="pi pi-external-link" class="p-button-text p-button-secondary" v-tooltip.top="'移動'"
+                            @click="openMoveDialog(data)" />
+                        <Button icon="pi pi-trash" class="p-button-danger p-button-text" @click="deletePayment(data)" />
+                    </div>
                 </template>
             </Column>
         </DataTable>
+
+        <Dialog v-model:visible="showMoveDialog" header="清算の移動" modal :style="{ width: '70vw' }">
+            <div v-if="isLoadingCandidates" class="flex justify-center p-4">
+                <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+            </div>
+            <div v-else>
+                <p class="mb-4">移動先の予約を選択してください（同じクライアントの前後1ヶ月以内の予約のみ表示されます）</p>
+                <DataTable :value="candidateReservations" scrollable scrollHeight="400px">
+                    <Column field="id" header="予約ID">
+                        <template #body="{ data }">
+                            <span class="text-xs">{{ data.id.substring(0, 8) }}...</span>
+                        </template>
+                    </Column>
+                    <Column header="期間">
+                        <template #body="{ data }">
+                            <span>{{ formatDate(new Date(data.details_min_date)) }} 〜 {{ formatDate(new
+                                Date(data.details_max_date)) }}</span>
+                        </template>
+                    </Column>
+                    <Column field="room_numbers" header="部屋"></Column>
+                    <Column field="status" header="ステータス"></Column>
+                    <Column header="選択">
+                        <template #body="{ data }">
+                            <Button label="選択" icon="pi pi-check" class="p-button-sm"
+                                @click="handleMovePayment(data.id)" />
+                        </template>
+                    </Column>
+                    <template #empty>
+                        <div class="p-4 text-center text-gray-500">
+                            移動可能な予約が見つかりません。
+                        </div>
+                    </template>
+                </DataTable>
+            </div>
+        </Dialog>
     </div>
 </template>
 
@@ -186,11 +225,11 @@ import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button,
 import { useSettingsStore } from '@/composables/useSettingsStore';
 const { paymentTypes, fetchPaymentTypes } = useSettingsStore();
 import { useReservationStore } from '@/composables/useReservationStore';
-const { reservationIsUpdating, fetchReservationClientIds, addReservationPayment, deleteReservationPayment } = useReservationStore();
+const { reservationIsUpdating, fetchReservationClientIds, addReservationPayment, deleteReservationPayment, moveReservationPayment, getReservationsByClient } = useReservationStore();
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
 import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+const { setClientsIsLoading } = useClientStore();
 
 // Helper
 function formatDate(date) {
@@ -198,32 +237,6 @@ function formatDate(date) {
     const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-};
-const normalizeKana = (str) => {
-    if (!str) return '';
-    let normalizedStr = str.normalize('NFKC');
-
-    // Convert Hiragana to Katakana
-    normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
-    );
-    // Convert half-width Katakana to full-width Katakana
-    normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
-    );
-
-    return normalizedStr;
-};
-const normalizePhone = (phone) => {
-    if (!phone) return '';
-
-    // Remove all non-numeric characters
-    let normalized = phone.replace(/\D/g, '');
-
-    // Remove leading zeros
-    normalized = normalized.replace(/^0+/, '');
-
-    return normalized;
 };
 
 // Computed
@@ -400,6 +413,53 @@ const deletePayment = (payment) => {
     });
 };
 
+const showMoveDialog = ref(false);
+const paymentToMove = ref(null);
+const candidateReservations = ref([]);
+const isLoadingCandidates = ref(false);
+
+const openMoveDialog = async (payment) => {
+    paymentToMove.value = payment;
+    showMoveDialog.value = true;
+    isLoadingCandidates.value = true;
+    try {
+        const hotelId = props.reservation_details[0].hotel_id;
+        const clientId = props.reservation_details[0].client_id;
+        const allReservations = await getReservationsByClient(hotelId, clientId);
+
+        // Filter by +- 1 month and exclude current reservation
+        const paymentDate = new Date(payment.date);
+        const oneMonthInMs = 30 * 24 * 60 * 60 * 1000;
+
+        candidateReservations.value = allReservations.filter(res => {
+            if (res.id === payment.reservation_id) return false;
+
+            // Use details_min_date and details_max_date from eff join
+            const checkIn = new Date(res.details_min_date);
+            const checkOut = new Date(res.details_max_date);
+
+            return (paymentDate >= new Date(checkIn.getTime() - oneMonthInMs)) &&
+                   (paymentDate <= new Date(checkOut.getTime() + oneMonthInMs));
+        });
+    } catch (error) {
+        console.error('Failed to fetch candidate reservations:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '移動先予約の取得に失敗しました。', life: 3000 });
+    } finally {
+        isLoadingCandidates.value = false;
+    }
+};
+
+const handleMovePayment = async (targetReservationId) => {
+    try {
+        await moveReservationPayment(paymentToMove.value.id, targetReservationId);
+        toast.add({ severity: 'success', summary: '成功', detail: '清算を移動しました。', life: 3000 });
+        showMoveDialog.value = false;
+    } catch (error) {
+        console.error('Error moving payment:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: error.message, life: 3000 });
+    }
+};
+
 // Client select
 const isAutocomplete = ref(false);
 const toggleMode = () => {
@@ -414,33 +474,37 @@ const updateReservationClients = async () => {
 const isClientSelected = ref(false);
 const client = ref({});
 const filteredClients = ref([]);
-const filterClients = (event) => {
-    const query = event.query.toLowerCase();
-    const normalizedQuery = normalizePhone(query);
-    const isNumericQuery = /^\d+$/.test(normalizedQuery);
-
-    if (!query || !clients.value || !Array.isArray(clients.value)) {
+const filterClients = async (event) => {
+    const query = event.query;
+    if (!query) {
         filteredClients.value = [];
         return;
     }
 
-    filteredClients.value = clients.value.filter((client) => {
-        // Name filtering (case-insensitive)
-        const matchesName =
-            (client.name && client.name.toLowerCase().includes(query)) ||
-            (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
-            (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
-        // Phone/Fax filtering (only for numeric queries)
-        const matchesPhoneFax = isNumericQuery &&
-            ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) ||
-                (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
-        // Email filtering (case-insensitive)
-        const matchesEmail = client.email && client.email.toLowerCase().includes(query);
+    try {
+        // Fetch matching clients from backend with a reasonable limit
+        setClientsIsLoading(true);
+        const authToken = localStorage.getItem('authToken');
+        const response = await fetch(`/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+        });
+        if (!response.ok) throw new Error('Search failed');
+        const data = await response.json();
 
-        // console.log('Client:', client, 'Query:', query, 'matchesName:', matchesName, 'matchesPhoneFax:', matchesPhoneFax, 'isNumericQuery', isNumericQuery, 'matchesEmail:', matchesEmail);
-
-        return matchesName || matchesPhoneFax || matchesEmail;
-    });
+        filteredClients.value = data.clients.map(client => ({
+            ...client,
+            display_name: client.name_kanji || client.name_kana || client.name || ''
+        }));
+    } catch (error) {
+        console.error('Failed to search clients:', error);
+        filteredClients.value = [];
+    } finally {
+        setClientsIsLoading(false);
+    }
 };
 const onClientSelect = (event) => {
     if (event.value) {
@@ -478,15 +542,7 @@ onMounted(async () => {
     await fetchPaymentTypes();
     await updateReservationClients();
 
-    if (clients.value.length === 0) {
-        setClientsIsLoading(true);
-        const clientsTotalPages = await fetchClients(1);
-        // Fetch clients for all pages
-        for (let page = 2; page <= clientsTotalPages; page++) {
-            await fetchClients(page);
-        }
-        setClientsIsLoading(false);
-    }
+    // REMOVED: pre-loading of all clients which caused performance issues
 
     // Initialize newPayment        
     const uniqueRoomIds = [...new Set(props.reservation_details.map(room => room.room_id))];

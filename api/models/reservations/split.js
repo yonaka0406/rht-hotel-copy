@@ -77,44 +77,59 @@ async function recalculateReservationMetrics(reservationId, hotelId, userId, dbC
 
 async function moveAssociatedPayments(targetReservationId, userId, originalReservationId, hotelId, movedDetails, dbClient) {
     const movedRoomIds = [...new Set(movedDetails.map(row => row.room_id))];
+    if (movedRoomIds.length === 0) return;
 
-    for (const roomId of movedRoomIds) {
-        const originalDetailsQuery = `SELECT id FROM reservation_details WHERE reservation_id = $1 AND room_id = $2 AND hotel_id = $3`;
-        const originalDetailsResult = await dbClient.query(originalDetailsQuery, [originalReservationId, roomId, hotelId]);
-        const originalDetailIds = originalDetailsResult.rows.map(row => row.id);
+    // 1. Identify which rooms were fully moved and which were partially moved.
+    // We check the current state of reservation_details in the transaction.
+    const roomStatusQuery = `
+        SELECT
+            room_id,
+            COUNT(*) FILTER (WHERE reservation_id = $1) AS original_count,
+            COUNT(*) FILTER (WHERE reservation_id = $2) AS moved_count,
+            MIN(date) FILTER (WHERE reservation_id = $2) AS min_moved_date,
+            MAX(date) FILTER (WHERE reservation_id = $2) AS max_moved_date
+        FROM reservation_details
+        WHERE room_id = ANY($3::uuid[]) AND hotel_id = $4 AND (reservation_id = $1 OR reservation_id = $2)
+        GROUP BY room_id;
+    `;
+    const roomStatusResult = await dbClient.query(roomStatusQuery, [originalReservationId, targetReservationId, movedRoomIds, hotelId]);
 
-        const movedDetailsForRoomQuery = `SELECT id FROM reservation_details WHERE reservation_id = $1 AND room_id = $2 AND hotel_id = $3`;
-        const movedDetailsForRoomResult = await dbClient.query(movedDetailsForRoomQuery, [targetReservationId, roomId, hotelId]);
-        const movedDetailIdsForRoom = movedDetailsForRoomResult.rows.map(row => row.id);
+    const fullyMovedRoomIds = [];
+    const partiallyMovedRooms = [];
 
-        if (movedDetailIdsForRoom.length > 0 && originalDetailIds.length === 0) {
-            const updatePaymentsQuery = `
-                    UPDATE reservation_payments
-                    SET reservation_id = $1, updated_by = $2
-                    WHERE reservation_id = $3 AND room_id = $4;
-                `;
-            await dbClient.query(updatePaymentsQuery, [targetReservationId, userId, originalReservationId, roomId]);
-        } else {
-            const movedDateRangeQuery = `
-                    SELECT MIN(date) AS min_date, MAX(date) AS max_date
-                    FROM reservation_details
-                    WHERE reservation_id = $1 AND room_id = $2 AND hotel_id = $3;
-                `;
-            const movedDateRangeResult = await dbClient.query(movedDateRangeQuery, [targetReservationId, roomId, hotelId]);
-            const { min_date, max_date } = movedDateRangeResult.rows[0];
-
-            if (min_date && max_date) {
-                const updatePaymentsQuery = `
-                        UPDATE reservation_payments
-                        SET reservation_id = $1, updated_by = $2
-                        WHERE reservation_id = $3
-                          AND room_id = $4
-                          AND date >= $5
-                          AND date <= $6;
-                    `;
-                await dbClient.query(updatePaymentsQuery, [targetReservationId, userId, originalReservationId, roomId, min_date, max_date]);
-            }
+    for (const row of roomStatusResult.rows) {
+        if (parseInt(row.original_count) === 0) {
+            fullyMovedRoomIds.push(row.room_id);
+        } else if (row.min_moved_date && row.max_moved_date) {
+            partiallyMovedRooms.push({
+                room_id: row.room_id,
+                min_date: row.min_moved_date,
+                max_date: row.max_moved_date
+            });
         }
+    }
+
+    // 2. Move payments for fully moved rooms in a single query
+    if (fullyMovedRoomIds.length > 0) {
+        const updateFullyMovedQuery = `
+            UPDATE reservation_payments
+            SET reservation_id = $1, updated_by = $2
+            WHERE reservation_id = $3 AND room_id = ANY($4::uuid[]);
+        `;
+        await dbClient.query(updateFullyMovedQuery, [targetReservationId, userId, originalReservationId, fullyMovedRoomIds]);
+    }
+
+    // 3. Move payments for partially moved rooms (one query per room range)
+    for (const room of partiallyMovedRooms) {
+        const updatePartiallyMovedQuery = `
+            UPDATE reservation_payments
+            SET reservation_id = $1, updated_by = $2
+            WHERE reservation_id = $3
+              AND room_id = $4
+              AND date >= $5
+              AND date <= $6;
+        `;
+        await dbClient.query(updatePartiallyMovedQuery, [targetReservationId, userId, originalReservationId, room.room_id, room.min_date, room.max_date]);
     }
 }
 

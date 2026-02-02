@@ -1783,6 +1783,24 @@ const actionSplitReservation = async (req, res) => {
   }
 };
 
+const moveReservationPayment = async (req, res) => {
+  const { paymentId } = req.params;
+  const { targetReservationId } = req.body;
+  const userId = req.user.id;
+
+  if (!paymentId || !targetReservationId) {
+    return res.status(400).json({ error: 'Missing paymentId or targetReservationId' });
+  }
+
+  try {
+    const result = await reservationsModel.moveReservationPayment(req.requestId, paymentId, targetReservationId, userId);
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error(`[${req.requestId}] moveReservationPayment - Error: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 const actionMergeReservations = async (req, res) => {
   const { targetReservationId, sourceReservationId, hotelId } = req.body;
   const userId = req.user.id;
@@ -1855,5 +1873,5 @@ module.exports = {
   editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber,
   deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations,
   handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation, cancelReservationRooms,
-  editPaymentTiming, changeReservationRoomsPeriod, actionSplitReservation, actionMergeReservations, getReservationsByClient,
+  editPaymentTiming, changeReservationRoomsPeriod, actionSplitReservation, actionMergeReservations, moveReservationPayment, getReservationsByClient,
 };

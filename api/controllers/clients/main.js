@@ -7,12 +7,13 @@ const logger = require('../../config/logger');
 // GET
 const getClients = async (req, res) => {
   const page = parseInt(req.params.page, 10) || 1; // Default to page 1 if not provided or invalid
-  const limit = 5000;
+  const limit = parseInt(req.query.limit, 10) || 5000;
   const offset = (page - 1) * limit;
+  const searchTerm = req.query.search || null;
 
   try {
-    const clients = await clientsModel.getAllClients(req.requestId, limit, offset);
-    const totalClients = await clientsModel.getTotalClientsCount(req.requestId);
+    const clients = await clientsModel.getAllClients(req.requestId, limit, offset, searchTerm);
+    const totalClients = await clientsModel.getTotalClientsCount(req.requestId, searchTerm);
     res.status(200).json({
       clients,
       total: totalClients,

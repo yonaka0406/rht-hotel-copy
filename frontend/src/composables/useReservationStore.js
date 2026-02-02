@@ -269,6 +269,32 @@ export function useReservationStore() {
             console.error('Error updating reservation client:', error);
         }
     };
+
+    const moveReservationPayment = async (paymentId, targetReservationId) => {
+        const authToken = localStorage.getItem('authToken');
+        try {
+            const response = await fetch(`/api/reservation/payment/move/${paymentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ targetReservationId }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to move reservation payment');
+            }
+
+            reservationIsUpdating.value = true;
+            reservationIsUpdating.value = false;
+            return await response.json();
+        } catch (error) {
+            console.error('Error moving reservation payment:', error);
+            throw error;
+        }
+    };
     const setReservationPlan = async (detail_id, hotel_id, plan, rates, price, disableRounding) => {
         // console.log('From Reservation Store => setReservationPlan');
         try {
@@ -925,6 +951,29 @@ export function useReservationStore() {
             return null;
         }
     };
+    const getReservationsByClient = async (hotelId, clientId) => {
+        const authToken = localStorage.getItem('authToken');
+        try {
+            const response = await fetch(`/api/reservation/client-list/${hotelId}/${clientId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch reservations by client');
+            }
+
+            return await response.json();
+
+        } catch (error) {
+            console.error('Error fetching reservations by client:', error);
+            return [];
+        }
+    };
+
     const fetchReservationPayments = async (hotelId, reservation_id) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -1742,6 +1791,8 @@ export function useReservationStore() {
         moveReservationRoom,
         addReservationPayment,
         addBulkReservationPayment,
+        moveReservationPayment,
+        getReservationsByClient,
         deleteHoldReservation,
         deleteReservationRoom,
         deleteReservationPayment,

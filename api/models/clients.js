@@ -129,9 +129,9 @@ const processNameString = async (nameString) => {
   return { name, nameKana, nameKanji };
 };
 
-const getAllClients = async (requestId, limit, offset) => {
+const getAllClients = async (requestId, limit, offset, searchTerm = null) => {
   const pool = getPool(requestId);
-  const query = `
+  let query = `
     SELECT
       clients.*,
       COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS name,
@@ -139,26 +139,36 @@ const getAllClients = async (requestId, limit, offset) => {
       CASE WHEN clients.legal_or_natural_person = 'legal' THEN TRUE ELSE FALSE END AS is_legal_person
     FROM clients
     WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
-    ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC
-    LIMIT $1 OFFSET $2
   `;
+  const values = [limit, offset];
+  if (searchTerm) {
+    query += ` AND (clients.name ILIKE $3 OR clients.name_kana ILIKE $3 OR clients.name_kanji ILIKE $3 OR clients.phone ILIKE $3 OR clients.email ILIKE $3)`;
+    values.push(`%${searchTerm}%`);
+  }
+  query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC LIMIT $1 OFFSET $2`;
+
   try {
-    const result = await pool.query(query, [limit, offset]);
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving all clients:', err);
     throw new Error('Database error');
   }
 };
-const getTotalClientsCount = async (requestId) => {
+const getTotalClientsCount = async (requestId, searchTerm = null) => {
   const pool = getPool(requestId);
-  const query = `
+  let query = `
     SELECT COUNT(*)
     FROM clients
     WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
   `;
+  const values = [];
+  if (searchTerm) {
+    query += ` AND (clients.name ILIKE $1 OR clients.name_kana ILIKE $1 OR clients.name_kanji ILIKE $1 OR clients.phone ILIKE $1 OR clients.email ILIKE $1)`;
+    values.push(`%${searchTerm}%`);
+  }
   try {
-    const result = await pool.query(query);
+    const result = await pool.query(query, values);
     return parseInt(result.rows[0].count);
   } catch (err) {
     console.error('Error retrieving total clients count:', err);
