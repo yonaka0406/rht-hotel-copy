@@ -54,7 +54,7 @@ const upsertForecastEntries = async (requestId, entries, userId, dbClient = null
                 sub_account_id, sub_account_name, amount, created_by, updated_by
              )
              VALUES %L
-             ON CONFLICT (hotel_id, month, account_name, sub_account_name) DO UPDATE SET
+             ON CONFLICT ON CONSTRAINT uq_hotel_dept_month_account_sub_forecast DO UPDATE SET
                 account_code_id = EXCLUDED.account_code_id,
                 sub_account_id = EXCLUDED.sub_account_id,
                 amount = EXCLUDED.amount,
