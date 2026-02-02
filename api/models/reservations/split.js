@@ -75,6 +75,16 @@ async function recalculateReservationMetrics(reservationId, hotelId, userId, dbC
     await dbClient.query(updateReservationQuery, [check_in, check_out, max_daily_people || 0, userId, reservationId, hotelId]);
 }
 
+async function recalculateMetricsIfActiveDetailsExist(reservationId, hotelId, userId, dbClient) {
+    const remainingActiveDetailsResult = await dbClient.query(
+        `SELECT COUNT(*) FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2 AND cancelled IS NULL`,
+        [reservationId, hotelId]
+    );
+    if (parseInt(remainingActiveDetailsResult.rows[0].count) > 0) {
+        await recalculateReservationMetrics(reservationId, hotelId, userId, dbClient);
+    }
+}
+
 async function moveAssociatedPayments(targetReservationId, userId, originalReservationId, hotelId, movedDetails, dbClient) {
     const movedRoomIds = [...new Set(movedDetails.map(row => row.room_id))];
     if (movedRoomIds.length === 0) return;
@@ -198,12 +208,7 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
         let newReservationIds = [];
 
         // Logic based on split indicators
-        if (isFullPeriodSplit && isFullRoomSplit) {
-            // If both period and rooms are full, it means the entire reservation is selected.
-            // This is not a split operation, so no action is performed, and no new reservation is created.
-            await client.query('COMMIT');
-            return []; // Return an empty array as no new reservation was created.
-        } else if ((isFullPeriodSplit && !isFullRoomSplit) || (!isFullPeriodSplit && isFullRoomSplit)) {
+        if ((isFullPeriodSplit && !isFullRoomSplit) || (!isFullPeriodSplit && isFullRoomSplit)) {
             // Case 2: Full Period, Partial Rooms OR Partial Period, Full Rooms
             // Create new reservation for detailsToMove
             const newReservationId = await createNewReservation(originalReservation, userId, client);
@@ -212,17 +217,11 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
             // Move detailsToMove to the new reservation
             await moveReservationDetails(newReservationId, userId, detailsToMove.map(d => d.id), hotelId, originalReservationId, client);
 
-            // Recalculate metrics for the new reservation
+            // Recalculate metrics for the new reservation (always has details)
             await recalculateReservationMetrics(newReservationId, hotelId, userId, client);
 
             // Recalculate metrics for the original reservation (detailsToKeepInOriginal)
-            const remainingActiveDetailsResult = await client.query(
-                `SELECT COUNT(*) FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2 AND cancelled IS NULL`,
-                [originalReservationId, hotelId]
-            );
-            if (parseInt(remainingActiveDetailsResult.rows[0].count) > 0) {
-                await recalculateReservationMetrics(originalReservationId, hotelId, userId, client);
-            }
+            await recalculateMetricsIfActiveDetailsExist(originalReservationId, hotelId, userId, client);
 
             // Move associated payments
             await moveAssociatedPayments(newReservationId, userId, originalReservationId, hotelId, detailsToMove, client);
@@ -299,13 +298,7 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
             }
 
             // Recalculate metrics for the original reservation (detailsToKeepInOriginal)
-            const remainingActiveDetailsResult = await client.query(
-                `SELECT COUNT(*) FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2 AND cancelled IS NULL`,
-                [originalReservationId, hotelId]
-            );
-            if (parseInt(remainingActiveDetailsResult.rows[0].count) > 0) {
-                await recalculateReservationMetrics(originalReservationId, hotelId, userId, client);
-            }
+            await recalculateMetricsIfActiveDetailsExist(originalReservationId, hotelId, userId, client);
         }
 
         await client.query('COMMIT');

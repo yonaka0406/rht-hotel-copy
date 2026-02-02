@@ -437,7 +437,12 @@ const openMoveDialog = async (payment) => {
         const allReservations = await getReservationsByClient(hotelId, clientId);
 
         // Ensure allReservations is an array
-        const reservationsArray = Array.isArray(allReservations) ? allReservations : [];
+        let reservationsArray = [];
+        if (Array.isArray(allReservations)) {
+            reservationsArray = allReservations;
+        } else {
+            console.error(`[openMoveDialog] Unexpected response type for reservations. Expected array but got ${typeof allReservations}. Value:`, allReservations, `Context: Payment ID=${payment.id}, Date=${payment.date}`);
+        }
 
         // Filter by +- 1 month and exclude current reservation
         const paymentDate = new Date(payment.date);
