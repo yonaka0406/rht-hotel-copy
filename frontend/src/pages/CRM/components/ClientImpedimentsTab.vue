@@ -33,7 +33,8 @@
             </Column>
             <Column header="アクション">
                 <template #body="slotProps">
-                    <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="openEditImpedimentDialog(slotProps.data)" />
+                    <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2"
+                        @click="openEditImpedimentDialog(slotProps.data)" aria-label="編集" v-tooltip="'編集'" />
                 </template>
             </Column>
         </DataTable>

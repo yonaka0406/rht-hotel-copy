@@ -130,7 +130,8 @@
                                 <Column header="操作">
                                     <template #body="{ data }">
                                         <Button @click="goToEditClientPage(data.id)" severity="info"
-                                            class="p-button-rounded p-button-text p-button-sm">
+                                            class="p-button-rounded p-button-text p-button-sm" aria-label="編集"
+                                            v-tooltip="'編集'">
                                             <i class="pi pi-pencil"></i>
                                         </Button>
                                     </template>

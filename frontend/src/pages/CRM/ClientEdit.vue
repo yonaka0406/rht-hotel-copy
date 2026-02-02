@@ -7,7 +7,7 @@
       <TabList>
         <Tab value="0" as="div" class="flex items-center gap-2">
           <span class="font-bold whitespace-nowrap">基本情報</span>
-          <i v-if="hasBlockImpediment" class="pi pi-ban text-red-500 ml-2"></i>
+          <i v-if="hasBlockImpediment" class="pi pi-ban text-red-500 ml-2" v-tooltip="'ブロックされている障害があります'"></i>
         </Tab>
         <Tab value="1" as="div" class="flex items-center gap-2">
           <span class="font-bold whitespace-nowrap">住所</span>
