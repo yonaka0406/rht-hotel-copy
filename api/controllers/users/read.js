@@ -1,5 +1,16 @@
 const usersModel = require('../../models/user');
 
+/**
+ * Removes sensitive fields from a user object.
+ * @param {Object} user - Raw user object from DB.
+ * @returns {Object} Sanitized user object.
+ */
+const sanitizeUser = (user) => {
+    if (!user) return null;
+    const { password_hash, google_access_token, google_refresh_token, ...safeUser } = user;
+    return safeUser;
+};
+
 const getAllUsers = async (req, res) => {
     const logger = req.app.locals.logger;
     const isProduction = process.env.NODE_ENV === 'production';
@@ -9,7 +20,9 @@ const getAllUsers = async (req, res) => {
             logger.info('No users found.', { requestId: req.requestId });
             return res.status(404).json({ error: isProduction ? 'Data not found.' : 'Users not found' });
         }
-        res.json(users);
+        // Sanitize each user in the list
+        const sanitizedUsers = users.map(sanitizeUser);
+        res.json(sanitizedUsers);
     } catch (err) {
         const specificError = 'Internal server error while fetching users.';
         logger.error(specificError, { error: err.message, stack: err.stack, requestId: req.requestId });
@@ -28,7 +41,7 @@ const getUser = async (req, res) => {
             return res.status(404).json({ error: isProduction ? 'User information not found.' : 'User not found' });
         }
         // Sanitize user data before sending to client
-        const { password_hash, google_access_token, google_refresh_token, ...safeUser } = user[0];
+        const safeUser = sanitizeUser(user[0]);
         res.json([safeUser]); // Return as array to maintain compatibility with frontend
     } catch (error) {
         const specificError = `Error getting user by ID: ${error.message}`;
@@ -49,7 +62,7 @@ const getUserById = async (req, res) => {
             return res.status(404).json({ error: isProduction ? 'User not found.' : 'User not found' });
         }
         // Sanitize user data before sending to client
-        const { password_hash, google_access_token, google_refresh_token, ...safeUser } = user[0];
+        const safeUser = sanitizeUser(user[0]);
         res.json({ user: safeUser }); // Return sanitized user
     } catch (error) {
         const specificError = `Error getting user by ID: ${error.message}`;
