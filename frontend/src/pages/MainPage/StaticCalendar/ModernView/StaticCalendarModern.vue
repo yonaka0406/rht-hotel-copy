@@ -75,8 +75,8 @@
                   <!-- Clickable Day Segments (Absolute inset-0 ensures grid alignment) -->
                   <div class="absolute inset-0 flex flex-col z-0">
                     <div v-for="item in block.items" :key="item.date"
-                         class="w-full transition-colors hover:bg-black/5"
-                         :style="{ height: rowHeight + 'px' }"
+                         class="w-full transition-colors hover:brightness-95"
+                         :style="{ height: rowHeight + 'px', backgroundColor: getItemColor(item) }"
                          @click="handleDayClick(item)"
                          @dblclick="handleDayDoubleClick(item)"
                          @mousemove="handleDayMouseMove($event, item, block)">
@@ -85,11 +85,11 @@
                   <!-- Indicator Strip (Left side) -->
                   <div class="absolute left-0 top-0 bottom-0 w-1 flex flex-col z-10 pointer-events-none">
                     <div v-for="item in block.items" :key="item.date"
-                         :style="{ height: rowHeight + 'px', backgroundColor: getItemColor(item) }"></div>
+                         :style="{ height: rowHeight + 'px', backgroundColor: darkenColor(getItemColor(item), 15) }"></div>
                   </div>
                   <!-- Sticky Header for Guest Name -->
-                  <div class="sticky top-0 z-20 px-1 py-0.5 backdrop-blur-sm bg-white/40 dark:bg-black/20 border-b border-black/5 pointer-events-none">
-                    <h4 class="font-bold text-[8px] leading-tight truncate" :style="{ color: block.textColor }">{{ block.client_name }}</h4>
+                  <div class="sticky top-0 z-20 px-1 py-0.5 backdrop-blur-md bg-white/60 dark:bg-black/40 border-b border-black/5 pointer-events-none">
+                    <h4 class="font-bold text-[8px] leading-tight truncate text-gray-900 dark:text-white">{{ block.client_name }}</h4>
                   </div>
                 </div>
               </div>
@@ -252,15 +252,20 @@ const getRoomBlocks = (roomId) => {
 
 const getMergedBlockStyle = (roomInfo) => {
   const room = props.selectedHotelRooms.find(r => r.room_id === roomInfo.room_id);
-  let backgroundColor = '#ffffff';
+  let backgroundColor = 'transparent';
   if (room && room.is_staff_room) backgroundColor = '#f3e5f5';
   else if (roomInfo.type === 'employee') backgroundColor = '#f3e5f5';
-  else if (roomInfo.status === 'provisory') backgroundColor = '#fef3c7'; // Lighter amber
-  else if (roomInfo.status === 'hold') backgroundColor = '#fef3c7';
-  else if (roomInfo.status === 'block') backgroundColor = '#fee2e2'; // Lighter red
 
   const textColor = '#1f2937';
   return { backgroundColor, textColor };
+};
+
+const darkenColor = (hex, percent = 20) => {
+  if (!hex || hex[0] !== '#') return hex;
+  const r = Math.max(0, Math.floor(parseInt(hex.slice(1, 3), 16) * (1 - percent / 100)));
+  const g = Math.max(0, Math.floor(parseInt(hex.slice(3, 5), 16) * (1 - percent / 100)));
+  const b = Math.max(0, Math.floor(parseInt(hex.slice(5, 7), 16) * (1 - percent / 100)));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 };
 
 const getItemColor = (item) => {

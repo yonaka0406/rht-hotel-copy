@@ -68,13 +68,16 @@ describe('StaticCalendarModern.vue - UX Improvement', () => {
     const indicatorSegments = wrapper.findAll('.absolute.left-0.top-0.bottom-0.w-1 div');
     expect(indicatorSegments.length).toBe(2);
 
-    // Verify colors of the segments
-    expect(indicatorSegments[0].attributes('style')).toContain('background-color: rgb(255, 0, 0)'); // #ff0000
-    expect(indicatorSegments[1].attributes('style')).toContain('background-color: rgb(0, 0, 255)'); // #0000ff
+    // Verify colors of the segments (indicator strip should be darkened)
+    // #ff0000 darkened by 15% is approx rgb(216, 0, 0)
+    expect(indicatorSegments[0].attributes('style')).toContain('background-color: rgb(216, 0, 0)');
+    // #0000ff darkened by 15% is approx rgb(0, 0, 216)
+    expect(indicatorSegments[1].attributes('style')).toContain('background-color: rgb(0, 0, 216)');
 
-    // Verify clickable segments are aligned with the top of the block
-    const clickableSegments = wrapper.find('.absolute.inset-0.flex.flex-col.z-0');
-    expect(clickableSegments.exists()).toBe(true);
+    // Verify clickable segments have the original plan colors
+    const clickableSegments = wrapper.findAll('.absolute.inset-0.flex.flex-col.z-0 div');
+    expect(clickableSegments[0].attributes('style')).toContain('background-color: rgb(255, 0, 0)');
+    expect(clickableSegments[1].attributes('style')).toContain('background-color: rgb(0, 0, 255)');
   });
 
   it('should have a sticky header for the guest name', () => {
