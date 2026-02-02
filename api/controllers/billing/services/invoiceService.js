@@ -1,4 +1,6 @@
 const logger = require('../../../config/logger');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Helper function to generate a new invoice number.
@@ -27,8 +29,37 @@ const generateNewInvoiceNumber = (maxInvoiceResult, hotelId, date) => {
   return new_invoice_number;
 };
 
+/**
+ * Load and convert the stamp image to base64 data URI
+ * This is cached to avoid reading the file on every invoice generation
+ */
+let cachedStampDataUri = null;
+function getStampImageDataUri() {
+  if (cachedStampDataUri) {
+    return cachedStampDataUri;
+  }
+
+  try {
+    // __dirname is at: api/controllers/billing/services
+    // STAMP_COMPONENTS_DIR is relative to project root (e.g., './api/components')
+    // So we need to go up 4 levels to reach the project root
+    const stampDirEnvPath = process.env.STAMP_COMPONENTS_DIR || './api/components';
+    const projectRoot = path.resolve(__dirname, '../../../..');
+    const stampPath = path.resolve(projectRoot, stampDirEnvPath, 'stamp.png');
+
+    const imageBuffer = fs.readFileSync(stampPath);
+    const base64Image = imageBuffer.toString('base64');
+    cachedStampDataUri = `data:image/png;base64,${base64Image}`;
+
+    return cachedStampDataUri;
+  } catch (error) {
+    logger.error('Failed to load stamp image:', error);
+    return ''; // Return empty string if image can't be loaded
+  }
+}
+
 function generateInvoiceHTML(html, data, userName) {
-  const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`;
+  const imageUrl = getStampImageDataUri();
 
   let modifiedHTML = html;
 

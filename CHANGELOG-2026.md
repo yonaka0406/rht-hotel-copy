@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.10] - 2026-02-02
+
+- Bug Fix: Fixed invoice PDF generation issue where the company stamp image failed to load in Playwright due to Helmet's Content Security Policy restrictions. The stamp image is now embedded as a base64 data URI, eliminating the need for HTTP requests and ensuring compatibility with CSP headers.
+
+---
+
 ## [1.4.9] - 2026-02-01
 
 - New Feature: Modern calendar view for room reservations with responsive per-room columns, sticky left date sidebar, and a dual-mode toggle to switch between classic and modern views.
@@ -29,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New Feature: Implemented intelligent data source prioritization for Occupancy metrics in Reports module
 - Performance: Improved data loading speed through parallel fetching operations in Monthly Report
 - Implementation: Dashboard data aligned with Room Indicator for consistent check-in/check-out statistics using effective date logic with edge detection for accurate room change and cancellation handling
-
 
 ---
 
