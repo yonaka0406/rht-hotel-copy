@@ -572,6 +572,16 @@ const getExportClientsCount = async (req, res) => {
   }
 };
 
+const getClientStats = async (req, res) => {
+  try {
+    const stats = await clientsModel.getClientStats(req.requestId);
+    res.status(200).json(stats);
+  } catch (error) {
+    console.error('Error getting client stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 module.exports = {
   getClients,
@@ -599,4 +609,5 @@ module.exports = {
   handleDeleteImpediment,
   exportClients,
   getExportClientsCount,
+  getClientStats,
 };

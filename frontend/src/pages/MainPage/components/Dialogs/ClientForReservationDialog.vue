@@ -313,7 +313,7 @@ const handleSave = () => {
 // Fetch clients on mount
 onMounted(async () => {
     if (props.client === null) {
-        console.log('[ClientForReservantionDialog] onMounted client is null');
+        console.log('[ClientForReservationDialog] onMounted client is null');
         localReservationDetails.value.legal_or_natural_person = 'legal';
         localReservationDetails.value.gender = 'other';
     }
@@ -326,13 +326,6 @@ watch(() => props.client, (newVal) => {
         localClient.value = { ...newVal };
     }
 }, { immediate: true });
-
-watch(() => props.modelValue, (newVal) => {
-    if (newVal) {
-        localReservationDetails.value = { ...props.reservationDetails };
-        localClient.value = { ...props.client };
-    }
-});
 
 watch(() => props.modelValue, (newVal) => {
     if (newVal) {

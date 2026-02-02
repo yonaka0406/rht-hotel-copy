@@ -173,7 +173,8 @@
                     <Column field="id" header="予約ID">
                         <template #body="{ data }">
                             <router-link :to="{ name: 'ReservationEdit', params: { reservation_id: data.id } }"
-                                target="_blank" class="text-sky-600 hover:underline text-xs flex items-center gap-1">
+                                target="_blank" rel="noopener noreferrer"
+                                class="text-sky-600 hover:underline text-xs flex items-center gap-1">
                                 <i class="pi pi-external-link"></i>
                                 {{ data.id.substring(0, 8) }}...
                             </router-link>

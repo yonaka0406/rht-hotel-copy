@@ -1308,6 +1308,39 @@ const getClientsCountForExport = async (requestId, filters = {}) => {
   }
 };
 
+const getClientStats = async (requestId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+      COUNT(*) as total,
+      COUNT(*) FILTER (WHERE legal_or_natural_person = 'natural') as natural_count,
+      COUNT(*) FILTER (WHERE legal_or_natural_person = 'legal') as legal_count,
+      COUNT(*) FILTER (WHERE loyalty_tier IS NOT NULL AND loyalty_tier <> 'N/A') as loyalty_total,
+      jsonb_object_agg(loyalty_tier, tier_count) FILTER (WHERE loyalty_tier IS NOT NULL AND loyalty_tier <> 'N/A') as tier_distribution
+    FROM (
+      SELECT loyalty_tier, COUNT(*) as tier_count
+      FROM clients
+      WHERE id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')
+      GROUP BY loyalty_tier
+    ) AS tier_stats;
+  `;
+
+  try {
+    const result = await pool.query(query);
+    const row = result.rows[0];
+    return {
+      total: parseInt(row.total),
+      natural: parseInt(row.natural_count),
+      legal: parseInt(row.legal_count),
+      loyalty_total: parseInt(row.loyalty_total),
+      tier_distribution: row.tier_distribution || {}
+    };
+  } catch (err) {
+    console.error('Error retrieving client stats:', err);
+    throw new Error('Database error');
+  }
+};
+
 
 module.exports = {
   toFullWidthKana,
@@ -1344,4 +1377,5 @@ module.exports = {
   deleteImpediment,
   getAllClientsForExport,
   getClientsCountForExport,
+  getClientStats,
 };

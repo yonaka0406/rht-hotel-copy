@@ -13,6 +13,13 @@ const relatedCompanies = ref([]);
 const isLoadingRelatedCompanies = ref(false);
 const commonRelationshipPairs = ref([]);
 const isLoadingCommonRelationshipPairs = ref(false);
+const clientStats = ref({
+    total: 0,
+    natural: 0,
+    legal: 0,
+    loyalty_total: 0,
+    tier_distribution: {}
+});
 
 export function useClientStore() {
 
@@ -237,6 +244,27 @@ export function useClientStore() {
         }
     };
     // Fetch data for the selected client
+    const fetchClientStats = async () => {
+        clientsIsLoading.value = true;
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/clients/stats', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) throw new Error('Failed to fetch client stats');
+            const data = await response.json();
+            clientStats.value = data;
+        } catch (error) {
+            console.error('Failed to fetch client stats:', error);
+        } finally {
+            clientsIsLoading.value = false;
+        }
+    };
+
     const fetchGroup = async (group_id) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -777,6 +805,8 @@ export function useClientStore() {
         isLoadingRelatedCompanies,
         commonRelationshipPairs,
         isLoadingCommonRelationshipPairs,
+        clientStats,
+        fetchClientStats,
         fetchAllClientsForFiltering, // add new function
         setClientsIsLoading,
         fetchClients,
