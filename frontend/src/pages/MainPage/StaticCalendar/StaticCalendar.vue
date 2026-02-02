@@ -1,5 +1,15 @@
 <template>
   <div class="p-2 bg-white dark:bg-gray-900 dark:text-gray-100 min-h-screen">
+    <Toast />
+    <ConfirmDialog group="templating">
+      <template #message="slotProps">
+        <div class="flex flex-col items-center w-full gap-4 border-b border-surface-200 dark:border-surface-700">
+          <i :class="slotProps.message.icon" class="!text-6xl text-primary-500"></i>
+          <div v-html="formattedMessage"></div>
+        </div>
+      </template>
+    </ConfirmDialog>
+
     <StaticCalendarHeader
       :selected-hotel="selectedHotel"
       :unique-legend-items="uniqueLegendItems"
@@ -114,6 +124,7 @@
         @toggle-view="viewMode = 'classic'"
         @cell-click="handleCellClick"
         @cell-double-click="handleCellDoubleClick"
+        @calendar-update="handleCalendarUpdate"
       />
       <template #footer>
         <StaticCalendarFooter @addMonths="handleAddMonths" :loading="isAddingMonths" />
@@ -131,35 +142,74 @@
       :date-range="dateRange"
       @select-reservation="selectReservationCard"
     />
+
+    <Drawer v-model:visible="editDrawerVisible" :modal="true" :position="'bottom'" :style="{ height: '75vh' }"
+      :closable="true">
+      <div v-if="reservationId">
+        <div class="flex justify-end">
+          <Button @click="goToReservationEdit" severity="info">
+            <i class="pi pi-arrow-right"></i><span>編集ページへ</span>
+          </Button>
+        </div>
+        <ReservationEdit :reservation_id="reservationId" :room_id="selectedRoom?.room_id" />
+
+        <Button v-if="isTempBlock" label="仮ブロック解除" icon="pi pi-unlock" @click="removeTempBlock" severity="danger" class="ml-2 mr-4" />
+        <Button v-if="isTempBlock" label="予約追加へ進む" icon="pi pi-check" @click="openClientDialog" severity="success" />
+      </div>
+
+      <ReservationAddRoom v-else :room_id="selectedRoom?.room_id" :date="selectedDate" @temp-block-close="handleTempBlock" />
+
+      <ClientForReservationDialog
+        v-model="showClientDialog"
+        :client="currentClient"
+        :reservation-details="reservationDetails"
+        @save="handleClientSave"
+        @close="showClientDialog = false"
+      />
+    </Drawer>
   </div>
 </template>
 
 <script setup>
 // Vue
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted, defineAsyncComponent } from 'vue';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
+import { useConfirm } from 'primevue/useconfirm';
+const confirm = useConfirm();
 
 import Panel from 'primevue/panel';
 import SelectButton from 'primevue/selectbutton';
 import Skeleton from 'primevue/skeleton';
+import Drawer from 'primevue/drawer';
+import ConfirmDialog from 'primevue/confirmdialog';
+import Toast from 'primevue/toast';
+import Button from 'primevue/button';
 import StaticCalendarHeader from './components/StaticCalendarHeader.vue';
 import StaticCalendarModern from './ModernView/StaticCalendarModern.vue';
 
 // Components
+const ReservationEdit = defineAsyncComponent(() => import('../Reservation/ReservationEdit.vue'));
+const ReservationAddRoom = defineAsyncComponent(() => import('../components/ReservationAddRoom.vue'));
+const ClientForReservationDialog = defineAsyncComponent(() => import('../components/Dialogs/ClientForReservationDialog.vue'));
 import StaticCalendarDrawer from './components/StaticCalendarDrawer.vue';
 import StaticCalendarFooter from './components/StaticCalendarFooter.vue';
 
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
-const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, selectedHotel } = useHotelStore();
+const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, selectedHotel, removeCalendarSettings } = useHotelStore();
 const allParkingSpots = ref([]);
 import { useReservationStore } from '@/composables/useReservationStore';
-const { reservedRooms, fetchReservedRooms } = useReservationStore();
+const { reservedRooms, fetchReservedRooms, reservationId, setReservationId, fetchReservation, reservationDetails, convertBlockToReservation, setCalendarChange } = useReservationStore();
+import { useUserStore } from '@/composables/useUserStore';
+const { logged_user } = useUserStore();
 import { useParkingStore } from '@/composables/useParkingStore';
 const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel } = useParkingStore();
 
 import { formatDate, formatDateWithDay } from '@/utils/dateUtils';
+import { SPECIAL_BLOCK_CLIENT_ID } from '@/utils/reservationUtils';
 
 // Room type color assignment
 const roomTypeGrayTones = [
@@ -226,6 +276,141 @@ const isDrawerVisible = ref(false);
 const cardSelectedReservationId = ref(null);
 const isAddingMonths = ref(false);
 
+const editDrawerVisible = ref(false);
+const selectedRoom = ref(null);
+const selectedDate = ref(null);
+const formattedMessage = ref('');
+
+const openEditDrawer = (roomId, date) => {
+  const res = fillRoomInfo(roomId, date);
+  if (!res.reservation_id) {
+    if (!logged_user.value || !logged_user.value.length || logged_user.value[0]?.permissions?.crud_ok !== true) {
+      toast.add({ severity: 'warn', summary: '権限エラー', detail: '予約作成の権限がありません。', life: 3000 });
+      return;
+    }
+  }
+
+  isUpdating.value = true;
+  selectedRoom.value = selectedHotelRooms.value.find(room => room.room_id === roomId);
+  selectedDate.value = date;
+
+  if (selectedRoom.value) {
+    if (!res.reservation_id) {
+      setReservationId(null);
+      editDrawerVisible.value = true;
+    } else {
+      setReservationId(res.reservation_id);
+      editDrawerVisible.value = true;
+    }
+  }
+};
+
+const goToReservationEdit = () => {
+  router.push({ name: 'ReservationEdit', params: { reservation_id: reservationId.value } });
+};
+
+const handleTempBlock = (_data) => {
+  editDrawerVisible.value = false;
+};
+
+const isTempBlock = computed(() => {
+    const res = reservationDetails.value?.reservation?.[0];
+    if(!res) return false;
+    return res.client_id === SPECIAL_BLOCK_CLIENT_ID && res.status === 'block';
+});
+
+const removeTempBlock = async () => {
+    try {
+        await removeCalendarSettings(
+            reservationDetails.value.reservation[0].reservation_id,
+            reservationDetails.value.reservation[0].hotel_id
+        );
+        toast.add({ severity: 'success', summary: '成功', detail: '仮ブロックが削除されました。', life: 3000 });
+        editDrawerVisible.value = false;
+    } catch (error) {
+        console.error('Error removing temporary block:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '仮ブロックの削除に失敗しました。', life: 3000 });
+    }
+};
+
+const showClientDialog = ref(false);
+const currentClient = ref({});
+
+const openClientDialog = () => {
+    currentClient.value = null;
+    const reservation = reservationDetails.value?.reservation?.[0];
+    if (reservation) {
+        reservationDetails.value = {
+            ...reservationDetails.value,
+            check_in: reservation.check_in,
+            check_out: reservation.check_out,
+            number_of_nights: calculateNights(new Date(reservation.check_in), new Date(reservation.check_out)),
+            number_of_people: reservation.number_of_people || 1
+        };
+    }
+    showClientDialog.value = true;
+};
+
+const calculateNights = (checkIn, checkOut) => {
+    const diffTime = Math.abs(checkOut - checkIn);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+const handleClientSave = async (clientData) => {
+    try {
+        const resId = reservationDetails.value?.reservation?.[0]?.reservation_id;
+        if (resId) {
+            await convertBlockToReservation(resId, clientData);
+            toast.add({ severity: 'success', summary: '成功', detail: 'クライアント情報を保存しました', life: 3000 });
+            showClientDialog.value = false;
+            await refreshData();
+            editDrawerVisible.value = false;
+        }
+    } catch (error) {
+        console.error('Error saving client data:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: error.response?.data?.error || 'クライアント情報の保存中にエラーが発生しました',
+            life: 3000
+        });
+    }
+};
+
+const refreshData = async () => {
+  const currentYear = currentMonth.value.getFullYear();
+  const month = currentMonth.value.getMonth();
+  const startDate = formatDate(new Date(currentYear, month, 1));
+  const endDate = formatDate(new Date(currentYear, month + 3, 0));
+  await fetchReservations(startDate, endDate);
+  await fetchReservedParkingSpots(selectedHotelId.value, startDate, endDate);
+};
+
+const handleCalendarUpdate = async (updateData) => {
+  const { reservation_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, message } = updateData;
+  formattedMessage.value = message;
+  confirm.require({
+    group: 'templating',
+    header: '確認',
+    icon: 'pi pi-exclamation-triangle',
+    acceptProps: { label: 'はい' },
+    accept: async () => {
+      isUpdating.value = true;
+      try {
+        await setCalendarChange(reservation_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, 'solo');
+        await refreshData();
+        toast.add({ severity: 'success', summary: '成功', detail: '予約を更新しました。', life: 3000 });
+      } catch (error) {
+        toast.add({ severity: 'error', summary: 'エラー', detail: error.message || '更新に失敗しました。', life: 3000 });
+      } finally {
+        isUpdating.value = false;
+      }
+    },
+    rejectProps: { label: 'キャンセル', severity: 'secondary', outlined: true },
+    reject: () => {}
+  });
+};
+
 const selectReservationCard = (reservationId) => {
   if (cardSelectedReservationId.value === reservationId) {
     cardSelectedReservationId.value = null;
@@ -288,6 +473,8 @@ const handleCellDoubleClick = (room_id, date) => {
   if (roomInfo && roomInfo.client_id) {
     selectedClientId.value = roomInfo.client_id;
     isDrawerVisible.value = true;
+  } else {
+    openEditDrawer(room_id, date);
   }
 };
 
@@ -723,6 +910,19 @@ watch(selectedHotelId, async (newHotelId, oldHotelId) => {
     console.error('Error fetching data for new hotel:', error);
   } finally {
     isLoading.value = false;
+  }
+});
+
+watch(reservationId, async (newReservationId, _oldReservationId) => {
+  if (newReservationId) {
+    await fetchReservation(newReservationId, selectedHotelId.value);
+  }
+}, { immediate: true });
+
+watch(editDrawerVisible, async (newVal, _oldVal) => {
+  if (newVal === false) {
+    isUpdating.value = false;
+    await refreshData();
   }
 });
 

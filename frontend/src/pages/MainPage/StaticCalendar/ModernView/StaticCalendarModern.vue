@@ -64,14 +64,34 @@
             <div class="flex h-full">
               <div v-for="room in headerRoomsData.roomNumbers" :key="room.room_id"
                    class="relative border-r border-gray-100 dark:border-gray-800 h-full"
-                   :style="{ width: roomColumnWidth + 'px' }">
+                   :style="{ width: roomColumnWidth + 'px' }"
+                   @click="handleGridClick($event, room)"
+                   @dblclick="handleGridDoubleClick($event, room)"
+                   @dragover="handleDragOver($event, room)"
+                   @drop="handleDrop($event, room)">
+
+                <!-- Drop Highlight -->
+                <div v-if="dropTargetRoomId === room.room_id && draggingBlock" class="absolute inset-x-0 pointer-events-none z-0">
+                  <div v-for="i in draggingBlock.items.length" :key="i"
+                       class="bg-green-500/20 border-y border-green-500/30"
+                       :style="{
+                         position: 'absolute',
+                         top: (dropTargetDateIndex + i - 1) * rowHeight + 'px',
+                         height: rowHeight + 'px',
+                         width: '100%'
+                       }">
+                  </div>
+                </div>
 
                 <!-- Reservation Blocks -->
                 <div v-for="block in getRoomBlocks(room.room_id)" :key="block.id"
                      class="absolute left-0.5 right-0.5 rounded overflow-hidden flex flex-col cursor-pointer transition-all hover:z-10 shadow-sm border border-black/5"
                      :style="getBlockStyle(block)"
-                     @click="handleBlockClick(block)"
-                     @dblclick="handleBlockDoubleClick(block)"
+                     draggable="true"
+                     @dragstart="handleDragStart($event, block)"
+                     @dragend="handleDragEnd"
+                     @click.stop="handleBlockClick(block)"
+                     @dblclick.stop="handleBlockDoubleClick(block)"
                      @contextmenu.prevent="onContextMenu($event, block)"
                      @mousemove="handleMouseMove($event, block)"
                      @mouseleave="handleMouseLeave">
@@ -140,7 +160,7 @@ const props = defineProps({
   isLoading: Boolean
 });
 
-const emit = defineEmits(['toggle-view', 'cell-click', 'cell-double-click', 'show-tooltip', 'hide-tooltip']);
+const emit = defineEmits(['toggle-view', 'cell-click', 'cell-double-click', 'show-tooltip', 'hide-tooltip', 'calendar-update']);
 
 const rowHeight = 22;
 const roomColumnWidth = 50;
@@ -165,6 +185,11 @@ const formatDateMonthDay = (dateStr) => {
 const getRoomTypeName = (roomId) => {
   const room = props.selectedHotelRooms.find(r => r.room_id === roomId);
   return room ? room.room_type_name : '';
+};
+
+const getRoomNumber = (roomId) => {
+  const room = props.selectedHotelRooms.find(r => r.room_id === roomId);
+  return room ? room.room_number : 'N/A';
 };
 
 const formatClientName = (name) => {
@@ -318,6 +343,114 @@ const handleBlockDoubleClick = (block) => {
   emit('cell-double-click', block.items[0].room_id, formatDate(new Date(block.items[0].date)));
 };
 
+// Grid Interaction Logic
+const handleGridClick = (event, room) => {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const relativeY = event.clientY - rect.top;
+  const dateIndex = Math.floor(relativeY / rowHeight);
+  if (dateIndex >= 0 && dateIndex < props.dateRange.length) {
+    emit('cell-click', room.room_id, props.dateRange[dateIndex]);
+  }
+};
+
+const handleGridDoubleClick = (event, room) => {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const relativeY = event.clientY - rect.top;
+  const dateIndex = Math.floor(relativeY / rowHeight);
+  if (dateIndex >= 0 && dateIndex < props.dateRange.length) {
+    emit('cell-double-click', room.room_id, props.dateRange[dateIndex]);
+  }
+};
+
+// Drag and Drop Logic
+const draggingBlock = ref(null);
+const dropTargetRoomId = ref(null);
+const dropTargetDateIndex = ref(null);
+
+const handleDragStart = (event, block) => {
+  draggingBlock.value = block;
+
+  const rect = event.target.getBoundingClientRect();
+  const offsetX = event.clientX - rect.left;
+  const offsetY = event.clientY - rect.top;
+
+  event.dataTransfer.setDragImage(event.target, offsetX, offsetY);
+  event.dataTransfer.effectAllowed = 'move';
+
+  // Make the original element semi-transparent
+  setTimeout(() => {
+    if (event.target) event.target.style.opacity = '0.4';
+  }, 0);
+};
+
+const handleDragEnd = (event) => {
+  if (event.target) event.target.style.opacity = '1';
+  draggingBlock.value = null;
+  dropTargetRoomId.value = null;
+  dropTargetDateIndex.value = null;
+};
+
+const handleDragOver = (event, room) => {
+  if (!draggingBlock.value) return;
+  event.preventDefault();
+
+  dropTargetRoomId.value = room.room_id;
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  const relativeY = event.clientY - rect.top;
+  dropTargetDateIndex.value = Math.floor(relativeY / rowHeight);
+};
+
+const handleDrop = (event, room) => {
+  if (!draggingBlock.value) return;
+  event.preventDefault();
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  const relativeY = event.clientY - rect.top;
+  const dateIndex = Math.floor(relativeY / rowHeight);
+
+  if (dateIndex >= 0 && dateIndex < props.dateRange.length) {
+    const targetDate = props.dateRange[dateIndex];
+    const sourceBlock = draggingBlock.value;
+
+    const durationDays = sourceBlock.items.length;
+    const newCheckIn = targetDate;
+    const newCheckOutDate = new Date(targetDate);
+    newCheckOutDate.setDate(newCheckOutDate.getDate() + durationDays);
+    const newCheckOut = formatDate(newCheckOutDate);
+
+    const updateData = {
+      reservation_id: sourceBlock.reservation_id,
+      old_check_in: sourceBlock.check_in,
+      old_check_out: sourceBlock.check_out,
+      new_check_in: newCheckIn,
+      new_check_out: newCheckOut,
+      old_room_id: sourceBlock.items[0].room_id,
+      new_room_id: room.room_id,
+      number_of_people: sourceBlock.items[0].total_number_of_people || sourceBlock.items[0].number_of_people || 1,
+      message: generateUpdateMessage(sourceBlock, room, newCheckIn, newCheckOut)
+    };
+
+    emit('calendar-update', updateData);
+  }
+
+  draggingBlock.value = null;
+  dropTargetRoomId.value = null;
+  dropTargetDateIndex.value = null;
+};
+
+const generateUpdateMessage = (block, targetRoom, newIn, newOut) => {
+  const oldRoomNum = getRoomNumber(block.items[0].room_id);
+  const newRoomNum = targetRoom.room_number;
+
+  let msg = `<b>${oldRoomNum}号室</b>の予約を `;
+  if (oldRoomNum !== newRoomNum) {
+    msg += `<b>${newRoomNum}号室</b>に移動し、`;
+  }
+  msg += `<br/>宿泊期間を<br/>「IN：${block.check_in} OUT：${block.check_out}」から<br/>「IN：${newIn} OUT：${newOut}」に変更しますか?`;
+  return msg;
+};
+
 // Tooltip Logic
 const tooltipVisible = ref(false);
 const tooltipData = ref({});
@@ -349,11 +482,6 @@ const handleMouseMove = (event, block) => {
 
 const handleMouseLeave = () => {
   tooltipVisible.value = false;
-};
-
-const getRoomNumber = (roomId) => {
-  const room = props.selectedHotelRooms.find(r => r.room_id === roomId);
-  return room ? room.room_number : 'N/A';
 };
 
 // Context Menu Logic
