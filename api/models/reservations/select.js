@@ -956,7 +956,13 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
          JOIN rooms rm ON rm.id = rd.room_id AND rm.hotel_id = rd.hotel_id
          WHERE rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id AND rd.cancelled IS NULL),
         ''
-      ) AS room_numbers
+      ) AS room_numbers,
+      COALESCE(
+        (SELECT ARRAY_AGG(DISTINCT rd.room_id)
+         FROM reservation_details rd
+         WHERE rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id AND rd.cancelled IS NULL),
+        '{}'::int[]
+      ) AS room_ids
     FROM reservations r
     JOIN clients c ON c.id = r.reservation_client_id
     JOIN (${EFF_SUBQUERY}) eff ON eff.reservation_id = r.id AND eff.hotel_id = r.hotel_id
