@@ -8,9 +8,9 @@ const {
   strongPasswordValidation,
 } = require('../middleware/validators');
 
-router.get('/users', authMiddleware_manageUsers, usersController.getAllUsers);
+router.get('/users', authMiddleware, usersController.getAllUsers);
 router.get('/user/get', authMiddleware, usersController.getUser);
-router.get('/users/:id', authMiddleware_manageUsers, usersController.getUserById);
+router.get('/users/:id', authMiddleware, usersController.getUserById);
 router.post(
   '/user/register',
   authMiddleware_manageUsers,
