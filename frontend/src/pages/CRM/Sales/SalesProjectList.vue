@@ -120,7 +120,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useProjectStore } from '@/composables/useProjectStore';
-import { useClientStore } from '@/composables/useClientStore'; // Import useClientStore
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -150,9 +149,6 @@ const {
     deleteProjectById
 } = projectStore;
 
-const clientStore = useClientStore();
-const { clients: allClientsList, fetchAllClientsForFiltering: fetchAllClientsListAction } = clientStore; // Destructure client list and fetch action
-
 const localSearchTerm = ref('');
 const currentPage = ref(1);
 const currentRowsPerPage = ref(10);
@@ -172,20 +168,39 @@ const loadProjects = async () => {
 
 onMounted(async () => { // Make onMounted async
   await loadProjects(); // Load initial project data
-  try {
-    await fetchAllClientsListAction(); // Fetch all clients
-  } catch (error) {
-    console.error("Failed to fetch all clients for SalesProjectList:", error);
-    // Optionally, show a toast message to the user
-  }
 });
 
+const clientNamesCache = ref({});
 const getClientNameById = (clientId) => {
-  if (!allClientsList.value || allClientsList.value.length === 0 || !clientId) {
-    return '該当なし';
+  if (!clientId) return '該当なし';
+  if (clientNamesCache.value[clientId]) return clientNamesCache.value[clientId];
+
+  // Trigger fetch if not in cache
+  fetchClientName(clientId);
+  return '読み込み中...';
+};
+
+const fetchClientName = async (clientId) => {
+  if (clientNamesCache.value[clientId]) return;
+  clientNamesCache.value[clientId] = '...'; // Placeholder to prevent duplicate fetches
+
+  const authToken = localStorage.getItem('authToken');
+  try {
+    const response = await fetch(`/api/client/${clientId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) throw new Error('Fetch failed');
+    const result = await response.json();
+    const client = result.client;
+    clientNamesCache.value[clientId] = client.name_kanji || client.name_kana || client.name || '不明';
+  } catch (error) {
+    console.error('Failed to fetch client name:', error);
+    clientNamesCache.value[clientId] = 'エラー';
   }
-  const client = allClientsList.value.find(c => c.id === clientId);
-  return client ? (client.name_kanji || client.name_kana || client.name || '不明なクライアント') : 'クライアントが見つかりません';
 };
 
 const applySearch = () => {

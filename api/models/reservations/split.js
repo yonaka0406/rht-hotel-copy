@@ -75,46 +75,45 @@ async function recalculateReservationMetrics(reservationId, hotelId, userId, dbC
     await dbClient.query(updateReservationQuery, [check_in, check_out, max_daily_people || 0, userId, reservationId, hotelId]);
 }
 
+async function recalculateMetricsIfActiveDetailsExist(reservationId, hotelId, userId, dbClient) {
+    const remainingActiveDetailsResult = await dbClient.query(
+        `SELECT COUNT(*) FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2 AND cancelled IS NULL`,
+        [reservationId, hotelId]
+    );
+    if (parseInt(remainingActiveDetailsResult.rows[0].count) > 0) {
+        await recalculateReservationMetrics(reservationId, hotelId, userId, dbClient);
+    }
+}
+
 async function moveAssociatedPayments(targetReservationId, userId, originalReservationId, hotelId, movedDetails, dbClient) {
-    const movedRoomIds = [...new Set(movedDetails.map(row => row.room_id))];
+    if (!movedDetails || movedDetails.length === 0) return;
 
-    for (const roomId of movedRoomIds) {
-        const originalDetailsQuery = `SELECT id FROM reservation_details WHERE reservation_id = $1 AND room_id = $2 AND hotel_id = $3`;
-        const originalDetailsResult = await dbClient.query(originalDetailsQuery, [originalReservationId, roomId, hotelId]);
-        const originalDetailIds = originalDetailsResult.rows.map(row => row.id);
+    // BOLT OPTIMIZATION: Use a single UPDATE statement with a subquery to move all relevant payments.
+    // This replaces the previous N+1 query pattern where partially moved rooms were updated in a loop.
+    // We match payments to moved reservation_details by reservation_id, room_id, and date.
+    // Since reservation_details have already been moved to targetReservationId in this transaction,
+    // we search for those records.
 
-        const movedDetailsForRoomQuery = `SELECT id FROM reservation_details WHERE reservation_id = $1 AND room_id = $2 AND hotel_id = $3`;
-        const movedDetailsForRoomResult = await dbClient.query(movedDetailsForRoomQuery, [targetReservationId, roomId, hotelId]);
-        const movedDetailIdsForRoom = movedDetailsForRoomResult.rows.map(row => row.id);
+    const updatePaymentsQuery = `
+        UPDATE reservation_payments
+        SET reservation_id = $1, updated_by = $2
+        WHERE reservation_id = $3
+          AND hotel_id = $4
+          AND EXISTS (
+              SELECT 1
+              FROM reservation_details rd
+              WHERE rd.reservation_id = $1
+                AND rd.hotel_id = $4
+                AND rd.room_id = reservation_payments.room_id
+                AND rd.date = reservation_payments.date
+          );
+    `;
 
-        if (movedDetailIdsForRoom.length > 0 && originalDetailIds.length === 0) {
-            const updatePaymentsQuery = `
-                    UPDATE reservation_payments
-                    SET reservation_id = $1, updated_by = $2
-                    WHERE reservation_id = $3 AND room_id = $4;
-                `;
-            await dbClient.query(updatePaymentsQuery, [targetReservationId, userId, originalReservationId, roomId]);
-        } else {
-            const movedDateRangeQuery = `
-                    SELECT MIN(date) AS min_date, MAX(date) AS max_date
-                    FROM reservation_details
-                    WHERE reservation_id = $1 AND room_id = $2 AND hotel_id = $3;
-                `;
-            const movedDateRangeResult = await dbClient.query(movedDateRangeQuery, [targetReservationId, roomId, hotelId]);
-            const { min_date, max_date } = movedDateRangeResult.rows[0];
-
-            if (min_date && max_date) {
-                const updatePaymentsQuery = `
-                        UPDATE reservation_payments
-                        SET reservation_id = $1, updated_by = $2
-                        WHERE reservation_id = $3
-                          AND room_id = $4
-                          AND date >= $5
-                          AND date <= $6;
-                    `;
-                await dbClient.query(updatePaymentsQuery, [targetReservationId, userId, originalReservationId, roomId, min_date, max_date]);
-            }
-        }
+    try {
+        await dbClient.query(updatePaymentsQuery, [targetReservationId, userId, originalReservationId, hotelId]);
+    } catch (err) {
+        logger.error(`[moveAssociatedPayments] Failed to move payments: ${err.message}`);
+        throw err;
     }
 }
 
@@ -183,12 +182,7 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
         let newReservationIds = [];
 
         // Logic based on split indicators
-        if (isFullPeriodSplit && isFullRoomSplit) {
-            // If both period and rooms are full, it means the entire reservation is selected.
-            // This is not a split operation, so no action is performed, and no new reservation is created.
-            await client.query('COMMIT');
-            return []; // Return an empty array as no new reservation was created.
-        } else if ((isFullPeriodSplit && !isFullRoomSplit) || (!isFullPeriodSplit && isFullRoomSplit)) {
+        if ((isFullPeriodSplit && !isFullRoomSplit) || (!isFullPeriodSplit && isFullRoomSplit)) {
             // Case 2: Full Period, Partial Rooms OR Partial Period, Full Rooms
             // Create new reservation for detailsToMove
             const newReservationId = await createNewReservation(originalReservation, userId, client);
@@ -197,11 +191,11 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
             // Move detailsToMove to the new reservation
             await moveReservationDetails(newReservationId, userId, detailsToMove.map(d => d.id), hotelId, originalReservationId, client);
 
-            // Recalculate metrics for the new reservation
+            // Recalculate metrics for the new reservation (always has details)
             await recalculateReservationMetrics(newReservationId, hotelId, userId, client);
 
             // Recalculate metrics for the original reservation (detailsToKeepInOriginal)
-            await recalculateReservationMetrics(originalReservationId, hotelId, userId, client);
+            await recalculateMetricsIfActiveDetailsExist(originalReservationId, hotelId, userId, client);
 
             // Move associated payments
             await moveAssociatedPayments(newReservationId, userId, originalReservationId, hotelId, detailsToMove, client);
@@ -278,7 +272,7 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
             }
 
             // Recalculate metrics for the original reservation (detailsToKeepInOriginal)
-            await recalculateReservationMetrics(originalReservationId, hotelId, userId, client);
+            await recalculateMetricsIfActiveDetailsExist(originalReservationId, hotelId, userId, client);
         }
 
         await client.query('COMMIT');

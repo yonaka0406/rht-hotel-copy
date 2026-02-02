@@ -612,18 +612,6 @@ onMounted( async () => {
         // Fetch initial actions based on scope
         await fetchDataBasedOnScope();
 
-        // Fetch all clients if not already loaded (for AutoComplete)
-        if (!clients.value || clients.value.length === 0) {
-            if (setClientsIsLoading) setClientsIsLoading(true);
-            try {
-                // Assuming fetchClients fetches all clients when called without pagination params
-                await fetchClients(); // Adjust this based on your actual fetchClients implementation
-            } catch (error) {
-                console.error("Failed to fetch clients:", error);
-            } finally {
-                if (setClientsIsLoading) setClientsIsLoading(false);
-            }
-        }
     } catch (error) {
         console.error("Error during onMounted:", error);
         toast.add({ severity: "error", summary: "初期化エラー", detail: "データの読み込みに失敗しました。", life: 3000 });

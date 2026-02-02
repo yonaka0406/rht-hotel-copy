@@ -3,37 +3,36 @@
         <div class="grid grid-cols-12 gap-4">
             <div class="field col-span-12 md:col-span-6">
                 <FloatLabel class="mt-6">
-                    <label for="projectName">プロジェクト名*</label>
                     <InputText id="projectName" v-model.trim="projectName" :class="{ 'p-invalid': projectNameError }"
                         fluid />
+                    <label for="projectName">プロジェクト名*</label>
                 </FloatLabel>
                 <small v-if="projectNameError" class="p-error">{{ projectNameError }}</small>
             </div>
 
             <div class="field col-span-12 md:col-span-6">
                 <FloatLabel class="mt-6">
-                    <label for="bidDate">入札日</label>
                     <DatePicker id="bidDate" v-model="bidDate" dateFormat="yy-mm-dd" showIcon fluid />
+                    <label for="bidDate">入札日</label>
                 </FloatLabel>
             </div>
 
             <div class="field col-span-12 md:col-span-6">
                 <FloatLabel class="mt-6">
-                    <label for="orderSource">発注元</label>
                     <InputText id="orderSource" v-model="orderSource" fluid />
+                    <label for="orderSource">発注元</label>
                 </FloatLabel>
             </div>
 
             <div class="field col-span-12 md:col-span-6">
                 <FloatLabel class="mt-6">
-                    <label for="projectLocation">工事場所</label>
                     <InputText id="projectLocation" v-model="projectLocation" fluid />
+                    <label for="projectLocation">工事場所</label>
                 </FloatLabel>
             </div>
 
             <div class="field col-span-12 md:col-span-6">
                 <FloatLabel class="mt-6">
-                    <label for="targetHotels">対象店舗</label>
                     <MultiSelect v-if="showHotelMultiSelect" id="targetHotels" key="hotel-multiselect-loaded"
                         v-model="selectedHotels" :options="hotelList" optionLabel="formal_name" dataKey="id"
                         placeholder="店舗を選択 (複数可)" display="chip" class="w-full" :loading="isLoadingHotelList"
@@ -41,36 +40,37 @@
                     <InputText v-else-if="isLoadingHotelList" id="targetHotelsLoading" disabled
                         placeholder="ホテル情報を読込中..." class="w-full" />
                     <InputText v-else id="targetHotelsEmpty" disabled placeholder="利用可能なホテルがありません" class="w-full" />
+                    <label for="targetHotels">対象店舗</label>
                 </FloatLabel>
             </div>
 
             <div class="field col-span-12 md:col-span-6">
                 <FloatLabel class="mt-6">
-                    <label for="budget">予算</label>
                     <InputNumber id="budget" v-model="budget" mode="currency" currency="JPY" locale="ja-JP"
                         class="w-full" />
+                    <label for="budget">予算</label>
                 </FloatLabel>
             </div>
 
             <div class="field col-span-12">
                 <FloatLabel class="mt-6">
-                    <label for="assignedWorkContent">作業内容</label>
                     <Textarea id="assignedWorkContent" v-model="assignedWorkContent" rows="3" fluid />
+                    <label for="assignedWorkContent">作業内容</label>
                 </FloatLabel>
             </div>
 
             <!-- Row for Start Date, End Date, Specific Specialized Work -->
             <div class="field col-span-12 md:col-span-4">
                 <FloatLabel class="mt-6">
-                    <label for="startDate">開始日</label>
                     <DatePicker id="startDate" v-model="startDate" dateFormat="yy-mm-dd" showIcon fluid />
+                    <label for="startDate">開始日</label>
                 </FloatLabel>
             </div>
 
             <div class="field col-span-12 md:col-span-4">
                 <FloatLabel class="mt-6">
-                    <label for="endDate">終了日</label>
                     <DatePicker id="endDate" v-model="endDate" dateFormat="yy-mm-dd" showIcon fluid />
+                    <label for="endDate">終了日</label>
                 </FloatLabel>
             </div>
 
@@ -84,7 +84,6 @@
 
             <div class="field col-span-12 md:col-span-6">
                 <FloatLabel class="mt-6">
-                    <label for="primeContractor">元請業者</label>
                     <AutoComplete id="primeContractor" v-model="primeContractor"
                         :suggestions="primeContractorSuggestions" @complete="onPrimeSearchLocal"
                         optionLabel="preferred_display_name" placeholder="クライアントを検索" forceSelection fluid>
@@ -112,12 +111,12 @@
                             </div>
                         </template>
                     </AutoComplete>
+                    <label for="primeContractor">元請業者</label>
                 </FloatLabel>
             </div>
 
             <div class="field col-span-12 md:col-span-6">
                 <FloatLabel class="mt-6">
-                    <label for="subContractors">下請業者</label>
                     <AutoComplete id="subContractors" v-model="subContractors" :suggestions="subContractorSuggestions"
                         @complete="onSubSearchLocal" optionLabel="preferred_display_name" placeholder="クライアントを検索"
                         multiple forceSelection fluid>
@@ -145,6 +144,7 @@
                             </div>
                         </template>
                     </AutoComplete>
+                    <label for="subContractors">下請業者</label>
                 </FloatLabel>
             </div>
         </div>
@@ -180,7 +180,7 @@ import { useProjectStore } from '@/composables/useProjectStore';
 const { createProject, updateProject } = useProjectStore();
 import { useClientStore } from '@/composables/useClientStore';
 const clientStore = useClientStore();
-const { clients: allClientsList, fetchAllClientsForFiltering, getClientById } = clientStore;
+const { fetchClient } = clientStore;
 import { useHotelStore } from '@/composables/useHotelStore';
 const { hotels: hotelList, isLoadingHotelList, fetchHotels } = useHotelStore();
 
@@ -238,7 +238,7 @@ const parseDate = (dateStr) => {
     return isNaN(date.getTime()) ? null : date;
 };
 
-const resetForm = () => {
+const resetForm = async () => {
     projectName.value = '';
     bidDate.value = null;
     orderSource.value = '';
@@ -253,11 +253,17 @@ const resetForm = () => {
     projectNameError.value = '';
 
     // Handle primeContractor reset carefully based on currentClientId
-    if (props.currentClientId && allClientsList.value?.length) {
-        const client = allClientsList.value.find(c => c.id === props.currentClientId);
-        if (client) {
-            primeContractor.value = { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
-        } else {
+    if (props.currentClientId) {
+        try {
+            const result = await fetchClient(props.currentClientId);
+            const client = result.client;
+            if (client) {
+                primeContractor.value = { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
+            } else {
+                primeContractor.value = null;
+            }
+        } catch (e) {
+            console.error('Failed to fetch client for resetForm:', e);
             primeContractor.value = null;
         }
     } else {
@@ -265,11 +271,9 @@ const resetForm = () => {
     }
 };
 
-watch(() => [props.projectDataToEdit, allClientsList.value, hotelList.value], (values) => {
-    const [newData, currentAllClients, currentHotelList] = values;
-    // This watch triggers when projectDataToEdit, allClientsList, or hotelList changes.
-    // This helps ensure that if master data (clients, hotels) loads after projectDataToEdit is set,
-    // the form pre-filling logic correctly runs.
+watch([() => props.projectDataToEdit, hotelList], async (values) => {
+    const [newData, currentHotelList] = values;
+    // This watch triggers when projectDataToEdit or hotelList changes.
 
     if (mode.value === 'edit' && newData) {
         projectName.value = newData.project_name || '';
@@ -291,23 +295,30 @@ watch(() => [props.projectDataToEdit, allClientsList.value, hotelList.value], (v
             selectedHotels.value = [];
         }
 
-        // Prime Contractor & Subcontractors: Ensure currentAllClients is populated
-        if (newData.related_clients && Array.isArray(newData.related_clients) && currentAllClients && currentAllClients.length > 0) {
+        // Prime Contractor & Subcontractors: Fetch individual client data if needed
+        if (newData.related_clients && Array.isArray(newData.related_clients)) {
             const pcData = newData.related_clients.find(rc => rc.role === '元請業者');
-            if (pcData) {
-                const client = currentAllClients.find(c => c.id === pcData.clientId);
-                primeContractor.value = client ? { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' } : null;
+            if (pcData && pcData.clientId) {
+                try {
+                    const result = await fetchClient(pcData.clientId);
+                    const client = result.client;
+                    primeContractor.value = client ? { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' } : null;
+                } catch (e) {
+                    console.error('Failed to fetch prime contractor:', e);
+                }
             } else {
                 primeContractor.value = null;
             }
 
-            subContractors.value = newData.related_clients
-                .filter(rc => rc.role === '下請業者')
-                .map(scData => {
-                    const client = currentAllClients.find(c => c.id === scData.clientId);
-                    return client ? { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' } : null;
-                })
-                .filter(Boolean);
+            const scDatas = newData.related_clients.filter(rc => rc.role === '下請業者');
+            const scPromises = scDatas.map(scData => fetchClient(scData.clientId).catch(() => null));
+            const scResults = await Promise.all(scPromises);
+            subContractors.value = scResults
+                .filter(res => res && res.client)
+                .map(res => {
+                    const client = res.client;
+                    return { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
+                });
         } else {
             primeContractor.value = null;
             subContractors.value = [];
@@ -315,51 +326,48 @@ watch(() => [props.projectDataToEdit, allClientsList.value, hotelList.value], (v
     } else if (mode.value === 'add') {
         resetForm();
         // Default prime contractor if currentClientId is provided in add mode
-        if (props.currentClientId && currentAllClients && currentAllClients.length > 0) {
-            const client = currentAllClients.find(c => c.id === props.currentClientId);
-            if (client) {
-                primeContractor.value = { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
+        if (props.currentClientId) {
+            try {
+                const result = await fetchClient(props.currentClientId);
+                const client = result.client;
+                if (client) {
+                    primeContractor.value = { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
+                }
+            } catch (e) {
+                console.error('Failed to fetch default prime contractor:', e);
             }
         }
     }
 }, { immediate: true, deep: true });
 
-const onPrimeSearchLocal = (event) => {
-    if (!event.query.trim().length) {
-        primeContractorSuggestions.value = allClientsList.value?.map(client => ({
+const searchClients = async (query) => {
+    const authToken = localStorage.getItem('authToken');
+    try {
+        const response = await fetch(`/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+        });
+        if (!response.ok) throw new Error('Search failed');
+        const data = await response.json();
+        return (data.clients || []).map(client => ({
             ...client,
             preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
-        })) || [];
-    } else {
-        const query = event.query.toLowerCase();
-        primeContractorSuggestions.value = allClientsList.value?.filter(client =>
-            (client.name?.toLowerCase().includes(query)) ||
-            (client.name_kana?.toLowerCase().includes(query)) ||
-            (client.name_kanji?.toLowerCase().includes(query))
-        ).map(client => ({
-            ...client,
-            preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
-        })) || [];
+        }));
+    } catch (error) {
+        console.error('Search failed:', error);
+        return [];
     }
 };
 
-const onSubSearchLocal = (event) => {
-    if (!event.query.trim().length) {
-        subContractorSuggestions.value = allClientsList.value?.map(client => ({
-            ...client,
-            preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
-        })) || [];
-    } else {
-        const query = event.query.toLowerCase();
-        subContractorSuggestions.value = allClientsList.value?.filter(client =>
-            (client.name?.toLowerCase().includes(query)) ||
-            (client.name_kana?.toLowerCase().includes(query)) ||
-            (client.name_kanji?.toLowerCase().includes(query))
-        ).map(client => ({
-            ...client,
-            preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
-        })) || [];
-    }
+const onPrimeSearchLocal = async (event) => {
+    primeContractorSuggestions.value = await searchClients(event.query);
+};
+
+const onSubSearchLocal = async (event) => {
+    subContractorSuggestions.value = await searchClients(event.query);
 };
 
 const validateForm = () => {
@@ -430,14 +438,13 @@ const handleSubmit = async () => {
 };
 
 onMounted(async () => {
-    // Fetch initial data required for the form, like hotel list or all clients list
-    // This might be better handled if data is already available from parent or fetched conditionally
+    // Fetch initial data required for the form, like hotel list
     if (!hotelList.value || hotelList.value.length === 0) {
         await fetchHotels();
     }
-    if (!allClientsList.value || allClientsList.value.length === 0) {
-        await fetchAllClientsForFiltering();
-    }
+    // BOLT PERFORMANCE: Removed fetchAllClientsForFiltering() call.
+    // Client selection now uses server-side search via AutoComplete.
+    // Individual clients are fetched on-demand for pre-filling in edit mode.
 });
 
 

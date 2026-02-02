@@ -126,6 +126,10 @@ const props = defineProps({
 
 const emit = defineEmits(['save-action', 'close-dialog']);
 
+// Stores
+import { useClientStore } from '@/composables/useClientStore';
+const { fetchClient } = useClientStore();
+
 // Primevue
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
@@ -188,7 +192,7 @@ const resetForm = () => {
   selectedClientObjectForForm.value = null;
 };
 
-const populateForm = (data) => {
+const populateForm = async (data) => {
   currentActionFormData.value = {
     ...initialFormData, // Start with defaults to ensure all fields are present
     id: data?.id || null,
@@ -204,6 +208,7 @@ const populateForm = (data) => {
   };
 
   if (currentActionFormData.value.client_id) {
+    // Try to find in the provided list first
     const clientObj = props.allClients.find(c => c.id === currentActionFormData.value.client_id);
     if (clientObj) {
       selectedClientObjectForForm.value = {
@@ -211,8 +216,22 @@ const populateForm = (data) => {
         display_name: clientObj.name_kanji || clientObj.name_kana || clientObj.name || `クライアントID: ${clientObj.id}`
       };
     } else {
-      selectedClientObjectForForm.value = null;
-      toast.add({ severity: "warn", summary: "注意", detail: "関連クライアントが見つかりませんでした。リストを更新してください。", life: 4000 });
+      // BOLT PERFORMANCE: Fetch individual client if not in current list
+      try {
+          const result = await fetchClient(currentActionFormData.value.client_id);
+          const fetchedClient = result.client;
+          if (fetchedClient) {
+            selectedClientObjectForForm.value = {
+                ...fetchedClient,
+                display_name: fetchedClient.name_kanji || fetchedClient.name_kana || fetchedClient.name || `クライアントID: ${fetchedClient.id}`
+            };
+          } else {
+              selectedClientObjectForForm.value = null;
+          }
+      } catch (e) {
+          console.error('Failed to fetch client for action form:', e);
+          selectedClientObjectForForm.value = null;
+      }
     }
   } else {
     selectedClientObjectForForm.value = null;

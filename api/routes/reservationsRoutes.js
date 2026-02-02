@@ -50,6 +50,7 @@ router.put('/reservation/update/time/:id', authMiddlewareCRUDAccess, reservation
 router.put('/reservation/update/type/:id', authMiddlewareCRUDAccess, reservationsController.editReservationType);
 router.put('/reservation/update/client/:id', authMiddlewareCRUDAccess, reservationsController.editReservationResponsible);
 router.put('/reservation/update/payment-timing/:id', authMiddlewareCRUDAccess, reservationsController.editPaymentTiming);
+router.put('/reservation/payment/move/:paymentId', authMiddlewareCRUDAccess, reservationsController.moveReservationPayment);
 router.put('/reservation/update/calendar/:id', authMiddlewareCRUDAccess, reservationsController.editRoomFromCalendar);
 router.put('/reservation/update/free/calendar', authMiddlewareCRUDAccess, reservationsController.editCalendarFreeChange);
 router.put('/reservation/update/room/guestnumber/:id', authMiddlewareCRUDAccess, reservationsController.editRoomGuestNumber);

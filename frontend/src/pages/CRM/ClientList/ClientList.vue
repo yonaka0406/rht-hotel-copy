@@ -27,6 +27,11 @@
                         class="dark:bg-gray-800 dark:text-gray-200"
                         v-model:filters="filters"
                         :value="clients"
+                        lazy
+                        :totalRecords="totalClients"
+                        @page="onLazyLoad"
+                        @sort="onLazyLoad"
+                        @filter="onLazyLoad"
                         dataKey="id"
                         filterDisplay="row"
                         :loading="clientsIsLoading"
@@ -35,7 +40,7 @@
                         stripedRows
                         paginator
                         :rows="10"
-                        :rowsPerPageOptions="[5, 10, 25, 50]"
+                        :rowsPerPageOptions="[10, 25, 50, 100]"
                         removableSort
                     >
                     <template #empty> 顧客見つかりません </template>
@@ -149,7 +154,7 @@
 
 <script setup>
     //Vue
-    import { ref, onMounted } from "vue";
+    import { ref, onMounted, onBeforeUnmount } from "vue";
     import { useRouter } from 'vue-router';
     import ExportClientDialog from './components/ExportClientDialog.vue';
     import NewClientDialog from './components/NewClientDialog.vue';
@@ -164,7 +169,7 @@
     
     //Setup
     const router = useRouter();
-    const { clients, clientsIsLoading, fetchClients } = useClientStore();
+    const { clients, totalClients, clientsIsLoading, fetchClients } = useClientStore();
     const toast = useToast();
 
     const exportDialogVisible = ref(false);
@@ -218,16 +223,73 @@
     };
 
     const handleClientCreated = () => {
-        fetchClients(); // Refresh the client list
+        loadLazyData(); // Refresh the client list
+    };
+
+    const lazyParams = ref({
+        first: 0,
+        rows: 10,
+        page: 0,
+        sortField: null,
+        sortOrder: null,
+        filters: filters.value
+    });
+
+    let loadLazyTimeout = null;
+    const lastFiltersString = ref('');
+
+    const onLazyLoad = (event) => {
+        // BOLT PERFORMANCE: Debounce if filters changed to avoid excessive API calls while typing
+        // We use a separate ref to track last stringified filters because lazyParams.filters
+        // might share the same object reference as the active filters.
+        const currentFiltersString = JSON.stringify(event.filters);
+        const isFilterChange = currentFiltersString !== lastFiltersString.value;
+        lastFiltersString.value = currentFiltersString;
+
+        lazyParams.value = event;
+        loadLazyData(isFilterChange);
+    };
+
+    const loadLazyData = async (debounced = false) => {
+        if (loadLazyTimeout) clearTimeout(loadLazyTimeout);
+
+        const execute = async () => {
+            const page = (lazyParams.value.page || 0) + 1;
+            const limit = lazyParams.value.rows || 10;
+            const sortField = lazyParams.value.sortField;
+            const sortOrder = lazyParams.value.sortOrder;
+
+            // Map PrimeVue filters to backend search
+            let searchTerm = null;
+            if (lazyParams.value.filters) {
+                const f = lazyParams.value.filters;
+                // Use name, phone or email as search term
+                searchTerm = f.name?.value || f.phone?.value || f.email?.value || f.customer_id?.value || null;
+            }
+
+            const personType = lazyParams.value.filters?.legal_or_natural_person?.value || null;
+
+            try {
+                await fetchClients(page, searchTerm, limit, personType, sortField, sortOrder);
+            } catch (error) {
+                console.error('Failed to fetch clients:', error);
+                toast.add({ severity: 'error', summary: 'エラー', detail: '顧客データの読み込みに失敗しました。', life: 3000 });
+            }
+        };
+
+        if (debounced) {
+            loadLazyTimeout = setTimeout(execute, 400); // 400ms debounce
+        } else {
+            await execute();
+        }
     };
 
     onMounted( async () => {
-        try {
-            await fetchClients();
-        } catch (error) {
-            console.error('Failed to fetch clients on mount:', error);
-            toast.add({ severity: 'error', summary: 'エラー', detail: '顧客データの読み込みに失敗しました。', life: 3000 });
-        }
+        loadLazyData();
+    });
+
+    onBeforeUnmount(() => {
+        if (loadLazyTimeout) clearTimeout(loadLazyTimeout);
     });
 
     const getTierDisplayName = (tier) => {

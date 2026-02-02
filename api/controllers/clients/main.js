@@ -7,12 +7,16 @@ const logger = require('../../config/logger');
 // GET
 const getClients = async (req, res) => {
   const page = parseInt(req.params.page, 10) || 1; // Default to page 1 if not provided or invalid
-  const limit = 5000;
+  const limit = parseInt(req.query.limit, 10) || 5000;
   const offset = (page - 1) * limit;
+  const searchTerm = req.query.search || null;
+  const personType = req.query.personType || null;
+  const sortField = req.query.sortField || null;
+  const sortOrder = parseInt(req.query.sortOrder) || null;
 
   try {
-    const clients = await clientsModel.getAllClients(req.requestId, limit, offset);
-    const totalClients = await clientsModel.getTotalClientsCount(req.requestId);
+    const clients = await clientsModel.getAllClients(req.requestId, limit, offset, searchTerm, personType, sortField, sortOrder);
+    const totalClients = await clientsModel.getTotalClientsCount(req.requestId, searchTerm, personType);
     res.status(200).json({
       clients,
       total: totalClients,
@@ -571,8 +575,51 @@ const getExportClientsCount = async (req, res) => {
   }
 };
 
+const getClientStats = async (req, res) => {
+  try {
+    const stats = await clientsModel.getClientStats(req.requestId);
+    res.status(200).json(stats);
+  } catch (error) {
+    console.error('Error getting client stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getClientCandidates = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const candidates = await clientsModel.getClientCandidates(req.requestId, id);
+    res.status(200).json(candidates);
+  } catch (error) {
+    console.error('Error getting client candidates:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getNextCustomerId = async (req, res) => {
+  try {
+    const nextId = await clientsModel.getNextCustomerId(req.requestId);
+    res.status(200).json({ nextId });
+  } catch (error) {
+    console.error('Error getting next customer ID:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getDuplicates = async (req, res) => {
+  try {
+    const duplicates = await clientsModel.findAllDuplicates(req.requestId);
+    res.status(200).json(duplicates);
+  } catch (error) {
+    console.error('Error getting duplicates:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 module.exports = {
+  getDuplicates,
+  getNextCustomerId,
   getClients,
   getClient,
   getGroup,
@@ -598,4 +645,6 @@ module.exports = {
   handleDeleteImpediment,
   exportClients,
   getExportClientsCount,
+  getClientStats,
+  getClientCandidates,
 };

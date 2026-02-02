@@ -189,10 +189,6 @@ const props = defineProps({
   initialSmokingPreference: String,
   initialNotes: String,
   hotelTotalRooms: Number,
-  allClients: {
-    type: Array,
-    default: () => []
-  },
   allRoomTypes: {
     type: Array,
     default: () => []
@@ -496,11 +492,16 @@ const handleSubmit = async () => {
     entryData.contact_phone = internalForm.value.contact_phone;
   }
 
-  const result = await waitlistStore.addEntry(entryData);
-  isLoading.value = false;
-  if (result) {
-    emit('submitted');
-    handleClose();
+  try {
+    const result = await waitlistStore.addEntry(entryData);
+    if (result) {
+      emit('submitted');
+      handleClose();
+    }
+  } catch (error) {
+    console.error('[WaitlistDialog] Failed to add entry:', error);
+  } finally {
+    isLoading.value = false;
   }
   // Toast for success/failure is handled by waitlistStore.addEntry
 };

@@ -6,7 +6,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import { useClientStore } from '@/composables/useClientStore';
 import ClientAutoComplete from './ClientAutoComplete.vue';
 
@@ -22,10 +22,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['update:modelValue', 'option-select', 'change', 'clear']);
 
-const { clients, clientsIsLoading, fetchClients, setClientsIsLoading } = useClientStore();
-
-watch(() => props.modelValue, () => {
-});
+const { clientsIsLoading, setClientsIsLoading } = useClientStore();
 
 const selectedClientProxy = computed({
   get: () => {
@@ -37,60 +34,65 @@ const selectedClientProxy = computed({
 });
 
 const filteredClients = ref([]);
+let debounceTimer = null;
 
-const normalizeKana = (str) => {
-  if (!str) return '';
-  let normalizedStr = str.normalize('NFKC');
-  normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0x60));
-  normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEC0));
-  return normalizedStr;
-};
-const normalizePhone = (phone) => {
-  if (!phone) return '';
-  let normalized = phone.replace(/\D/g, '');
-  normalized = normalized.replace(/^0+/, '');
-  return normalized;
-};
-
-const ensureDisplayName = (client) => {
-  if (!client.display_name) {
-    client.display_name = client.name_kanji || client.name_kana || client.name || '';
-  }
-  return client;
-};
-
-const filterClients = (event) => {
-  const query = event.query.toLowerCase();
-  const normalizedQuery = normalizePhone(query);
-  const isNumericQuery = /^\d+$/.test(normalizedQuery);
-
-  if (!query || !clients.value || !Array.isArray(clients.value)) {
+const performSearch = async (query) => {
+  if (!query) {
     filteredClients.value = [];
     return;
   }
 
-  filteredClients.value = clients.value.filter((client) => {
-    // Apply person type filter if specified
-    if (props.personTypeFilter && client.legal_or_natural_person !== props.personTypeFilter) {
-      return false;
+  const authToken = localStorage.getItem('authToken');
+  if (!authToken) {
+    console.warn('[ClientAutoCompleteWithStore] No authToken found. Search aborted.');
+    filteredClients.value = [];
+    return;
+  }
+
+  try {
+    setClientsIsLoading(true);
+
+    // Build URL with search query and optional personType filter
+    let url = `/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`;
+    if (props.personTypeFilter) {
+      url += `&personType=${encodeURIComponent(props.personTypeFilter)}`;
     }
 
-    const matchesName =
-      (client.name && client.name.toLowerCase().includes(query)) ||
-      (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
-      (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
-    const matchesPhoneFax = isNumericQuery &&
-      ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) ||
-        (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
-    const matchesEmail = client.email && client.email.toLowerCase().includes(query);
-    const matchesCustomerId = client.customer_id && String(client.customer_id).toLowerCase().includes(query.toLowerCase());
-    return matchesName || matchesPhoneFax || matchesEmail || matchesCustomerId;
-  }).map(ensureDisplayName);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) throw new Error('Search failed');
+    const data = await response.json();
+
+    const results = data.clients || [];
+
+    filteredClients.value = results.map(client => ({
+      ...client,
+      display_name: client.name_kanji || client.name_kana || client.name || ''
+    }));
+  } catch (error) {
+    console.error('[ClientAutoCompleteWithStore] Search failed:', error);
+    filteredClients.value = [];
+  } finally {
+    setClientsIsLoading(false);
+  }
 };
 
 const handleComplete = (event) => {
-  filterClients(event);
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    performSearch(event.query);
+  }, 400);
 };
+
+onBeforeUnmount(() => {
+  clearTimeout(debounceTimer);
+});
 const handleOptionSelect = (event) => {
   emit('option-select', event);
 };
@@ -101,23 +103,4 @@ const handleClear = (event) => {
   emit('clear', event);
 };
 
-watch(selectedClientProxy, () => {
-});
-
-onMounted(async () => {
-  if (!clients.value || clients.value.length === 0) {
-    setClientsIsLoading(true);
-    const clientsTotalPages = await fetchClients(1);
-    const fetchPromises = [];
-    for (let page = 2; page <= clientsTotalPages; page++) {
-      fetchPromises.push(fetchClients(page));
-    }
-    await Promise.all(fetchPromises);
-    setClientsIsLoading(false);
-  }
-  // Ensure all loaded clients have display_name
-  if (clients.value && Array.isArray(clients.value)) {
-    clients.value.forEach(ensureDisplayName);
-  }
-});
 </script>

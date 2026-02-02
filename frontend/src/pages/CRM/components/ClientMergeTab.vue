@@ -21,7 +21,7 @@
             <div v-for="candidate in candidates" :key="candidate.id" class="mb-4 border rounded-lg p-4 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
                 <div class="flex flex-col md:flex-row justify-between items-start">
                     <div class="flex-grow w-full">
-                        <ClientCard :client-id="candidate.id" />
+                        <ClientCard :client="candidate" />
                     </div>
                     <div class="mt-4 md:mt-0 md:ml-4 flex flex-col gap-2 w-full md:w-auto">
                         <Button label="この顧客に合流" icon="pi pi-sync" severity="warning" class="p-button-sm w-full" @click="confirmMerge(candidate.id)" />
@@ -70,11 +70,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClientStore } from '@/composables/useClientStore';
-import { findCandidatesForClient } from '@/utils/clientDuplicateUtils';
-
 import ClientCard from './ClientCard.vue';
 import ClientMerge from './ClientMerge.vue';
 import Button from 'primevue/button';
@@ -96,11 +94,13 @@ const emit = defineEmits(['update-badge']);
 
 const router = useRouter();
 const clientStore = useClientStore();
-const { clients, fetchAllClientsForFiltering, selectedClient } = clientStore;
+const { selectedClient } = clientStore;
 
 const candidates = ref([]);
 const isCalculating = ref(false);
 const manualSearchText = ref('');
+const filteredManualClients = ref([]);
+const isSearchingManual = ref(false);
 const showMergeDialog = ref(false);
 const selectedOldId = ref(null);
 
@@ -109,16 +109,18 @@ const searchCandidates = async () => {
 
     isCalculating.value = true;
     try {
-        if (clients.value.length === 0) {
-            await fetchAllClientsForFiltering();
-        }
-
-        // Ensure we have the selected client info
-        if (selectedClient.value && selectedClient.value.client) {
-            const found = findCandidatesForClient(selectedClient.value.client, clients.value);
-            candidates.value = found;
-            emit('update-badge', found.length);
-        }
+        const authToken = localStorage.getItem('authToken');
+        const response = await fetch(`/api/clients/${props.clientId}/candidates`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+        });
+        if (!response.ok) throw new Error('Failed to fetch candidates');
+        const data = await response.json();
+        candidates.value = data;
+        emit('update-badge', data.length);
     } catch (error) {
         console.error('[ClientMergeTab] Error finding candidates:', error);
     } finally {
@@ -126,18 +128,33 @@ const searchCandidates = async () => {
     }
 };
 
-const filteredManualClients = computed(() => {
-    if (!manualSearchText.value) return [];
-    const text = manualSearchText.value.toLowerCase();
-    return clients.value.filter(c =>
-        c.id !== props.clientId && (
-            (c.name && c.name.toLowerCase().includes(text)) ||
-            (c.name_kana && c.name_kana.toLowerCase().includes(text)) ||
-            (c.name_kanji && c.name_kanji.toLowerCase().includes(text)) ||
-            (c.customer_id && c.customer_id.toString().includes(text)) ||
-            c.id.toString().includes(text)
-        )
-    ).slice(0, 20);
+let manualSearchTimeout = null;
+watch(manualSearchText, (newVal) => {
+    clearTimeout(manualSearchTimeout);
+    if (!newVal || newVal.length < 2) {
+        filteredManualClients.value = [];
+        return;
+    }
+    manualSearchTimeout = setTimeout(async () => {
+        isSearchingManual.value = true;
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client-list/1?limit=20&search=${encodeURIComponent(newVal)}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) throw new Error('Search failed');
+            const data = await response.json();
+            filteredManualClients.value = (data.clients || []).filter(c => c.id !== props.clientId);
+        } catch (error) {
+            console.error('[ClientMergeTab] Manual search failed:', error);
+        } finally {
+            isSearchingManual.value = false;
+        }
+    }, 400);
 });
 
 const confirmMerge = (oldId) => {
@@ -155,18 +172,10 @@ const goToEdit = (id) => {
     window.open(routeData.href, '_blank');
 };
 
-onMounted(() => {
-    searchCandidates();
-});
-
-// Re-search if selectedClient changes (after initial fetch)
-watch(() => selectedClient.value, (newVal) => {
-    if (newVal && newVal.client) {
+// BOLT PERFORMANCE: Consolidate watchers to prevent infinite request loops
+watch(() => props.clientId, (newId) => {
+    if (newId) {
         searchCandidates();
     }
 }, { immediate: true });
-
-watch(() => props.clientId, () => {
-    searchCandidates();
-});
 </script>
