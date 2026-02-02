@@ -29,3 +29,7 @@
 ## 2026-02-02 - Implementing Lazy Loading for Massive DataTables
 **Learning:** Even with server-side sorting and searching, rendering a list of 5,000+ items at once (or trying to fetch them all) in a DataTable can overwhelm the browser and the backend. Using PrimeVue's `lazy` mode to fetch only the current page (e.g., 10-50 rows) and total count from the server ensures consistent performance regardless of total dataset size (e.g., 20,000+ records).
 **Action:** Use `lazy` loading for all primary list views expected to grow beyond 500 records.
+
+## 2026-02-02 - Using v-memo for High-Frequency Grid Rendering
+**Learning:** In large grids where mouse-over effects (row/column highlighting) trigger frequent re-renders, the entire grid template is often re-evaluated, leading to UI stuttering. Applying `v-memo` to the grid rows allows Vue to skip re-rendering rows that haven't changed their data, highlight state, or view mode, keeping the main thread free for smooth interactions.
+**Action:** Use `v-memo` on rows in large calendar or grid components, specifically targeting data and visual state dependencies.
