@@ -109,9 +109,9 @@
                     </div>
                     <div class="field mt-4">
                         <FloatLabel>
-                            <InputText id="phone" v-model="editedAddress.fax"
+                            <InputText id="fax" v-model="editedAddress.fax"
                                 @input="validateFAXField(editedAddress.fax)" fluid />
-                            <label for="phone">FAX</label>
+                            <label for="fax">FAX</label>
                         </FloatLabel>
                         <small v-if="!isValidFAX" class="p-error">有効な電話番号を入力してください。</small>
                     </div>

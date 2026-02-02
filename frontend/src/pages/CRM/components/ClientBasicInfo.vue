@@ -19,21 +19,21 @@
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <label for="name_kana">カナ</label>
                                 <InputText id="name_kana" v-model="client.name_kana" fluid />
+                                <label for="name_kana">カナ</label>
                             </FloatLabel>
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <label for="name_kanji">漢字</label>
                                 <InputText id="name_kanji" v-model="client.name_kanji" fluid />
+                                <label for="name_kanji">漢字</label>
                             </FloatLabel>
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <label for="date_of_birth">生年月日・設立日</label>
-                                <DatePicker v-model="client.date_of_birth" :showIcon="true" iconDisplay="input"
+                                <DatePicker id="date_of_birth" v-model="client.date_of_birth" :showIcon="true" iconDisplay="input"
                                     dateFormat="yy-mm-dd" :selectOtherMonths="true" fluid />
+                                <label for="date_of_birth">生年月日・設立日</label>
                             </FloatLabel>
                         </div>
                         <div class="field col-span-1">
@@ -52,33 +52,33 @@
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputText v-model="client.email" :invalid="!isValidEmail"
+                                <InputText id="email" v-model="client.email" :invalid="!isValidEmail"
                                     fluid />
-                                <label>メールアドレス</label>
-                                <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
+                                <label for="email">メールアドレス</label>
                             </FloatLabel>
+                            <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputText v-model="client.phone"
+                                <InputText id="phone" v-model="client.phone"
                                     :invalid="!isValidPhone"
                                     fluid />
-                                <label>電話番号</label>
-                                <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
+                                <label for="phone">電話番号</label>
                             </FloatLabel>
+                            <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputText v-model="client.fax"
+                                <InputText id="fax" v-model="client.fax"
                                     :invalid="!isValidFAX" fluid />
-                                <label>FAX</label>
-                                <small v-if="!isValidFAX" class="p-error">有効な電話番号を入力してください。</small>
+                                <label for="fax">FAX</label>
                             </FloatLabel>
+                            <small v-if="!isValidFAX" class="p-error">有効な電話番号を入力してください。</small>
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputText v-model="client.website" fluid />
-                                <label>ウェブサイト</label>
+                                <InputText id="website" v-model="client.website" fluid />
+                                <label for="website">ウェブサイト</label>
                             </FloatLabel>
                         </div>
                         <div class="field col-span-1">
@@ -87,10 +87,10 @@
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputText v-model="client.customer_id" fluid pattern="\d*" />
-                                <label>顧客コード</label>
-                                <small class="text-gray-500">次の利用可能番号: {{ nextAvailableCustomerId }}</small>
+                                <InputText id="customer_id" v-model="client.customer_id" fluid pattern="\d*" />
+                                <label for="customer_id">顧客コード</label>
                             </FloatLabel>
+                            <small class="text-gray-500">次の利用可能番号: {{ nextAvailableCustomerId }}</small>
                         </div>
                         <div class="field col-span-1 flex items-center">
                             <label class="mr-2 font-semibold">ロイヤルティ層:</label>
@@ -103,13 +103,13 @@
                         </div>
                         <div class="field col-span-1 md:col-span-2 xl:col-span-3">
                             <FloatLabel>
-                                <Textarea v-model="client.comment" fluid />
-                                <label>備考</label>
+                                <Textarea id="comment" v-model="client.comment" fluid />
+                                <label for="comment">備考</label>
                             </FloatLabel>
                         </div>
                     </div>
                     <div class="flex justify-center items-center mt-3">
-                        <Button label="保存" severity="info" type="submit" />
+                        <Button label="保存" severity="info" type="submit" :loading="isSaving" />
                     </div>
                 </form>
 
@@ -189,14 +189,14 @@
         <div>
             <div class="mt-6">
                 <FloatLabel>
-                    <label for="groupName" class="font-bold">グループ名</label>
                     <InputText id="groupName" v-model="newGroupName" class="w-full" required />
+                    <label for="groupName" class="font-bold">グループ名</label>
                 </FloatLabel>
             </div>
             <div class="mt-6">
                 <FloatLabel>
-                    <label for="groupComment" class="font-bold">コメント</label>
                     <Textarea id="groupComment" v-model="newGroupComment" rows="2" fluid />
+                    <label for="groupComment" class="font-bold">コメント</label>
                 </FloatLabel>
             </div>
         </div>
@@ -229,6 +229,7 @@ const toast = useToast();
 import { Card, Dialog, FloatLabel, InputText, InputNumber, DatePicker, Select, SelectButton, RadioButton, Textarea, Button, DataTable, Column, Tag } from 'primevue';
 
 // Client
+const isSaving = ref(false);
 const clientId = ref(route.params.clientId);
 const client = ref({
     legal_or_natural_person: 'natural',
@@ -326,6 +327,7 @@ const saveClient = async () => {
         }
     }
 
+    isSaving.value = true;
     try {
         await updateClientInfoCRM(clientData.id, clientData);
         // Update the original ref after successful save
@@ -333,6 +335,8 @@ const saveClient = async () => {
         toast.add({ severity: 'success', summary: 'Success', detail: '顧客情報が編集されました。', life: 3000 });
     } catch (error) {
         toast.add({ severity: 'error', summary: 'Error', detail: error.message || '顧客情報の更新に失敗しました。', life: 5000 });
+    } finally {
+        isSaving.value = false;
     }
 };
 
