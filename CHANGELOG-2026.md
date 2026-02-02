@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bug Fix: Fixed invoice PDF generation issue where the company stamp image failed to load in Playwright due to Helmet's Content Security Policy restrictions. The stamp image is now embedded as a base64 data URI, eliminating the need for HTTP requests and ensuring compatibility with CSP headers.
 - New Feature: Implemented move-payment flow with confirmation dialog and supporting backend endpoints for client statistics, next customer ID, candidates, and duplicates.
 - Performance: Optimized client management with server-driven search, paginated lazy loading, backend duplicate detection, dashboard aggregation, bulk database batching, and memoized row rendering.
+- New Feature: Added a "Merge" tab to the client edit page for streamlined CRM record consolidation.
+- New Feature: Static calendar with unified contiguous reservation days into single blocks while preserving per-day coloring and sticky headers.
 
 ---
 
