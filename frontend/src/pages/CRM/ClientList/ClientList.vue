@@ -154,7 +154,7 @@
 
 <script setup>
     //Vue
-    import { ref, onMounted } from "vue";
+    import { ref, onMounted, onBeforeUnmount } from "vue";
     import { useRouter } from 'vue-router';
     import ExportClientDialog from './components/ExportClientDialog.vue';
     import NewClientDialog from './components/NewClientDialog.vue';
@@ -235,37 +235,61 @@
         filters: filters.value
     });
 
+    let loadLazyTimeout = null;
+    const lastFiltersString = ref('');
+
     const onLazyLoad = (event) => {
+        // BOLT PERFORMANCE: Debounce if filters changed to avoid excessive API calls while typing
+        // We use a separate ref to track last stringified filters because lazyParams.filters
+        // might share the same object reference as the active filters.
+        const currentFiltersString = JSON.stringify(event.filters);
+        const isFilterChange = currentFiltersString !== lastFiltersString.value;
+        lastFiltersString.value = currentFiltersString;
+
         lazyParams.value = event;
-        loadLazyData();
+        loadLazyData(isFilterChange);
     };
 
-    const loadLazyData = async () => {
-        const page = (lazyParams.value.page || 0) + 1;
-        const limit = lazyParams.value.rows || 10;
-        const sortField = lazyParams.value.sortField;
-        const sortOrder = lazyParams.value.sortOrder;
+    const loadLazyData = async (debounced = false) => {
+        if (loadLazyTimeout) clearTimeout(loadLazyTimeout);
 
-        // Map PrimeVue filters to backend search
-        let searchTerm = null;
-        if (lazyParams.value.filters) {
-            const f = lazyParams.value.filters;
-            // Use name, phone or email as search term
-            searchTerm = f.name?.value || f.phone?.value || f.email?.value || f.customer_id?.value || null;
-        }
+        const execute = async () => {
+            const page = (lazyParams.value.page || 0) + 1;
+            const limit = lazyParams.value.rows || 10;
+            const sortField = lazyParams.value.sortField;
+            const sortOrder = lazyParams.value.sortOrder;
 
-        const personType = lazyParams.value.filters?.legal_or_natural_person?.value || null;
+            // Map PrimeVue filters to backend search
+            let searchTerm = null;
+            if (lazyParams.value.filters) {
+                const f = lazyParams.value.filters;
+                // Use name, phone or email as search term
+                searchTerm = f.name?.value || f.phone?.value || f.email?.value || f.customer_id?.value || null;
+            }
 
-        try {
-            await fetchClients(page, searchTerm, limit, personType, sortField, sortOrder);
-        } catch (error) {
-            console.error('Failed to fetch clients:', error);
-            toast.add({ severity: 'error', summary: 'エラー', detail: '顧客データの読み込みに失敗しました。', life: 3000 });
+            const personType = lazyParams.value.filters?.legal_or_natural_person?.value || null;
+
+            try {
+                await fetchClients(page, searchTerm, limit, personType, sortField, sortOrder);
+            } catch (error) {
+                console.error('Failed to fetch clients:', error);
+                toast.add({ severity: 'error', summary: 'エラー', detail: '顧客データの読み込みに失敗しました。', life: 3000 });
+            }
+        };
+
+        if (debounced) {
+            loadLazyTimeout = setTimeout(execute, 400); // 400ms debounce
+        } else {
+            await execute();
         }
     };
 
     onMounted( async () => {
         loadLazyData();
+    });
+
+    onBeforeUnmount(() => {
+        if (loadLazyTimeout) clearTimeout(loadLazyTimeout);
     });
 
     const getTierDisplayName = (tier) => {

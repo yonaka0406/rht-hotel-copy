@@ -81,7 +81,8 @@
                                 </Select>
                                 <AutoComplete v-else v-model="client" :suggestions="filteredClients"
                                     optionLabel="display_name" field="id" @complete="filterClients"
-                                    @option-select="onClientSelect" @change="onClientChange" @clear="resetClient" fluid>
+                                    @option-select="onClientSelect" @change="onClientChange" @clear="resetClient" fluid
+                                    :delay="400">
                                     <template #option="slotProps">
                                         <div>
                                             <p>

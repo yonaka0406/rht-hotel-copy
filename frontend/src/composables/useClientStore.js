@@ -60,7 +60,7 @@ export function useClientStore() {
     };
 
     // Fetch the list of clients
-    const fetchClients = async (pageInput, searchTerm = null, limit = 100, personType = null, sortField = null, sortOrder = null) => {
+    const fetchClients = async (pageInput, searchTerm = null, limit = 100, personType = null, sortField = null, sortOrder = null, append = false) => {
         const page = Math.max(1, parseInt(pageInput) || 1);
         clientsIsLoading.value = true;
         try {
@@ -95,13 +95,12 @@ export function useClientStore() {
 
             if (data && data.clients) {
                 totalClients.value = data.total || 0;
-                if (page === 1 || page === undefined) {
+                if (!append || page === 1) {
                     setClients(data.clients);
-                    return data.totalPages;
                 } else {
                     appendClients(data.clients);
-                    return data.totalPages;
                 }
+                return data.totalPages;
             } else {
                 console.warn('No clients data received');
             }
@@ -584,12 +583,12 @@ export function useClientStore() {
         try {
             // BOLT PERFORMANCE: Use a larger limit for bulk fetching to minimize network round-trips
             const limit = 5000;
-            const totalPages = await fetchClients(1, null, limit);
+            const totalPages = await fetchClients(1, null, limit, null, null, null, true);
 
             if (totalPages && totalPages > 1) {
                 const pagePromises = [];
                 for (let page = 2; page <= totalPages; page++) {
-                    pagePromises.push(fetchClients(page, null, limit));
+                    pagePromises.push(fetchClients(page, null, limit, null, null, null, true));
                 }
                 await Promise.all(pagePromises);
             }

@@ -87,7 +87,7 @@ const handleComplete = (event) => {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     performSearch(event.query);
-  }, 300);
+  }, 400);
 };
 
 onBeforeUnmount(() => {

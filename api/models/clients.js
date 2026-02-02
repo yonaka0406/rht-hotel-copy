@@ -155,21 +155,21 @@ const getAllClients = async (requestId, limit, offset, searchTerm = null, person
     paramIndex++;
   }
 
-  // BOLT PERFORMANCE: Dynamic sorting on server
+  // BOLT PERFORMANCE: Dynamic sorting on server with id as tie-breaker for stable pagination
   if (sortField) {
     const allowedSortFields = ['name', 'customer_id', 'loyalty_tier', 'email', 'phone'];
     if (allowedSortFields.includes(sortField)) {
         const order = sortOrder === -1 ? 'DESC' : 'ASC';
         if (sortField === 'name') {
-            query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ${order}`;
+            query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ${order}, clients.id ASC`;
         } else {
-            query += ` ORDER BY ${sortField} ${order}`;
+            query += ` ORDER BY ${sortField} ${order}, clients.id ASC`;
         }
     } else {
-        query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC`;
+        query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC, clients.id ASC`;
     }
   } else {
-    query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC`;
+    query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC, clients.id ASC`;
   }
 
   query += ` LIMIT $1 OFFSET $2`;

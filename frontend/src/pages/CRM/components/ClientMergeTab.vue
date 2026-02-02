@@ -154,7 +154,7 @@ watch(manualSearchText, (newVal) => {
         } finally {
             isSearchingManual.value = false;
         }
-    }, 300);
+    }, 400);
 });
 
 const confirmMerge = (oldId) => {
