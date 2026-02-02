@@ -2,6 +2,7 @@
     <div class="p-4">
         <ConfirmDialog group="delete"></ConfirmDialog>
         <ConfirmDialog group="payment"></ConfirmDialog>
+        <ConfirmDialog group="move"></ConfirmDialog>
         <Card>
             <template #title>
                 <span>
@@ -172,7 +173,8 @@
                     <Column field="id" header="予約ID">
                         <template #body="{ data }">
                             <router-link :to="{ name: 'ReservationEdit', params: { reservation_id: data.id } }"
-                                target="_blank" class="text-sky-600 hover:underline text-xs">
+                                target="_blank" class="text-sky-600 hover:underline text-xs flex items-center gap-1">
+                                <i class="pi pi-external-link"></i>
                                 {{ data.id.substring(0, 8) }}...
                             </router-link>
                         </template>
@@ -190,10 +192,10 @@
                                 :severity="getStatusSeverity(data.status)" />
                         </template>
                     </Column>
-                    <Column header="選択">
+                    <Column header="操作">
                         <template #body="{ data }">
-                            <Button label="選択" icon="pi pi-check" class="p-button-sm"
-                                @click="handleMovePayment(data.id)" />
+                            <Button label="移動" icon="pi pi-arrow-right" class="p-button-sm"
+                                @click="confirmMove(data.id)" />
                         </template>
                     </Column>
                     <template #empty>
@@ -475,6 +477,27 @@ const handleMovePayment = async (targetReservationId) => {
         console.error('Error moving payment:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: error.message, life: 3000 });
     }
+};
+
+const confirmMove = (targetReservationId) => {
+    confirm.require({
+        group: 'move',
+        header: '確認',
+        message: '本当にこの清算を別の予約に移動しますか？',
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'キャンセル',
+            severity: 'secondary',
+            outlined: true
+        },
+        acceptProps: {
+            label: '移動',
+            severity: 'primary'
+        },
+        accept: () => {
+            handleMovePayment(targetReservationId);
+        }
+    });
 };
 
 const getStatusSeverity = (status) => {
