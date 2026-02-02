@@ -1,0 +1,3 @@
+## 2025-01-31 - [Modern Calendar View Implementation]
+**Learning:** For dense, scrollable grid layouts like hotel calendars, sticky positioning is essential for maintaining context. Specifically, using `sticky top-0` inside absolutely-positioned reservation blocks keeps guest names visible while the user scrolls vertically through long stays. Additionally, avoiding `v-html` in custom tooltips prevents XSS risks when displaying user-generated data like guest names.
+**Action:** Always favor structured Vue templates over `v-html` for tooltips, and utilize `fixed` positioning for tooltips in complex scrollable containers to avoid clipping issues.

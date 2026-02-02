@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.9] - 2026-02-01
+
+- New Feature: Modern calendar view for room reservations with responsive per-room columns, sticky left date sidebar, and a dual-mode toggle to switch between classic and modern views.
+- Improvement: Enhanced performance and accuracy of client duplication detection using Japanese character normalization and corporate prefix stripping.
+- New Feature: Added a "Merge" tab to the client edit page for streamlined CRM record consolidation.
+- UI Improvement: Responsive Dashboard dialog layout with improved spacing and readability.
+- Refactor: Restructured reservations calendar cell rendering architecture for improved responsiveness and faster display with large date ranges and room counts.
+- Refactor: Enhanced cell interaction handling with expanded event support for drag and navigation operations.
+- Security Improvement: Added rate limiting to authentication endpoints (login, password reset) to prevent brute-force attacks.
+- Security Improvement: Enhanced security headers for improved protection against common web vulnerabilities.
+- Bug Fix: Fixed a critical SQL injection vulnerability in the updateImpediment model function within api/models/clients.js. The fix involves implementing a whitelist for allowed database fields when building dynamic UPDATE queries. This prevents attackers from injecting malicious SQL through object keys in the request body.
+
+---
+
 ## [1.4.8] - 2026-01-30
 
 - New Feature: Added department group management capabilities for accounting settings

@@ -33,6 +33,7 @@
 
                     <DataTable class="dark:bg-gray-800 dark:text-gray-200 p-datatable-sm"
                         :value="filteredDuplicatePairs" :paginator="true" :rows="5" :rowsPerPageOptions="[5, 10, 20]"
+                        dataKey="earliest.id"
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
                         v-if="filteredDuplicatePairs.length > 0">
@@ -64,7 +65,7 @@
                                             <div class="mt-2 grid grid-cols-2 gap-2">
                                                 <Button @click="goToEditClientPage(duplicate.id)" label="編集"
                                                     icon="pi pi-pencil" severity="secondary" class="p-button-sm" />
-                                                <Button @click="mergeClients(duplicate.id)" label="この顧客に合流"
+                                                <Button @click="mergeClients(duplicate.id, data.earliest.id)" label="この顧客に合流"
                                                     icon="pi pi-sync" severity="warning" class="p-button-sm" />
                                             </div>
                                         </AccordionContent>
@@ -89,9 +90,10 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, onMounted } from "vue";
 import { useRouter } from 'vue-router';
 import { useClientStore } from '@/composables/useClientStore';
+import { findDuplicates } from '@/utils/clientDuplicateUtils';
 
 import ClientCard from './components/ClientCard.vue';
 import ClientMerge from './components/ClientMerge.vue';
@@ -111,7 +113,12 @@ import AccordionContent from 'primevue/accordioncontent';
 
 
 const router = useRouter();
-const { clients, clientsIsLoading } = useClientStore();
+const { clients, clientsIsLoading, fetchAllClientsForFiltering } = useClientStore();
+
+onMounted(async () => {
+    // Ensure we have all clients for a thorough duplication check
+    await fetchAllClientsForFiltering();
+});
 
 // --- State Refs ---
 const duplicatePairs = ref([]);
@@ -140,106 +147,35 @@ const filteredDuplicatePairs = computed(() => {
 });
 
 
-// --- ENHANCED Asynchronous Duplicate Calculation ---
+// --- Optimized Duplicate Calculation ---
 
 const calculateDuplicates = async () => {
-    const allClients = clients.value;
-    if (!allClients || allClients.length === 0) {
+    if (!clients.value || clients.value.length === 0) {
         duplicatePairs.value = [];
         return;
     }
 
     isCalculating.value = true;
 
+    // Yield to main thread to allow UI to update
     await new Promise(resolve => setTimeout(resolve, 0));
 
     try {
-
-        const potentialGroups = new Map();
-
-        // --- Step 1: Group clients by potential duplicate keys (no change here) ---
-        for (const client of allClients) {
-            const keys = [];
-            if (client.email) keys.push(`email:${client.email.toLowerCase()}`);
-            if (client.phone) keys.push(`phone:${client.phone.replace(/\D/g, '')}`);
-            const normalizedName = normalizeString(client.name);
-            if (normalizedName) keys.push(`name:${normalizedName}`);
-            const normalizedKana = normalizeString(client.name_kana);
-            if (normalizedKana) keys.push(`name_kana:${normalizedKana}`);
-            if (client.date_of_birth) keys.push(`dob:${new Date(client.date_of_birth).toDateString()}`);
-
-            for (const key of keys) {
-                if (!potentialGroups.has(key)) potentialGroups.set(key, new Set());
-                potentialGroups.get(key).add(client.id);
-            }
-        }
-
-        // --- Step 2: Use a Union-Find algorithm to merge overlapping groups ---
-        const parent = new Map();
-        const find = (i) => {
-            if (parent.get(i) === i) return i;
-            parent.set(i, find(parent.get(i))); // Path compression
-            return parent.get(i);
-        };
-        const union = (i, j) => {
-            const rootI = find(i);
-            const rootJ = find(j);
-            if (rootI !== rootJ) parent.set(rootI, rootJ);
-        };
-
-        allClients.forEach(c => parent.set(c.id, c.id)); // Initialize each client in its own set
-
-        for (const ids of potentialGroups.values()) {
-            if (ids.size > 1) {
-                const idArray = [...ids];
-                for (let i = 1; i < idArray.length; i++) {
-                    union(idArray[0], idArray[i]);
-                }
-            }
-        }
-
-        // --- Step 3: Consolidate clients into final groups based on their root parent ---
-        const consolidatedGroups = new Map();
-        for (const client of allClients) {
-            const root = find(client.id);
-            if (!consolidatedGroups.has(root)) consolidatedGroups.set(root, []);
-            consolidatedGroups.get(root).push(client);
-        }
-
-        // --- Step 4: Create the final pairs for the UI from the consolidated groups ---
-        const finalPairs = [];
-        for (const group of consolidatedGroups.values()) {
-            if (group.length > 1) {
-                const earliest = group.reduce((e, c) => new Date(c.created_at) < new Date(e.created_at) ? c : e);
-                const duplicates = group.filter(c => c.id !== earliest.id);
-
-                if (duplicates.length > 0) {
-                    finalPairs.push({ earliest, duplicates });
-                }
-            }
-        }
-
-        duplicatePairs.value = finalPairs;
-
+        // Use the optimized utility to find duplicates
+        duplicatePairs.value = findDuplicates(clients.value);
     } catch (error) {
+        console.error('[ClientDuplicates] Calculation error:', error);
         duplicatePairs.value = [];
     } finally {
         isCalculating.value = false;
     }
 };
 
-// --- Helper Function ---
-const normalizeString = (str) => {
-    if (!str) return '';
-    return str.toLowerCase().replace(/\s+/g, '');
-};
-
 // --- Watcher ---
-watch(clients, (newClients, oldClients) => {
-    if (Array.isArray(newClients) && newClients.length > 0) {
+// Only trigger calculation when loading is finished and clients data is available
+watch(clientsIsLoading, (isLoading) => {
+    if (!isLoading && clients.value.length > 0) {
         calculateDuplicates();
-    } else {
-        duplicatePairs.value = [];
     }
 }, { immediate: true });
 
@@ -250,13 +186,7 @@ const goToEditClientPage = (clientId) => {
     window.open(routeData.href, '_blank');
 };
 
-const mergeClients = (oldId) => {
-    const pair = duplicatePairs.value.find(p => p.duplicates.some(dup => dup.id === oldId));
-    if (!pair) {
-        console.warn('[ClientDuplicates] No matching earliest client found for merge:', oldId);
-        return;
-    }
-    const newClientId = pair.earliest.id;
+const mergeClients = (oldId, newClientId) => {
     showDrawer.value = true;
     drawerProps.value = { oldClientId: oldId, newClientId };
 };

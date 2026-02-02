@@ -11,9 +11,9 @@
                 </FloatLabel>
             </div>
         </div>
-        <div class="flex grid grid-cols-5 col-span-2">
+        <div class="grid grid-cols-5 col-span-2">
             <div v-for="(legendItem, index) in legendItems" :key="index"
-                class="flex items-center text-sm rounded m-1 font-bold justify-center"
+                class="flex items-center text-sm rounded m-1 font-bold justify-center whitespace-nowrap"
                 style="overflow: hidden; text-overflow: ellipsis"
                 :style="{ backgroundColor: `${legendItem.plan_color}` }" v-tooltip="legendItem.plan_name">
                 <span>{{ legendItem.plan_name }}</span>
@@ -28,16 +28,12 @@
 </template>
 
 <script setup>
-// Vue
-import { ref } from 'vue';
+import { SelectButton, InputText, FloatLabel } from 'primevue';
+
 const props = defineProps({
     modelValue: {
         type: Object,
-        required: true,
-        default: () => ({
-            date: new Date().toISOString().split('T')[0],
-            isCompactView: false
-        })
+        required: true
     },
     legendItems: {
         type: Array,
@@ -49,15 +45,12 @@ const props = defineProps({
     }
 });
 
-const viewOptions = ref([
-    { label: '縮小', value: true },
-    { label: '拡大', value: false },
-]);
-
 const emit = defineEmits(['update:modelValue']);
 
-//Primevue
-import { SelectButton, InputText, FloatLabel } from 'primevue';
+const viewOptions = [
+    { label: '縮小', value: true },
+    { label: '拡大', value: false },
+];
 
 const updateDate = (newDate) => {
     emit('update:modelValue', {
