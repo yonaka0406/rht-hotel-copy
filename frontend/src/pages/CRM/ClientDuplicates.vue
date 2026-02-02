@@ -65,8 +65,9 @@
                                             <div class="mt-2 grid grid-cols-2 gap-2">
                                                 <Button @click="goToEditClientPage(duplicate.id)" label="編集"
                                                     icon="pi pi-pencil" severity="secondary" class="p-button-sm" />
-                                                <Button @click="mergeClients(duplicate.id, data.earliest.id)" label="この顧客に合流"
-                                                    icon="pi pi-sync" severity="warning" class="p-button-sm" />
+                                                <Button @click="mergeClients(duplicate.id, data.earliest.id)"
+                                                    label="この顧客に合流" icon="pi pi-sync" severity="warning"
+                                                    class="p-button-sm" />
                                             </div>
                                         </AccordionContent>
                                     </AccordionPanel>
@@ -122,7 +123,7 @@ const drawerProps = ref({});
 const filterText = ref('');
 
 onMounted(async () => {
-    // BOLT PERFORMANCE: Move duplication detection to backend to avoid loading all clients (5000+) into memory.
+    // Move duplication detection to backend to avoid loading all clients (5000+) into memory.
     duplicatePairs.value = await fetchDuplicates();
 });
 

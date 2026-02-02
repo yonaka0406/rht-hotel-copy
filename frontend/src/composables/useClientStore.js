@@ -60,18 +60,20 @@ export function useClientStore() {
     };
 
     // Fetch the list of clients
-    const fetchClients = async (pageInput, searchTerm = null, limit = 100, personType = null, sortField = null, sortOrder = null, append = false) => {
+    const fetchClients = async (pageInput, filters = {}, limit = 100, sortField = null, sortOrder = null, append = false) => {
         const page = Math.max(1, parseInt(pageInput) || 1);
         clientsIsLoading.value = true;
         try {
             const authToken = localStorage.getItem('authToken');
             let url = `/api/client-list/${page}?limit=${limit}`;
-            if (searchTerm) {
-                url += `&search=${encodeURIComponent(searchTerm)}`;
-            }
-            if (personType) {
-                url += `&personType=${encodeURIComponent(personType)}`;
-            }
+            
+            if (filters.searchTerm) url += `&search=${encodeURIComponent(filters.searchTerm)}`;
+            if (filters.personType) url += `&personType=${encodeURIComponent(filters.personType)}`;
+            if (filters.phone) url += `&phone=${encodeURIComponent(filters.phone)}`;
+            if (filters.email) url += `&email=${encodeURIComponent(filters.email)}`;
+            if (filters.loyaltyTier) url += `&loyaltyTier=${encodeURIComponent(filters.loyaltyTier)}`;
+            if (filters.customerCode) url += `&customerCode=${encodeURIComponent(filters.customerCode)}`;
+
             if (sortField) {
                 url += `&sortField=${encodeURIComponent(sortField)}`;
             }
@@ -581,14 +583,14 @@ export function useClientStore() {
     const fetchAllClientsForFiltering = async () => {
         clientsIsLoading.value = true;
         try {
-            // BOLT PERFORMANCE: Use a larger limit for bulk fetching to minimize network round-trips
+            // Use a larger limit for bulk fetching to minimize network round-trips
             const limit = 5000;
-            const totalPages = await fetchClients(1, null, limit, null, null, null, true);
+            const totalPages = await fetchClients(1, {}, limit, null, null, true);
 
             if (totalPages && totalPages > 1) {
                 const pagePromises = [];
                 for (let page = 2; page <= totalPages; page++) {
-                    pagePromises.push(fetchClients(page, null, limit, null, null, null, true));
+                    pagePromises.push(fetchClients(page, {}, limit, null, null, true));
                 }
                 await Promise.all(pagePromises);
             }
@@ -623,6 +625,48 @@ export function useClientStore() {
             return [];
         } finally {
             clientsIsLoading.value = false;
+        }
+    };
+
+    const fetchClientCandidates = async (clientId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/clients/${clientId}/candidates`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) throw new Error('Failed to fetch candidates');
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to fetch candidates:', error);
+            throw error;
+        }
+    };
+
+    const searchClients = async (query) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+             if (!response.ok) {
+                throw new Error(`HTTPエラーが発生しました。ステータス: ${response.status}`);
+            }
+            const data = await response.json();
+            return (data.clients || []).map(client => ({
+                ...client,
+                display_name: client.name_kanji || client.name_kana || client.name || ''
+            }));
+        } catch (error) {
+            console.error('Failed to search clients:', error);
+            return [];
         }
     };
 
@@ -854,5 +898,7 @@ export function useClientStore() {
         downloadClients,
         fetchNextCustomerId,
         fetchDuplicates,
+        fetchClientCandidates,
+        searchClients,
     };
 }

@@ -129,7 +129,8 @@ const processNameString = async (nameString) => {
   return { name, nameKana, nameKanji };
 };
 
-const getAllClients = async (requestId, limit, offset, searchTerm = null, personType = null, sortField = null, sortOrder = null) => {
+const getAllClients = async (requestId, limit, offset, filters = {}, sortField = null, sortOrder = null) => {
+  const { searchTerm, personType, phone, email, loyaltyTier, customerCode } = filters;
   const pool = getPool(requestId);
   let query = `
     SELECT
@@ -144,7 +145,7 @@ const getAllClients = async (requestId, limit, offset, searchTerm = null, person
   let paramIndex = 3;
 
   if (searchTerm) {
-    query += ` AND (clients.name ILIKE $${paramIndex} OR clients.name_kana ILIKE $${paramIndex} OR clients.name_kanji ILIKE $${paramIndex} OR clients.phone ILIKE $${paramIndex} OR clients.email ILIKE $${paramIndex})`;
+    query += ` AND (clients.name ILIKE $${paramIndex} OR clients.name_kana ILIKE $${paramIndex} OR clients.name_kanji ILIKE $${paramIndex} OR clients.phone ILIKE $${paramIndex} OR clients.email ILIKE $${paramIndex} OR CAST(clients.customer_id AS TEXT) ILIKE $${paramIndex})`;
     values.push(`%${searchTerm}%`);
     paramIndex++;
   }
@@ -155,18 +156,42 @@ const getAllClients = async (requestId, limit, offset, searchTerm = null, person
     paramIndex++;
   }
 
-  // BOLT PERFORMANCE: Dynamic sorting on server with id as tie-breaker for stable pagination
+  if (phone) {
+    query += ` AND clients.phone ILIKE $${paramIndex}`;
+    values.push(`%${phone}%`);
+    paramIndex++;
+  }
+
+  if (email) {
+    query += ` AND clients.email ILIKE $${paramIndex}`;
+    values.push(`%${email}%`);
+    paramIndex++;
+  }
+
+  if (loyaltyTier) {
+    query += ` AND clients.loyalty_tier = $${paramIndex}`;
+    values.push(loyaltyTier);
+    paramIndex++;
+  }
+
+  if (customerCode) {
+    query += ` AND CAST(clients.customer_id AS TEXT) ILIKE $${paramIndex}`;
+    values.push(`%${customerCode}%`);
+    paramIndex++;
+  }
+
+  // Dynamic sorting on server with id as tie-breaker for stable pagination
   if (sortField) {
     const allowedSortFields = ['name', 'customer_id', 'loyalty_tier', 'email', 'phone'];
     if (allowedSortFields.includes(sortField)) {
-        const order = sortOrder === -1 ? 'DESC' : 'ASC';
-        if (sortField === 'name') {
-            query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ${order}, clients.id ASC`;
-        } else {
-            query += ` ORDER BY ${sortField} ${order}, clients.id ASC`;
-        }
+      const order = sortOrder === -1 ? 'DESC' : 'ASC';
+      if (sortField === 'name') {
+        query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ${order}, clients.id ASC`;
+      } else {
+        query += ` ORDER BY ${sortField} ${order}, clients.id ASC`;
+      }
     } else {
-        query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC, clients.id ASC`;
+      query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC, clients.id ASC`;
     }
   } else {
     query += ` ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC, clients.id ASC`;
@@ -182,7 +207,8 @@ const getAllClients = async (requestId, limit, offset, searchTerm = null, person
     throw new Error('Database error');
   }
 };
-const getTotalClientsCount = async (requestId, searchTerm = null, personType = null) => {
+const getTotalClientsCount = async (requestId, filters = {}) => {
+  const { searchTerm, personType, phone, email, loyaltyTier, customerCode } = filters;
   const pool = getPool(requestId);
   let query = `
     SELECT COUNT(*)
@@ -193,7 +219,7 @@ const getTotalClientsCount = async (requestId, searchTerm = null, personType = n
   let paramIndex = 1;
 
   if (searchTerm) {
-    query += ` AND (clients.name ILIKE $${paramIndex} OR clients.name_kana ILIKE $${paramIndex} OR clients.name_kanji ILIKE $${paramIndex} OR clients.phone ILIKE $${paramIndex} OR clients.email ILIKE $${paramIndex})`;
+    query += ` AND (clients.name ILIKE $${paramIndex} OR clients.name_kana ILIKE $${paramIndex} OR clients.name_kanji ILIKE $${paramIndex} OR clients.phone ILIKE $${paramIndex} OR clients.email ILIKE $${paramIndex} OR CAST(clients.customer_id AS TEXT) ILIKE $${paramIndex})`;
     values.push(`%${searchTerm}%`);
     paramIndex++;
   }
@@ -201,6 +227,30 @@ const getTotalClientsCount = async (requestId, searchTerm = null, personType = n
   if (personType) {
     query += ` AND clients.legal_or_natural_person = $${paramIndex}`;
     values.push(personType);
+    paramIndex++;
+  }
+
+  if (phone) {
+    query += ` AND clients.phone ILIKE $${paramIndex}`;
+    values.push(`%${phone}%`);
+    paramIndex++;
+  }
+
+  if (email) {
+    query += ` AND clients.email ILIKE $${paramIndex}`;
+    values.push(`%${email}%`);
+    paramIndex++;
+  }
+
+  if (loyaltyTier) {
+    query += ` AND clients.loyalty_tier = $${paramIndex}`;
+    values.push(loyaltyTier);
+    paramIndex++;
+  }
+
+  if (customerCode) {
+    query += ` AND CAST(clients.customer_id AS TEXT) ILIKE $${paramIndex}`;
+    values.push(`%${customerCode}%`);
     paramIndex++;
   }
 
@@ -1261,6 +1311,10 @@ const buildClientFilterQuery = (filters) => {
     whereClauses.push(`c.legal_or_natural_person = $${paramIndex++}`);
     values.push(filters.legal_or_natural_person);
   }
+  if (filters.customer_id || filters.customerCode) {
+    whereClauses.push(`CAST(c.customer_id AS TEXT) ILIKE $${paramIndex++}`);
+    values.push(`%${filters.customer_id || filters.customerCode}%`);
+  }
 
   return {
     whereClause: whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '',
@@ -1517,7 +1571,7 @@ const findAllDuplicates = async (requestId) => {
 
     if (!clients || clients.length === 0) return [];
 
-    // BOLT PERFORMANCE: Move duplication grouping logic to backend to avoid bulk transfer of raw data.
+    // Move duplication grouping logic to backend to avoid bulk transfer of raw data.
     // 1. Group clients by exact matches (Email, Phone, Normalized Name)
     const exactGroups = new Map();
 

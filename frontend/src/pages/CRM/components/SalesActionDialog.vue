@@ -216,21 +216,21 @@ const populateForm = async (data) => {
         display_name: clientObj.name_kanji || clientObj.name_kana || clientObj.name || `クライアントID: ${clientObj.id}`
       };
     } else {
-      // BOLT PERFORMANCE: Fetch individual client if not in current list
+      // Fetch individual client if not in current list
       try {
-          const result = await fetchClient(currentActionFormData.value.client_id);
-          const fetchedClient = result.client;
-          if (fetchedClient) {
-            selectedClientObjectForForm.value = {
-                ...fetchedClient,
-                display_name: fetchedClient.name_kanji || fetchedClient.name_kana || fetchedClient.name || `クライアントID: ${fetchedClient.id}`
-            };
-          } else {
-              selectedClientObjectForForm.value = null;
-          }
-      } catch (e) {
-          console.error('Failed to fetch client for action form:', e);
+        const result = await fetchClient(currentActionFormData.value.client_id);
+        const fetchedClient = result.client;
+        if (fetchedClient) {
+          selectedClientObjectForForm.value = {
+            ...fetchedClient,
+            display_name: fetchedClient.name_kanji || fetchedClient.name_kana || fetchedClient.name || `クライアントID: ${fetchedClient.id}`
+          };
+        } else {
           selectedClientObjectForForm.value = null;
+        }
+      } catch (e) {
+        console.error('Failed to fetch client for action form:', e);
+        selectedClientObjectForForm.value = null;
       }
     }
   } else {

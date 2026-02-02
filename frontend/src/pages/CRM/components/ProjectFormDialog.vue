@@ -86,14 +86,14 @@
                 <FloatLabel class="mt-6">
                     <AutoComplete id="primeContractor" v-model="primeContractor"
                         :suggestions="primeContractorSuggestions" @complete="onPrimeSearchLocal"
-                        optionLabel="preferred_display_name" placeholder="クライアントを検索" forceSelection fluid>
+                        optionLabel="display_name" placeholder="クライアントを検索" forceSelection fluid>
                         <template #option="slotProps">
                             <div class="flex flex-col">
                                 <div class="flex items-center">
                                     <i v-if="slotProps.option.legal_or_natural_person === 'legal'"
                                         class="pi pi-building mr-2 text-gray-500"></i>
                                     <i v-else class="pi pi-user mr-2 text-gray-500"></i>
-                                    {{ slotProps.option.preferred_display_name }}
+                                    {{ slotProps.option.display_name }}
                                     <span v-if="slotProps.option.customer_id" class="text-xs text-sky-800 ml-2">
                                         [{{ slotProps.option.customer_id }}]
                                     </span>
@@ -118,7 +118,7 @@
             <div class="field col-span-12 md:col-span-6">
                 <FloatLabel class="mt-6">
                     <AutoComplete id="subContractors" v-model="subContractors" :suggestions="subContractorSuggestions"
-                        @complete="onSubSearchLocal" optionLabel="preferred_display_name" placeholder="クライアントを検索"
+                        @complete="onSubSearchLocal" optionLabel="display_name" placeholder="クライアントを検索"
                         multiple forceSelection fluid>
                         <template #option="slotProps">
                             <div class="flex flex-col">
@@ -126,7 +126,7 @@
                                     <i v-if="slotProps.option.legal_or_natural_person === 'legal'"
                                         class="pi pi-building mr-2 text-gray-500"></i>
                                     <i v-else class="pi pi-user mr-2 text-gray-500"></i>
-                                    {{ slotProps.option.preferred_display_name }}
+                                    {{ slotProps.option.display_name }}
                                     <span v-if="slotProps.option.customer_id" class="text-xs text-sky-800 ml-2">
                                         [{{ slotProps.option.customer_id }}]
                                     </span>
@@ -180,7 +180,7 @@ import { useProjectStore } from '@/composables/useProjectStore';
 const { createProject, updateProject } = useProjectStore();
 import { useClientStore } from '@/composables/useClientStore';
 const clientStore = useClientStore();
-const { fetchClient } = clientStore;
+const { fetchClient, searchClients } = clientStore;
 import { useHotelStore } from '@/composables/useHotelStore';
 const { hotels: hotelList, isLoadingHotelList, fetchHotels } = useHotelStore();
 
@@ -258,7 +258,7 @@ const resetForm = async () => {
             const result = await fetchClient(props.currentClientId);
             const client = result.client;
             if (client) {
-                primeContractor.value = { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
+                primeContractor.value = { ...client, display_name: client.name_kanji || client.name_kana || client.name || '' };
             } else {
                 primeContractor.value = null;
             }
@@ -302,7 +302,7 @@ watch([() => props.projectDataToEdit, hotelList], async (values) => {
                 try {
                     const result = await fetchClient(pcData.clientId);
                     const client = result.client;
-                    primeContractor.value = client ? { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' } : null;
+                    primeContractor.value = client ? { ...client, display_name: client.name_kanji || client.name_kana || client.name || '' } : null;
                 } catch (e) {
                     console.error('Failed to fetch prime contractor:', e);
                 }
@@ -317,7 +317,7 @@ watch([() => props.projectDataToEdit, hotelList], async (values) => {
                 .filter(res => res && res.client)
                 .map(res => {
                     const client = res.client;
-                    return { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
+                    return { ...client, display_name: client.name_kanji || client.name_kana || client.name || '' };
                 });
         } else {
             primeContractor.value = null;
@@ -331,7 +331,7 @@ watch([() => props.projectDataToEdit, hotelList], async (values) => {
                 const result = await fetchClient(props.currentClientId);
                 const client = result.client;
                 if (client) {
-                    primeContractor.value = { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
+                    primeContractor.value = { ...client, display_name: client.name_kanji || client.name_kana || client.name || '' };
                 }
             } catch (e) {
                 console.error('Failed to fetch default prime contractor:', e);
@@ -339,28 +339,6 @@ watch([() => props.projectDataToEdit, hotelList], async (values) => {
         }
     }
 }, { immediate: true, deep: true });
-
-const searchClients = async (query) => {
-    const authToken = localStorage.getItem('authToken');
-    try {
-        const response = await fetch(`/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json',
-            },
-        });
-        if (!response.ok) throw new Error('Search failed');
-        const data = await response.json();
-        return (data.clients || []).map(client => ({
-            ...client,
-            preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
-        }));
-    } catch (error) {
-        console.error('Search failed:', error);
-        return [];
-    }
-};
 
 const onPrimeSearchLocal = async (event) => {
     primeContractorSuggestions.value = await searchClients(event.query);
@@ -442,7 +420,7 @@ onMounted(async () => {
     if (!hotelList.value || hotelList.value.length === 0) {
         await fetchHotels();
     }
-    // BOLT PERFORMANCE: Removed fetchAllClientsForFiltering() call.
+    // Removed fetchAllClientsForFiltering() call.
     // Client selection now uses server-side search via AutoComplete.
     // Individual clients are fetched on-demand for pre-filling in edit mode.
 });

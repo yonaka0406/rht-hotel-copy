@@ -242,7 +242,7 @@ import { translateReservationStatus } from '@/utils/reservationUtils';
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
 import { useClientStore } from '@/composables/useClientStore';
-const { setClientsIsLoading } = useClientStore();
+const { setClientsIsLoading, searchClients } = useClientStore();
 
 // Helper
 function formatDate(date) {
@@ -539,21 +539,7 @@ const filterClients = async (event) => {
     try {
         // Fetch matching clients from backend with a reasonable limit
         setClientsIsLoading(true);
-        const authToken = localStorage.getItem('authToken');
-        const response = await fetch(`/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json',
-            },
-        });
-        if (!response.ok) throw new Error('Search failed');
-        const data = await response.json();
-
-        filteredClients.value = data.clients.map(client => ({
-            ...client,
-            display_name: client.name_kanji || client.name_kana || client.name || ''
-        }));
+        filteredClients.value = await searchClients(query);
     } catch (error) {
         console.error('Failed to search clients:', error);
         filteredClients.value = [];

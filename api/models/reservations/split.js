@@ -88,7 +88,7 @@ async function recalculateMetricsIfActiveDetailsExist(reservationId, hotelId, us
 async function moveAssociatedPayments(targetReservationId, userId, originalReservationId, hotelId, movedDetails, dbClient) {
     if (!movedDetails || movedDetails.length === 0) return;
 
-    // BOLT OPTIMIZATION: Use a single UPDATE statement with a subquery to move all relevant payments.
+    // Use a single UPDATE statement with a subquery to move all relevant payments.
     // This replaces the previous N+1 query pattern where partially moved rooms were updated in a loop.
     // We match payments to moved reservation_details by reservation_id, room_id, and date.
     // Since reservation_details have already been moved to targetReservationId in this transaction,
