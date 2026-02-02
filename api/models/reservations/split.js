@@ -216,7 +216,13 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
             await recalculateReservationMetrics(newReservationId, hotelId, userId, client);
 
             // Recalculate metrics for the original reservation (detailsToKeepInOriginal)
-            await recalculateReservationMetrics(originalReservationId, hotelId, userId, client);
+            const remainingActiveDetailsResult = await client.query(
+                `SELECT COUNT(*) FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2 AND cancelled IS NULL`,
+                [originalReservationId, hotelId]
+            );
+            if (parseInt(remainingActiveDetailsResult.rows[0].count) > 0) {
+                await recalculateReservationMetrics(originalReservationId, hotelId, userId, client);
+            }
 
             // Move associated payments
             await moveAssociatedPayments(newReservationId, userId, originalReservationId, hotelId, detailsToMove, client);
@@ -293,7 +299,13 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
             }
 
             // Recalculate metrics for the original reservation (detailsToKeepInOriginal)
-            await recalculateReservationMetrics(originalReservationId, hotelId, userId, client);
+            const remainingActiveDetailsResult = await client.query(
+                `SELECT COUNT(*) FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2 AND cancelled IS NULL`,
+                [originalReservationId, hotelId]
+            );
+            if (parseInt(remainingActiveDetailsResult.rows[0].count) > 0) {
+                await recalculateReservationMetrics(originalReservationId, hotelId, userId, client);
+            }
         }
 
         await client.query('COMMIT');
