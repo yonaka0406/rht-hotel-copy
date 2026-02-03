@@ -1189,7 +1189,7 @@ const getCostBreakdownData = async (requestId, topN = 5, dbClient = null) => {
                 SELECT 
                     hd.hotel_id,
                     date_trunc('month', dua.accounting_month)::date as month,
-                    SUM(dua.available_room_nights) as total_available_rooms,
+                    MAX(dua.available_room_nights) as total_available_rooms,
                     SUM(dua.rooms_sold_nights) as total_sold_rooms
                 FROM du_accounting dua
                 JOIN hotel_depts hd ON dua.hotel_id = hd.hotel_id
