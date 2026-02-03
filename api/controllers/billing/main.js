@@ -82,6 +82,55 @@ const generateInvoice = async (req, res) => {
       invoiceData.invoice_number = generateNewInvoiceNumber(maxInvoiceNumData, hotelId, invoiceData.date);
     }
 
+    // 支払い方法別の表示名マッピング
+    const getPaymentDisplayName = (paymentType) => {
+      const displayNames = {
+        'cash': 'ご入金（現金）',
+        'credit': 'ご入金（クレジットカード）',
+        'discount': 'お値引き',
+        'point': 'ご入金（ネットポイント）',
+        'wire': 'ご入金（事前振り込み）'
+      };
+      return displayNames[paymentType] || `ご入金（${paymentType}）`;
+    };
+
+    // 支払い詳細から請求書以外の支払いを抽出
+    const payments = invoiceData.details || [];
+    const otherPayments = payments.filter(p => p.payment_type_transaction !== 'bill');
+
+    // 支払い方法別に集計
+    const paymentsByType = otherPayments.reduce((acc, payment) => {
+      const type = payment.payment_type_transaction;
+      if (!acc[type]) {
+        acc[type] = {
+          total: 0,
+          displayName: getPaymentDisplayName(type)
+        };
+      }
+      acc[type].total += parseFloat(payment.value);
+      return acc;
+    }, {});
+
+    // 実際の請求額を計算（総額 - 既入金額）
+    const totalPaidAmount = Object.values(paymentsByType).reduce((sum, info) => sum + info.total, 0);
+    const actualInvoiceAmount = invoiceData.invoice_total_value - totalPaidAmount;
+
+    // 支払い詳細をitemsに追加
+    const paymentItems = Object.entries(paymentsByType).map(([type, info]) => ({
+      name: info.displayName,
+      category: 'payment',
+      tax_rate: 0,
+      total_quantity: 1,
+      total_price: -info.total,
+      total_net_price: -info.total
+    }));
+
+    // 元のitemsと支払い詳細を結合
+    invoiceData.items = [...(invoiceData.items || []), ...paymentItems];
+    
+    // 実際の請求額を設定
+    invoiceData.invoice_total_value = actualInvoiceAmount;
+
     await billingModel.updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
 
     const userInfo = await usersModel.selectUserByID(req.requestId, userId);
