@@ -5,19 +5,30 @@ import { useToast } from 'primevue/usetoast';
 import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';
 import SelectButton from 'primevue/selectbutton';
+import Select from 'primevue/select';
 import BudgetActualComparisonTable from './components/BudgetActualComparisonTable.vue';
+import AccountingBudgetActualHeader from './components/AccountingBudgetActualHeader.vue';
+import OccupancyComparisonTable from './components/OccupancyComparisonTable.vue';
+import OperatingProfitComparisonTable from './components/OperatingProfitComparisonTable.vue';
 
 const accountingStore = useAccountingStore();
 const toast = useToast();
 
 const selectedMonth = ref(new Date());
+const selectedDepartmentGroup = ref(null);
+const departmentGroups = ref([]);
 const displayType = ref('single'); // 'single' or 'cumulative'
 const displayTypeOptions = [
     { label: '単月', value: 'single' },
     { label: '累計 (年初より)', value: 'cumulative' }
 ];
 
-const budgetActualData = ref({ actual: [], budget: [] });
+const budgetActualData = ref({
+    actual: [],
+    budget: [],
+    occupancy: { actual: [], budget: [] },
+    operatingProfit: { actual: [], budget: [] }
+});
 const isLoading = ref(false);
 
 const periodLabel = computed(() => {
@@ -53,10 +64,16 @@ const fetchData = async () => {
             return `${y}-${m}-${day}`;
         };
 
-        const result = await accountingStore.fetchBudgetActualComparison({
+        const params = {
             startDate: formatDate(start),
             endDate: formatDate(end)
-        });
+        };
+
+        if (selectedDepartmentGroup.value) {
+            params.departmentGroupId = selectedDepartmentGroup.value;
+        }
+
+        const result = await accountingStore.fetchBudgetActualComparison(params);
         
         budgetActualData.value = result;
     } catch (e) {
@@ -67,13 +84,26 @@ const fetchData = async () => {
     }
 };
 
-watch([displayType, selectedMonth], () => {
+const loadDepartmentGroups = async () => {
+    try {
+        const groups = await accountingStore.fetchDepartmentGroups();
+        departmentGroups.value = [
+            { label: 'すべての部門', value: null },
+            ...groups.map(g => ({ label: g.name, value: g.id }))
+        ];
+    } catch (e) {
+        console.error('Failed to fetch department groups:', e);
+    }
+};
+
+watch([displayType, selectedMonth, selectedDepartmentGroup], () => {
     fetchData();
 });
 
 onMounted(() => {
     const today = new Date();
     selectedMonth.value = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    loadDepartmentGroups();
     fetchData();
 });
 </script>
@@ -82,27 +112,25 @@ onMounted(() => {
     <div class="bg-slate-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300 min-h-screen">
         <div class="max-w-7xl mx-auto">
             <!-- Header -->
-            <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                <div class="flex items-center gap-4">
-                    <button @click="$router.push({ name: 'AccountingDashboard' })" 
-                        class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors">
-                        <i class="pi pi-arrow-left text-xl text-slate-600 dark:text-slate-400"></i>
-                    </button>
-                    <div>
-                        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                            予実管理
-                        </h1>
-                        <p class="text-sm text-slate-600 dark:text-slate-400">
-                            設定された予算と実績値の比較分析
-                        </p>
-                    </div>
+            <AccountingBudgetActualHeader />
+
+            <div class="flex flex-wrap items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-8">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">表示形式:</span>
+                    <SelectButton v-model="displayType" :options="displayTypeOptions" optionLabel="label" optionValue="value" />
                 </div>
 
-                <div class="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                    <SelectButton v-model="displayType" :options="displayTypeOptions" optionLabel="label" optionValue="value" class="mr-2" />
-                    <DatePicker v-model="selectedMonth" view="month" dateFormat="yy/mm" class="w-40" />
-                    <Button label="表示" icon="pi pi-refresh" @click="fetchData" :loading="isLoading" />
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">対象月:</span>
+                    <DatePicker v-model="selectedMonth" view="month" dateFormat="yy/mm" fluid class="w-40" />
                 </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">部門区分:</span>
+                    <Select v-model="selectedDepartmentGroup" :options="departmentGroups" optionLabel="label" optionValue="value" placeholder="部門を選択" fluid class="w-56" />
+                </div>
+
+                <Button label="データを更新" icon="pi pi-refresh" @click="fetchData" :loading="isLoading" class="ml-auto" />
             </div>
 
             <!-- Main Content -->
@@ -120,6 +148,12 @@ onMounted(() => {
 
                     <BudgetActualComparisonTable :data="budgetActualData" :is-loading="isLoading" />
                 </div>
+            </div>
+
+            <!-- New Tables -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+                <OccupancyComparisonTable :data="budgetActualData.occupancy" :is-loading="isLoading" />
+                <OperatingProfitComparisonTable :data="budgetActualData.operatingProfit" :is-loading="isLoading" />
             </div>
         </div>
     </div>

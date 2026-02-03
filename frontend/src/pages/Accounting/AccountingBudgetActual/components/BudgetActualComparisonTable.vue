@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
     data: {
@@ -34,24 +34,63 @@ const formatDiffPercent = (val) => {
     return val === 0 ? '-' : `${sign}${formatted} p.p.`;
 };
 
+const expandedGroups = ref(new Set());
+
+const toggleGroup = (label) => {
+    if (expandedGroups.value.has(label)) {
+        expandedGroups.value.delete(label);
+    } else {
+        expandedGroups.value.add(label);
+    }
+};
+
 const rows = computed(() => {
     if (!props.data || !props.data.actual || !props.data.budget) return [];
-
-    const findAmount = (list, mgId) => {
-        const item = list.find(i => i.management_group_id === mgId || i.id === mgId);
-        return item ? parseFloat(item.amount) : 0;
-    };
 
     const actual = props.data.actual;
     const budget = props.data.budget;
 
-    const createRow = (label, getVal, isProfit = false) => {
-        const aVal = getVal(actual);
-        const bVal = getVal(budget);
+    const findGroupSum = (list, mgIds) => {
+        return list
+            .filter(i => mgIds.includes(i.management_group_id))
+            .reduce((sum, i) => sum + parseFloat(i.amount), 0);
+    };
+
+    const getAccountsInGroups = (mgIds) => {
+        const accounts = new Map();
+
+        actual.filter(i => mgIds.includes(i.management_group_id)).forEach(i => {
+            if (!accounts.has(i.account_name)) {
+                accounts.set(i.account_name, { name: i.account_name, code: i.account_code, actual: 0, budget: 0 });
+            }
+            accounts.get(i.account_name).actual += parseFloat(i.amount);
+        });
+
+        budget.filter(i => mgIds.includes(i.management_group_id)).forEach(i => {
+            if (!accounts.has(i.account_name)) {
+                accounts.set(i.account_name, { name: i.account_name, code: i.account_code, actual: 0, budget: 0 });
+            }
+            accounts.get(i.account_name).budget += parseFloat(i.amount);
+        });
+
+        return Array.from(accounts.values()).map(acc => {
+            const diff = acc.actual - acc.budget;
+            return { ...acc, diff };
+        }).sort((a, b) => a.code.localeCompare(b.code));
+    };
+
+    const createRow = (label, mgIds, isProfit = false, canExpand = true) => {
+        const aVal = findGroupSum(actual, mgIds);
+        const bVal = findGroupSum(budget, mgIds);
         const diff = aVal - bVal;
 
-        const aRev = findAmount(actual, 1);
-        const bRev = findAmount(budget, 1);
+        // Determine if positive diff is "good" or "bad"
+        // Groups 2, 3, 4, 5, 7 are expenses
+        const isExpense = mgIds.length === 1 && [2, 3, 4, 5, 7].includes(mgIds[0]);
+        const isGood = isExpense ? diff <= 0 : diff >= 0;
+
+        const aRev = findGroupSum(actual, [1]);
+        const bRev = findGroupSum(budget, [1]);
 
         const aRatio = aRev !== 0 ? Math.abs(aVal / aRev) * 100 : 0;
         const bRatio = bRev !== 0 ? Math.abs(bVal / bRev) * 100 : 0;
@@ -65,26 +104,25 @@ const rows = computed(() => {
             budgetRatio: bRatio,
             actualRatio: aRatio,
             diffRatio,
-            isProfit
+            isProfit,
+            isGood,
+            isExpense,
+            canExpand,
+            accounts: canExpand ? getAccountsInGroups(mgIds) : []
         };
     };
 
     const result = [];
-    result.push(createRow('売上高', (list) => findAmount(list, 1)));
-    result.push(createRow('売上原価', (list) => findAmount(list, 2)));
-    result.push(createRow('売上総利益', (list) => findAmount(list, 1) + findAmount(list, 2), true));
-    result.push(createRow('人件費', (list) => findAmount(list, 3)));
-    result.push(createRow('経費', (list) => findAmount(list, 4)));
-    result.push(createRow('減価償却費', (list) => findAmount(list, 5)));
-    result.push(createRow('営業利益', (list) => 
-        findAmount(list, 1) + findAmount(list, 2) + findAmount(list, 3) + 
-        findAmount(list, 4) + findAmount(list, 5), true));
-    result.push(createRow('営業外収入', (list) => findAmount(list, 6)));
-    result.push(createRow('営業外費用', (list) => findAmount(list, 7)));
-    result.push(createRow('経常利益', (list) => 
-        findAmount(list, 1) + findAmount(list, 2) + findAmount(list, 3) + 
-        findAmount(list, 4) + findAmount(list, 5) + findAmount(list, 6) + 
-        findAmount(list, 7), true));
+    result.push(createRow('売上高', [1]));
+    result.push(createRow('売上原価', [2]));
+    result.push(createRow('売上総利益', [1, 2], true, false));
+    result.push(createRow('人件費', [3]));
+    result.push(createRow('経費', [4]));
+    result.push(createRow('減価償却費', [5]));
+    result.push(createRow('営業利益', [1, 2, 3, 4, 5], true, false));
+    result.push(createRow('営業外収入', [6]));
+    result.push(createRow('営業外費用', [7]));
+    result.push(createRow('経常利益', [1, 2, 3, 4, 5, 6, 7], true, false));
 
     return result;
 });
@@ -116,22 +154,49 @@ const rows = computed(() => {
                 </tr>
             </tbody>
             <tbody v-else>
-                <tr v-for="row in rows" :key="row.label" 
-                    :class="[
-                        'border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors',
-                        row.isProfit ? 'bg-violet-50/30 dark:bg-violet-900/10 font-bold' : ''
-                    ]">
-                    <td class="py-3 px-4 text-slate-700 dark:text-slate-300">{{ row.label }}</td>
-                    <td class="py-3 px-4 text-right text-slate-900 dark:text-white font-mono">{{ formatNumber(row.budget) }}</td>
-                    <td class="py-3 px-4 text-right text-slate-900 dark:text-white font-mono">{{ formatNumber(row.actual) }}</td>
-                    <td class="py-3 px-4 text-right font-mono" 
-                        :class="row.diff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
-                        {{ row.diff > 0 ? '+' : '' }}{{ formatNumber(row.diff) }}
-                    </td>
-                    <td class="py-3 px-4 text-right text-slate-500 dark:text-slate-400 font-mono">{{ formatPercent(row.budgetRatio) }}</td>
-                    <td class="py-3 px-4 text-right text-slate-500 dark:text-slate-400 font-mono">{{ formatPercent(row.actualRatio) }}</td>
-                    <td class="py-3 px-4 text-right text-slate-500 dark:text-slate-400 font-mono">{{ formatDiffPercent(row.diffRatio) }}</td>
-                </tr>
+                <template v-for="row in rows" :key="row.label">
+                    <tr
+                        :class="[
+                            'border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors',
+                            row.isProfit ? 'bg-violet-50/30 dark:bg-violet-900/10 font-bold' : '',
+                            row.canExpand ? 'cursor-pointer' : ''
+                        ]"
+                        @click="row.canExpand && toggleGroup(row.label)">
+                        <td class="py-3 px-4 text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                            <i v-if="row.canExpand" class="pi text-[10px] text-slate-400 transition-transform duration-200"
+                                :class="expandedGroups.has(row.label) ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+                            {{ row.label }}
+                        </td>
+                        <td class="py-3 px-4 text-right text-slate-900 dark:text-white font-mono">{{ formatNumber(row.budget) }}</td>
+                        <td class="py-3 px-4 text-right text-slate-900 dark:text-white font-mono">{{ formatNumber(row.actual) }}</td>
+                        <td class="py-3 px-4 text-right font-mono"
+                            :class="row.isGood ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                            <span v-tooltip.top="row.isExpense ? '予算との差分（マイナスはコスト削減に成功）' : '予算との差分（プラスは目標超過達成）'">
+                                {{ row.diff > 0 ? '+' : '' }}{{ formatNumber(row.diff) }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-right text-slate-500 dark:text-slate-400 font-mono text-xs">{{ formatPercent(row.budgetRatio) }}</td>
+                        <td class="py-3 px-4 text-right text-slate-500 dark:text-slate-400 font-mono text-xs">{{ formatPercent(row.actualRatio) }}</td>
+                        <td class="py-3 px-4 text-right text-slate-500 dark:text-slate-400 font-mono text-xs">{{ formatDiffPercent(row.diffRatio) }}</td>
+                    </tr>
+
+                    <!-- Account Details (Drill-down) -->
+                    <template v-if="expandedGroups.has(row.label)">
+                        <tr v-for="acc in row.accounts" :key="acc.code" class="bg-slate-50/50 dark:bg-slate-900/20 text-[13px] border-b border-slate-100/50 dark:border-slate-800/30">
+                            <td class="py-2 px-10 text-slate-500 dark:text-slate-400 italic">
+                                {{ acc.name }}
+                                <span class="text-[10px] ml-1 opacity-50">{{ acc.code }}</span>
+                            </td>
+                            <td class="py-2 px-4 text-right text-slate-400 dark:text-slate-500 font-mono">{{ formatNumber(acc.budget) }}</td>
+                            <td class="py-2 px-4 text-right text-slate-400 dark:text-slate-500 font-mono">{{ formatNumber(acc.actual) }}</td>
+                            <td class="py-2 px-4 text-right font-mono text-xs"
+                                :class="acc.diff >= 0 ? 'text-emerald-500/70' : 'text-rose-500/70'">
+                                {{ acc.diff > 0 ? '+' : '' }}{{ formatNumber(acc.diff) }}
+                            </td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </template>
+                </template>
             </tbody>
         </table>
     </div>
