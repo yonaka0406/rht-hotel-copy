@@ -74,6 +74,19 @@
                                 <span class="font-bold">{{ (invoiceData.invoice_total_value || 0).toLocaleString() }}
                                     円</span>
                             </div>
+                            <!-- 支払方法別内訳を表示 -->
+                            <div v-if="invoiceData.payment_breakdown && Object.keys(invoiceData.payment_breakdown).length > 1" 
+                                 class="w-64 text-xs text-gray-600 mt-1">
+                                <div class="flex justify-between">
+                                    <span>内訳</span>
+                                    <span></span>
+                                </div>
+                                <div v-for="(amount, paymentType) in invoiceData.payment_breakdown" :key="paymentType" 
+                                     class="flex justify-between ml-2">
+                                    <span>{{ paymentType }}：</span>
+                                    <span>{{ amount.toLocaleString() }}円</span>
+                                </div>
+                            </div>
                             <div v-if="!isBalanceCorrect"
                                 class="mt-2 p-2 bg-red-100 text-red-700 rounded-md text-xs w-full text-center animate-pulse">
                                 <i class="pi pi-exclamation-triangle mr-1"></i>

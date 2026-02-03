@@ -309,51 +309,12 @@ const openInvoiceDialog = (data) => {
     }
 
     // 請求書作成ダイアログでは全支払方法のデータを取得
-    // 同じクライアント・同じ月の全支払いを取得
-    console.log('DEBUG: Original data:', data);
-    console.log('DEBUG: billedList.value length:', billedList.value.length);
-    
-    // 紋別バイオマス発電株式会社のデータを詳しく確認
-    const clientPayments = billedList.value.filter(item => 
-        item.client_id === data.client_id
-    );
-    console.log('DEBUG: All payments for this client (count):', clientPayments.length);
-    
-    // 各支払いの詳細を確認
-    clientPayments.forEach((item, index) => {
-        console.log(`DEBUG: Payment ${index}:`, {
-            id: item.id,
-            client_id: item.client_id,
-            date: formatDate(new Date(item.date)),
-            value: item.value,
-            payment_type_name: item.payment_type_name,
-            payment_type_transaction: item.payment_type_transaction,
-            reservation_id: item.reservation_id
-        });
-    });
-    
     // 同じ予約IDの全支払いを取得（支払方法に関係なく）
     const sameReservationPayments = billedList.value.filter(item => 
-        clientPayments.some(cp => cp.reservation_id === item.reservation_id)
+        data.details.some(detail => detail.reservation_id === item.reservation_id)
     );
     
-    console.log('DEBUG: Same reservation payments (count):', sameReservationPayments.length);
-    sameReservationPayments.forEach((item, index) => {
-        console.log(`DEBUG: Same reservation payment ${index}:`, {
-            id: item.id,
-            client_id: item.client_id,
-            date: formatDate(new Date(item.date)),
-            value: item.value,
-            payment_type_name: item.payment_type_name,
-            payment_type_transaction: item.payment_type_transaction,
-            reservation_id: item.reservation_id
-        });
-    });
-    
     const allPaymentsForClient = sameReservationPayments;
-    
-    console.log('DEBUG: allPaymentsForClient:', allPaymentsForClient);
-    console.log('DEBUG: Filter criteria - client_id:', data.client_id, 'date:', data.date);
 
     // 全支払方法を含むデータを再構築（支払い方法ごとに個別のエントリを保持）
     const allPaymentData = {
@@ -677,7 +638,7 @@ const openInvoiceDialog = (data) => {
     const groupedRates = {};
     let hasBackendRateData = false;
 
-    console.log('Aggregating tax rates for invoice. Input blocks:', uniqueReservationBlocks);
+        console.log('Aggregating tax rates for invoice. Input blocks:', uniqueReservationBlocks);
 
     // 1. Sum up from backend provided 'rates' (reservation_rates_json)
     uniqueReservationBlocks.forEach(block => {
@@ -708,7 +669,7 @@ const openInvoiceDialog = (data) => {
 
     // 2. Fallback logic: If no backend rate data found at all, estimate based on payment values (default 10%)
     if (!hasBackendRateData) {
-        console.warn('No backend rate data found. Falling back to payment-based estimation.');
+            console.log('No backend rate data found. Falling back to payment-based estimation.');
         data.details.forEach(block => {
             const rate = block.tax_rate || 0.1;
             const category = 'accommodation'; // Default to accommodation
@@ -752,11 +713,20 @@ const openInvoiceDialog = (data) => {
     // 全ての支払い方法を含む合計金額を手動で計算
     const calculatedTotalValue = allPaymentData.details.reduce((sum, detail) => {
         const value = parseFloat(detail.value || 0);
-        console.log('DEBUG: Adding value:', value, 'from detail:', detail);
         return sum + value;
     }, 0);
-    
-    console.log('DEBUG: calculatedTotalValue:', calculatedTotalValue);
+
+    // 支払方法別の内訳を計算
+    const paymentBreakdown = {};
+    allPaymentData.details.forEach(detail => {
+        const paymentType = detail.payment_type_name || 'その他';
+        const value = parseFloat(detail.value || 0);
+        
+        if (!paymentBreakdown[paymentType]) {
+            paymentBreakdown[paymentType] = 0;
+        }
+        paymentBreakdown[paymentType] += value;
+    });
 
     invoiceData.value = {
         id: data.id,
@@ -787,6 +757,7 @@ const openInvoiceDialog = (data) => {
         comment: data.comment,
         daily_details: relevantDailyDetails,
         details: allPaymentData.details, // 全支払方法の詳細情報を追加
+        payment_breakdown: paymentBreakdown, // 支払方法別内訳を追加
     };
 
     invoiceDBData.value = {
