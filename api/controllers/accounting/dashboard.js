@@ -128,7 +128,7 @@ const getReconciliationClientDetails = async (req, res, next) => {
 const getBudgetActualComparison = async (req, res, next) => {
     try {
         const { requestId } = req;
-        const { startDate, endDate, hotelIds } = req.query;
+        const { startDate, endDate, hotelIds, departmentGroupId } = req.query;
 
         // 1. Resolve Hotel IDs
         let targetHotelIds = [];
@@ -178,7 +178,8 @@ const getBudgetActualComparison = async (req, res, next) => {
             startDate: queryStart,
             endDate: queryEnd,
             hotelIds: targetHotelIds,
-            departmentNames
+            departmentNames,
+            departmentGroupId: departmentGroupId ? parseInt(departmentGroupId) : null
         };
 
         const comparison = await accountingModel.budgetActual.getComparison(requestId, filters);
