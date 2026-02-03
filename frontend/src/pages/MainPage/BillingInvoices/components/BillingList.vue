@@ -181,7 +181,7 @@
              @mouseleave="handleMouseLeave"
              @click="!isBarExpanded ? isBarExpanded = true : null"
         >
-            <div class="bg-surface-0 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-full shadow-xl flex items-center backdrop-blur-md bg-opacity-90 overflow-hidden transition-all duration-500"
+            <div class="bg-surface-0 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-full shadow-xl flex items-center backdrop-blur-md bg-opacity-90 transition-all duration-500"
                  :class="isBarExpanded ? 'px-6 py-3 gap-6 max-w-xl' : 'px-3 py-3 gap-0 max-w-[4rem]'">
 
                 <div class="flex items-center gap-3 shrink-0">

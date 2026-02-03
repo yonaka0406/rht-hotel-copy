@@ -46,6 +46,7 @@
                                     dateFormat="yy-mm-dd"                                        
                                     :selectOtherMonths="true"   
                                     class="ml-2"
+                                    fluid
                                 />
                                 <label for="billingForm.date">請求日</label>
                             </FloatLabel>
