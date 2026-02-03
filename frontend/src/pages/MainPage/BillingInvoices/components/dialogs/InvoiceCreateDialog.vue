@@ -79,6 +79,11 @@
                                 <i class="pi pi-exclamation-triangle mr-1"></i>
                                 注意：税区分合計が入金合計と一致しません。
                             </div>
+                            <div v-if="!isBalanceCorrect && showPdfError"
+                                class="mt-1 p-2 bg-orange-100 text-orange-700 rounded-md text-xs w-full text-center">
+                                <i class="pi pi-times-circle mr-1"></i>
+                                税区分合計が入金合計と一致しない場合、PDF作成はできません。Excel作成で金額を修正して請求書を作成して下さい。
+                            </div>
                         </div>
                     </template>
                 </DataTable>
@@ -93,14 +98,14 @@
             </div>
             <div class="col-span-12 flex justify-end gap-2">
                 <Button v-if="!isGenerating" label="Excel作成" @click="$emit('generateExcel')" severity="success" />
-                <Button v-if="!isGenerating" label="PDF作成" @click="$emit('generatePdf')" />
+                <Button v-if="!isGenerating" label="PDF作成" @click="handlePdfGeneration" />
             </div>
         </div>
     </Dialog>
 </template>
 
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Dialog, FloatLabel, InputText, DataTable, Column, Textarea, Button } from 'primevue';
 
 const props = defineProps({
@@ -111,6 +116,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:visible', 'generateExcel', 'generatePdf']);
+
+const showPdfError = ref(false);
 
 const visible = computed({
     get: () => props.visible,
@@ -124,6 +131,21 @@ const ratesTotal = computed(() => {
 
 const isBalanceCorrect = computed(() => {
     return Math.abs(ratesTotal.value - (props.invoiceData.invoice_total_value || 0)) < 1;
+});
+
+const handlePdfGeneration = () => {
+    if (!isBalanceCorrect.value) {
+        showPdfError.value = true;
+        return;
+    }
+    emit('generatePdf');
+};
+
+// ダイアログが閉じられた時にエラーメッセージをリセット
+watch(() => props.visible, (newVal) => {
+    if (!newVal) {
+        showPdfError.value = false;
+    }
 });
 
 /*
