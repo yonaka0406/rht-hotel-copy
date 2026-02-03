@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New Feature: Introduced occupancy and operating profit comparison reports.
 - New Feature: Enhanced finance data import and synchronization to support department-specific targeting alongside hotel-level tracking.
 - New Feature: Extended forecasting system to track financial data at department level for improved budget tracking.
+- New Feature: Floating bulk action bar appears when items are selected, showing count and quick access to bulk invoice creation with expand/collapse interactions.
 
 ---
 
