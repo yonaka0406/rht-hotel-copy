@@ -194,9 +194,11 @@ const summarizedBilledList = computed(() => {
         return [];
     }
 
+    // デバッグ用ログを削除（本番環境用）
     const summary = {};
     for (const item of billedList.value) {
-        const key = `${item.id}-${item.invoice_number}-${item.date}-${item.client_id}`;
+        // 同じ予約の全ての支払いをグループ化（支払い方法に関係なく）
+        const key = `${item.reservation_id}`;
         if (!summary[key]) {
             summary[key] = {
                 id: item.id,
@@ -233,6 +235,8 @@ const summarizedBilledList = computed(() => {
                         room_number: item.room_number,
                         comment: item.payment_comment,
                         value: parseFloat(item.value),
+                        payment_type_name: item.payment_type_name,
+                        payment_type_transaction: item.payment_type_transaction,
                         details: item.reservation_details_json,
                         rates: item.reservation_rates_json,
                         total_people: item.total_people
@@ -274,13 +278,17 @@ const summarizedBilledList = computed(() => {
                 room_number: item.room_number,
                 comment: item.payment_comment,
                 value: parseFloat(item.value),
+                payment_type_name: item.payment_type_name,
+                payment_type_transaction: item.payment_type_transaction,
                 details: item.reservation_details_json,
                 rates: item.reservation_rates_json,
                 total_people: item.total_people
             });
         }
     }
-    return Object.values(summary).sort((a, b) => b.total_value - a.total_value);
+    const finalSummary = Object.values(summary).sort((a, b) => b.total_value - a.total_value);
+    
+    return finalSummary;
 });
 
 // Dialog
@@ -666,6 +674,12 @@ const openInvoiceDialog = (data) => {
 
     console.log('Final grouped rates:', groupedRates);
 
+    // 全ての支払い方法を含む合計金額を手動で計算
+    const calculatedTotalValue = data.details.reduce((sum, detail) => {
+        const value = parseFloat(detail.value || 0);
+        return sum + value;
+    }, 0);
+
     invoiceData.value = {
         id: data.id,
         hotel_id: data.hotel_id,
@@ -682,7 +696,7 @@ const openInvoiceDialog = (data) => {
         customer_code: data.customer_code || '',
         client_name: data.display_name,
         invoice_total_stays: data.stays_count,
-        invoice_total_value: data.total_value,
+        invoice_total_value: calculatedTotalValue, // 手動計算した値を使用
         items: Object.values(groupedRates)
             .filter(item => item.total_price !== 0) // Filter out zero-value items
             .sort((a, b) => {

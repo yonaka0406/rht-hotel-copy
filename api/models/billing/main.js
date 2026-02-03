@@ -213,6 +213,8 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,reservation_payments.room_id
       ,reservation_payments.value
       ,reservation_payments.comment as payment_comment
+      ,payment_types.name as payment_type_name
+      ,payment_types.transaction as payment_type_transaction
       ,rooms.room_number
       ,room_types.name as room_type_name
       ,clients.name_kanji as client_kanji
@@ -339,6 +341,9 @@ const selectBilledListView = async (requestId, hotelId, month) => {
         JOIN
       reservation_payments
       ON reservation_payments.hotel_id = reservations.hotel_id AND reservation_payments.reservation_id = reservations.id
+        JOIN
+      payment_types
+      ON payment_types.id = reservation_payments.payment_type_id
         LEFT JOIN
       (SELECT hotel_id, reservation_id, MAX(total_people_per_day) AS number_of_people, COUNT(rd_id) AS stays_count
         FROM (
@@ -352,7 +357,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
         GROUP BY hotel_id, reservation_id
       ) AS details
       ON details.hotel_id = reservation_payments.hotel_id AND details.reservation_id = reservation_payments.reservation_id
-        JOIN
+        LEFT JOIN
       invoices
       ON invoices.id = reservation_payments.invoice_id AND invoices.hotel_id = reservation_payments.hotel_id
         JOIN
@@ -365,7 +370,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       clients
       ON clients.id = reservation_payments.client_id
     WHERE
-      invoices.hotel_id = $1
+      reservation_payments.hotel_id = $1
       AND reservation_payments.date >= date_trunc('month', $2::date)
       AND reservation_payments.date < date_trunc('month', $2::date) + interval '1 month'
   ;`;
