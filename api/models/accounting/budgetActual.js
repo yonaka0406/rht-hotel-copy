@@ -96,45 +96,68 @@ const getComparison = async (requestId, filters, dbClient = null) => {
         `;
 
         // 3. Fetch Occupancy Data
+        // Calculation: SUM(rooms_sold) / SUM(max_available_rooms_per_month)
         let occActualQuery = `
-            SELECT
-                a.hotel_id,
-                h.name as hotel_name,
-                SUM(a.rooms_sold_nights) as rooms_sold,
-                SUM(a.available_room_nights) as available_rooms
-            FROM du_accounting a
-            JOIN hotels h ON a.hotel_id = h.id
-            WHERE a.accounting_month BETWEEN $1 AND $2
+            WITH monthly_occ AS (
+                SELECT
+                    a.hotel_id,
+                    a.accounting_month,
+                    MAX(a.available_room_nights) as available_rooms,
+                    SUM(a.rooms_sold_nights) as rooms_sold
+                FROM du_accounting a
+                WHERE a.accounting_month BETWEEN $1 AND $2
         `;
         const occActualParams = [startDate, endDate];
         if (effectiveHotelIds && effectiveHotelIds.length > 0) {
             occActualQuery += ` AND a.hotel_id = ANY($3)`;
             occActualParams.push(effectiveHotelIds);
         }
-        occActualQuery += ` GROUP BY a.hotel_id, h.name`;
+        occActualQuery += `
+                GROUP BY a.hotel_id, a.accounting_month
+            )
+            SELECT
+                mo.hotel_id,
+                h.name as hotel_name,
+                SUM(mo.rooms_sold) as rooms_sold,
+                SUM(mo.available_rooms) as available_rooms
+            FROM monthly_occ mo
+            JOIN hotels h ON mo.hotel_id = h.id
+            GROUP BY mo.hotel_id, h.name
+        `;
 
         let occBudgetQuery = `
-            SELECT
-                f.hotel_id,
-                h.name as hotel_name,
-                SUM(f.rooms_sold_nights) as rooms_sold,
-                SUM(f.available_room_nights) as available_rooms
-            FROM du_forecast f
-            JOIN hotels h ON f.hotel_id = h.id
-            WHERE f.forecast_month BETWEEN $1 AND $2
+            WITH monthly_occ AS (
+                SELECT
+                    f.hotel_id,
+                    f.forecast_month,
+                    MAX(f.available_room_nights) as available_rooms,
+                    SUM(f.rooms_sold_nights) as rooms_sold
+                FROM du_forecast f
+                WHERE f.forecast_month BETWEEN $1 AND $2
         `;
         const occBudgetParams = [startDate, endDate];
         if (effectiveHotelIds && effectiveHotelIds.length > 0) {
             occBudgetQuery += ` AND f.hotel_id = ANY($3)`;
             occBudgetParams.push(effectiveHotelIds);
         }
-        occBudgetQuery += ` GROUP BY f.hotel_id, h.name`;
+        occBudgetQuery += `
+                GROUP BY f.hotel_id, f.forecast_month
+            )
+            SELECT
+                mo.hotel_id,
+                h.name as hotel_name,
+                SUM(mo.rooms_sold) as rooms_sold,
+                SUM(mo.available_rooms) as available_rooms
+            FROM monthly_occ mo
+            JOIN hotels h ON mo.hotel_id = h.id
+            GROUP BY mo.hotel_id, h.name
+        `;
 
         // 4. Operating Profit per Hotel (Groups 1-5)
         let opActualQuery = `
             SELECT
-                hotel_id,
-                hotel_name,
+                COALESCE(hotel_id, 0) as hotel_id,
+                COALESCE(hotel_name, '未割当') as hotel_name,
                 SUM(net_amount) as amount
             FROM acc_profit_loss
             WHERE month BETWEEN $1 AND $2
@@ -149,13 +172,13 @@ const getComparison = async (requestId, filters, dbClient = null) => {
 
         let opBudgetQuery = `
             SELECT
-                e.hotel_id,
-                h.name as hotel_name,
+                COALESCE(e.hotel_id, 0) as hotel_id,
+                COALESCE(h.name, '未割当') as hotel_name,
                 SUM(CASE WHEN mg.display_order = 1 THEN e.amount ELSE -e.amount END) as amount
             FROM du_forecast_entries e
             JOIN acc_account_codes ac ON e.account_name = ac.name
             JOIN acc_management_groups mg ON ac.management_group_id = mg.id
-            JOIN hotels h ON e.hotel_id = h.id
+            LEFT JOIN hotels h ON e.hotel_id = h.id
             WHERE e.month BETWEEN $1 AND $2
             AND mg.display_order BETWEEN 1 AND 5
         `;

@@ -32,7 +32,11 @@ const hotelRows = computed(() => {
     return hotelIds.map(hotelId => {
         const actualItem = props.data.actual.find(i => i.hotel_id === hotelId);
         const budgetItem = props.data.budget.find(i => i.hotel_id === hotelId);
-        const hotelName = actualItem?.hotel_name || budgetItem?.hotel_name || `Hotel ${hotelId}`;
+        let hotelName = actualItem?.hotel_name || budgetItem?.hotel_name || `Hotel ${hotelId}`;
+
+        if (hotelId === 0 || hotelId === '0') {
+            hotelName = '未割当';
+        }
 
         const actualVal = parseFloat(actualItem?.amount || 0);
         const budgetVal = parseFloat(budgetItem?.amount || 0);
