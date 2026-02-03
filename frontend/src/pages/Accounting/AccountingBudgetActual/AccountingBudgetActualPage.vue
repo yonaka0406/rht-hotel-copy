@@ -121,13 +121,13 @@ onMounted(() => {
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">対象月:</span>
-                    <DatePicker v-model="selectedMonth" view="month" dateFormat="yy/mm" class="w-40" />
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">対象月:</span>
+                    <DatePicker v-model="selectedMonth" view="month" dateFormat="yy/mm" fluid class="w-40" />
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">部門区分:</span>
-                    <Select v-model="selectedDepartmentGroup" :options="departmentGroups" optionLabel="label" optionValue="value" placeholder="部門を選択" class="w-56" />
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">部門区分:</span>
+                    <Select v-model="selectedDepartmentGroup" :options="departmentGroups" optionLabel="label" optionValue="value" placeholder="部門を選択" fluid class="w-56" />
                 </div>
 
                 <Button label="データを更新" icon="pi pi-refresh" @click="fetchData" :loading="isLoading" class="ml-auto" />
