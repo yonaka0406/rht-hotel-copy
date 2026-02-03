@@ -3,26 +3,7 @@ import { ref, onMounted, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/composables/useUserStore';
 import { useAccountingStore } from '@/composables/useAccountingStore';
-import VChart from 'vue-echarts';
-import { use } from 'echarts/core';
-import { CanvasRenderer } from 'echarts/renderers';
-import { LineChart, BarChart } from 'echarts/charts';
-import {
-    TitleComponent,
-    TooltipComponent,
-    LegendComponent,
-    GridComponent
-} from 'echarts/components';
-
-use([
-    CanvasRenderer,
-    LineChart,
-    BarChart,
-    TitleComponent,
-    TooltipComponent,
-    LegendComponent,
-    GridComponent
-]);
+import SalesComparisonChart from './components/charts/SalesComparisonChart.vue';
 
 const router = useRouter();
 const { logged_user, fetchUser } = useUserStore();
@@ -39,6 +20,7 @@ const monthlyChartData = ref(null);
 const availableYears = ref([]);
 const selectedYear = ref(new Date().getFullYear());
 const isLoading = ref(true);
+const isChartLoading = ref(false);
 const hasError = ref(false);
 
 // Computed properties for last import
@@ -68,6 +50,12 @@ const lastImportPeriodFormatted = computed(() => {
     };
 
     return `${formatDate(info.min_date)} 〜 ${formatDate(info.max_date)}`;
+});
+
+const lastMonthLabel = computed(() => {
+    const today = new Date();
+    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    return `${lastMonth.getFullYear()}年${lastMonth.getMonth() + 1}月`;
 });
 
 // Computed properties for user information
@@ -106,124 +94,6 @@ const paymentsSalesDiff = computed(() => {
     }
 
     return payments - sales;
-});
-
-// Chart configuration
-const chartOption = computed(() => {
-    if (!monthlyChartData.value || !monthlyChartData.value.monthlyData) {
-        return null;
-    }
-
-    const data = monthlyChartData.value.monthlyData;
-    console.log('📊 Raw chart data:', data);
-    
-    const months = data.map(d => d.month_label);
-    const pmsData = data.map(d => {
-        const amount = parseFloat(d.pms_amount) || 0;
-        const result = Math.round(amount / 1000);
-        console.log(`PMS: ${d.pms_amount} (${typeof d.pms_amount}) -> ${amount} -> ${result}`);
-        return result;
-    });
-    const yayoiData = data.map(d => {
-        const amount = parseFloat(d.yayoi_amount) || 0;
-        const result = Math.round(amount / 1000);
-        console.log(`Yayoi: ${d.yayoi_amount} (${typeof d.yayoi_amount}) -> ${amount} -> ${result}`);
-        return result;
-    });
-
-    console.log('📊 Processed chart data:', { months, pmsData, yayoiData });
-
-    return {
-        title: {
-            text: `${selectedYear.value}年 売上比較`,
-            textStyle: {
-                fontSize: 14,
-                fontWeight: 'bold'
-            },
-            left: 'center'
-        },
-        tooltip: {
-            trigger: 'axis',
-            formatter: (params) => {
-                let result = `${params[0].axisValue}<br/>`;
-                params.forEach(param => {
-                    console.log('Tooltip param:', param);
-                    const rawValue = param.value;
-                    console.log('Raw value:', rawValue, 'Type:', typeof rawValue);
-                    
-                    let value = 0;
-                    if (rawValue !== null && rawValue !== undefined) {
-                        const numValue = parseFloat(rawValue);
-                        if (!isNaN(numValue)) {
-                            value = numValue * 1000;
-                        }
-                    }
-                    
-                    console.log('Calculated value:', value);
-                    const formattedValue = new Intl.NumberFormat('ja-JP').format(value);
-                    console.log('Formatted value:', formattedValue);
-                    
-                    result += `${param.seriesName}: ¥${formattedValue}<br/>`;
-                });
-                return result;
-            }
-        },
-        legend: {
-            data: ['PMS売上', '弥生データ'],
-            bottom: 0,
-            textStyle: {
-                fontSize: 11
-            }
-        },
-        grid: {
-            left: '3%',
-            right: '4%',
-            bottom: '15%',
-            top: '15%',
-            containLabel: true
-        },
-        xAxis: {
-            type: 'category',
-            data: months,
-            axisLabel: {
-                fontSize: 10
-            }
-        },
-        yAxis: {
-            type: 'value',
-            name: '売上 (千円)',
-            nameTextStyle: {
-                fontSize: 10
-            },
-            axisLabel: {
-                fontSize: 10,
-                formatter: '{value}K'
-            }
-        },
-        series: [
-            {
-                name: 'PMS売上',
-                type: 'bar',
-                data: pmsData,
-                itemStyle: {
-                    color: '#8b5cf6'
-                }
-            },
-            {
-                name: '弥生データ',
-                type: 'line',
-                data: yayoiData,
-                itemStyle: {
-                    color: '#f59e0b'
-                },
-                lineStyle: {
-                    width: 2
-                },
-                symbol: 'circle',
-                symbolSize: 4
-            }
-        ]
-    };
 });
 
 // Year navigation
@@ -484,6 +354,24 @@ onMounted(async () => {
                                     </span>
                                 </button>
 
+                                <!-- Budget vs Actual Comparison Card -->
+                                <button @click="$router.push({ name: 'AccountingBudgetActual' })"
+                                    class="group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 border border-slate-100 dark:border-slate-700 rounded-xl transition-all duration-200 cursor-pointer text-center h-full">
+                                    <div
+                                        class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-4 border border-slate-100 dark:border-slate-700">
+                                        <i class="pi pi-percentage text-xl text-violet-600 dark:text-violet-400"></i>
+                                    </div>
+                                    <span class="font-semibold text-slate-900 dark:text-white text-lg mb-2">予実管理</span>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">予算と実績の比較分析</p>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                                        設定された予算と実際の数値を比較し差異を分析
+                                    </p>
+                                    <span
+                                        class="text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:gap-2 transition-all mt-auto">
+                                        比較画面を表示 <i class="pi pi-arrow-right"></i>
+                                    </span>
+                                </button>
+
                                 <!-- Cost Breakdown Card -->
                                 <button @click="$router.push({ name: 'AccountingCostBreakdown' })"
                                     class="group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 border border-slate-100 dark:border-slate-700 rounded-xl transition-all duration-200 cursor-pointer text-center h-full">
@@ -568,42 +456,17 @@ onMounted(async () => {
                         </div>
 
                         <!-- Monthly Sales Comparison Chart -->
-                        <div v-if="monthlyChartData && chartOption"
-                            class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg">
-                                        <i class="pi pi-chart-line text-violet-600 dark:text-violet-400 text-lg"></i>
-                                    </div>
-                                    <div class="flex items-center justify-center gap-2">
-                                        <button @click="changeYear(-1)" 
-                                            :disabled="!canGoPreviousYear"
-                                            class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                                            <i class="pi pi-chevron-left text-slate-600 dark:text-slate-400 text-sm"></i>
-                                        </button>
-                                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300 min-w-[4rem] text-center">
-                                            {{ selectedYear }}年
-                                        </span>
-                                        <button @click="changeYear(1)" 
-                                            :disabled="!canGoNextYear"
-                                            class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                                            <i class="pi pi-chevron-right text-slate-600 dark:text-slate-400 text-sm"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="h-64">
-                                <VChart :option="chartOption" class="w-full h-full" />
-                            </div>
-                            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-                                <p class="text-xs text-slate-500 dark:text-slate-400 text-center mb-2">
-                                    PMS売上計算と弥生会計データの月次比較
-                                </p>
-                                <button @click="$router.push({ name: 'AccountingDataIntegrityAnalysis' })"
-                                    class="w-full sm:w-auto text-xs font-semibold text-slate-500 hover:text-violet-600 flex items-center justify-center sm:justify-start gap-1 transition-colors cursor-pointer bg-transparent border-none p-0">
-                                    差異分析・詳細を表示 <i class="pi pi-arrow-right text-[10px]"></i>
-                                </button>
-                            </div>
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                            <SalesComparisonChart 
+                                :chart-data="monthlyChartData"
+                                :selected-year="selectedYear"
+                                :available-years="availableYears"
+                                :can-go-previous-year="canGoPreviousYear"
+                                :can-go-next-year="canGoNextYear"
+                                :is-loading="isChartLoading"
+                                @change-year="changeYear"
+                                @navigate-to-details="router.push({ name: 'AccountingDataIntegrityAnalysis' })"
+                            />
                         </div>
                     </div>
                 </div>

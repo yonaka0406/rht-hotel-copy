@@ -1,5 +1,7 @@
 -- 0. Drop existing tables and views if they exist (Clean Slate)
+DROP VIEW IF EXISTS acc_profit_loss CASCADE;
 DROP VIEW IF EXISTS acc_monthly_account_summary CASCADE;
+DROP VIEW IF EXISTS acc_accounts_with_sub_accounts CASCADE;
 DROP TABLE IF EXISTS acc_departments CASCADE;
 DROP TABLE IF EXISTS acc_yayoi_data CASCADE;
 DROP TABLE IF EXISTS acc_accounting_mappings CASCADE;
@@ -577,6 +579,7 @@ SELECT
     asa.name as sub_account_name,
     gd.department,
     gd.tax_class,
+    mg.id as management_group_id,
     mg.name as management_group_name,
     mg.display_order as management_group_display_order,
     gd.total_amount,
@@ -609,6 +612,7 @@ pl_data AS (
         amas.department,
         dhm.hotel_id,
         dhm.hotel_name,
+        amas.management_group_id,
         amas.management_group_name,
         amas.management_group_display_order,
         amas.account_code,
@@ -622,6 +626,7 @@ pl_data AS (
         amas.department,
         dhm.hotel_id,
         dhm.hotel_name,
+        amas.management_group_id,
         amas.management_group_name,
         amas.management_group_display_order,
         amas.account_code,
@@ -632,6 +637,7 @@ SELECT
     department,
     hotel_id,
     hotel_name,
+    management_group_id,
     management_group_name,
     management_group_display_order,
     account_code,
