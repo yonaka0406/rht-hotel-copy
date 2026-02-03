@@ -194,11 +194,16 @@ const summarizedBilledList = computed(() => {
         return [];
     }
 
-    // デバッグ用ログを削除（本番環境用）
+    // 請求書支払いのみをフィルタリング
+    const invoiceOnlyItems = billedList.value.filter(item => 
+        item.payment_type_name === '請求書' || 
+        item.payment_type_transaction === 'invoice'
+    );
+
+    // 元のグループ化ロジックを適用（請求書支払いのみ）
     const summary = {};
-    for (const item of billedList.value) {
-        // 同じ予約の全ての支払いをグループ化（支払い方法に関係なく）
-        const key = `${item.reservation_id}`;
+    for (const item of invoiceOnlyItems) {
+        const key = `${item.id}-${item.invoice_number}-${item.date}-${item.client_id}`;
         if (!summary[key]) {
             summary[key] = {
                 id: item.id,
@@ -286,9 +291,7 @@ const summarizedBilledList = computed(() => {
             });
         }
     }
-    const finalSummary = Object.values(summary).sort((a, b) => b.total_value - a.total_value);
-    
-    return finalSummary;
+    return Object.values(summary).sort((a, b) => b.total_value - a.total_value);
 });
 
 // Dialog
@@ -305,13 +308,85 @@ const openInvoiceDialog = (data) => {
         data.invoice_number = null;
     }
 
+    // 請求書作成ダイアログでは全支払方法のデータを取得
+    // 同じクライアント・同じ月の全支払いを取得
+    console.log('DEBUG: Original data:', data);
+    console.log('DEBUG: billedList.value length:', billedList.value.length);
+    
+    // 紋別バイオマス発電株式会社のデータを詳しく確認
+    const clientPayments = billedList.value.filter(item => 
+        item.client_id === data.client_id
+    );
+    console.log('DEBUG: All payments for this client (count):', clientPayments.length);
+    
+    // 各支払いの詳細を確認
+    clientPayments.forEach((item, index) => {
+        console.log(`DEBUG: Payment ${index}:`, {
+            id: item.id,
+            client_id: item.client_id,
+            date: formatDate(new Date(item.date)),
+            value: item.value,
+            payment_type_name: item.payment_type_name,
+            payment_type_transaction: item.payment_type_transaction,
+            reservation_id: item.reservation_id
+        });
+    });
+    
+    // 同じ予約IDの全支払いを取得（支払方法に関係なく）
+    const sameReservationPayments = billedList.value.filter(item => 
+        clientPayments.some(cp => cp.reservation_id === item.reservation_id)
+    );
+    
+    console.log('DEBUG: Same reservation payments (count):', sameReservationPayments.length);
+    sameReservationPayments.forEach((item, index) => {
+        console.log(`DEBUG: Same reservation payment ${index}:`, {
+            id: item.id,
+            client_id: item.client_id,
+            date: formatDate(new Date(item.date)),
+            value: item.value,
+            payment_type_name: item.payment_type_name,
+            payment_type_transaction: item.payment_type_transaction,
+            reservation_id: item.reservation_id
+        });
+    });
+    
+    const allPaymentsForClient = sameReservationPayments;
+    
+    console.log('DEBUG: allPaymentsForClient:', allPaymentsForClient);
+    console.log('DEBUG: Filter criteria - client_id:', data.client_id, 'date:', data.date);
+
+    // 全支払方法を含むデータを再構築（支払い方法ごとに個別のエントリを保持）
+    const allPaymentData = {
+        ...data,
+        details: allPaymentsForClient.map(item => ({
+            id: item.id,
+            client_id: item.client_id,
+            date: formatDate(new Date(item.date)),
+            check_in: formatDate(new Date(item.check_in)),
+            check_out: formatDate(new Date(item.check_out)),
+            reservation_id: item.reservation_id,
+            room_id: item.room_id,
+            room_type_name: item.room_type_name,
+            room_number: item.room_number,
+            comment: item.payment_comment,
+            value: parseFloat(item.value),
+            payment_type_name: item.payment_type_name,
+            payment_type_transaction: item.payment_type_transaction,
+            details: item.reservation_details_json,
+            rates: item.reservation_rates_json,
+            total_people: item.total_people
+        }))
+    };
+    
+    console.log('DEBUG: allPaymentData.details:', allPaymentData.details);
+
     const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
 
     // Deduplicate blocks by reservation_id to get month-level details and rates once per reservation
     const uniqueReservationBlocks = [];
     const seenResIds = new Set();
-    data.details.forEach(block => {
+    allPaymentData.details.forEach(block => {
         if (!seenResIds.has(block.reservation_id)) {
             seenResIds.add(block.reservation_id);
             uniqueReservationBlocks.push(block);
@@ -675,10 +750,13 @@ const openInvoiceDialog = (data) => {
     console.log('Final grouped rates:', groupedRates);
 
     // 全ての支払い方法を含む合計金額を手動で計算
-    const calculatedTotalValue = data.details.reduce((sum, detail) => {
+    const calculatedTotalValue = allPaymentData.details.reduce((sum, detail) => {
         const value = parseFloat(detail.value || 0);
+        console.log('DEBUG: Adding value:', value, 'from detail:', detail);
         return sum + value;
     }, 0);
+    
+    console.log('DEBUG: calculatedTotalValue:', calculatedTotalValue);
 
     invoiceData.value = {
         id: data.id,
@@ -708,7 +786,7 @@ const openInvoiceDialog = (data) => {
             }),
         comment: data.comment,
         daily_details: relevantDailyDetails,
-        details: data.details, // 支払い詳細情報を追加
+        details: allPaymentData.details, // 全支払方法の詳細情報を追加
     };
 
     invoiceDBData.value = {
