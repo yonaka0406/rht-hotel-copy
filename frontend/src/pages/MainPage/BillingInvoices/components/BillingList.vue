@@ -166,28 +166,46 @@
                 </template>
             </DataTable>            
         </div>
-        <div class="flex justify-end mt-4">
-            <Button
-                severity="info"                
-                @click="$emit('openBulkDrawer')"
-            >
-            <OverlayBadge 
-                :value="selectedReservations ? selectedReservations.length : 0" 
-                size="large" 
-                :position="'top-right'" 
-                severity="danger"
-                class="mt-1"
-            >
-                <i class="pi pi-shopping-cart" style="font-size: 2rem" />
-            </OverlayBadge>
-            </Button>
-        </div>
-
         <ReservationEditDrawer
             v-model:visible="drawerVisible"
             :reservationId="selectedReservation?.id"
         />
-    </Panel> 
+    </Panel>
+
+    <!-- Floating Bulk Action Bar -->
+    <Transition name="layout-sidebar">
+        <div v-if="selectedReservations && selectedReservations.length > 0"
+             class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+            <div class="bg-surface-0 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-full shadow-xl px-6 py-3 flex items-center gap-6 backdrop-blur-md bg-opacity-90">
+                <div class="flex items-center gap-3">
+                    <OverlayBadge
+                        :value="selectedReservations.length"
+                        severity="danger"
+                        size="small"
+                    >
+                        <div class="bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full w-10 h-10 flex items-center justify-center">
+                            <i class="pi pi-shopping-cart text-xl"></i>
+                        </div>
+                    </OverlayBadge>
+                    <div class="flex flex-col">
+                        <span class="text-sm font-bold leading-none">{{ selectedReservations.length }}件の予約を選択中</span>
+                        <span class="text-xs text-surface-500 mt-1 italic">まとめ請求書を作成できます</span>
+                    </div>
+                </div>
+
+                <div class="h-8 w-px bg-surface-200 dark:bg-surface-700"></div>
+
+                <Button
+                    label="まとめ請求書を作成"
+                    icon="pi pi-paperclip"
+                    @click="$emit('openBulkDrawer')"
+                    severity="help"
+                    rounded
+                    class="font-bold shadow-sm px-6"
+                />
+            </div>
+        </div>
+    </Transition>
 </template>
 
 <script setup>
@@ -353,3 +371,22 @@ watch(() => [selectedHotelId.value], // Watch multiple values
     { immediate: true }
 ); 
 </script>
+
+<style scoped>
+.layout-sidebar-enter-active,
+.layout-sidebar-leave-active {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.layout-sidebar-enter-from,
+.layout-sidebar-leave-to {
+    transform: translate(-50%, 2rem);
+    opacity: 0;
+}
+
+.layout-sidebar-enter-to,
+.layout-sidebar-leave-from {
+    transform: translate(-50%, 0);
+    opacity: 1;
+}
+</style>
