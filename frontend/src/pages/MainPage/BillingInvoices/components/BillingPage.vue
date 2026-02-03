@@ -708,6 +708,7 @@ const openInvoiceDialog = (data) => {
             }),
         comment: data.comment,
         daily_details: relevantDailyDetails,
+        details: data.details, // 支払い詳細情報を追加
     };
 
     invoiceDBData.value = {

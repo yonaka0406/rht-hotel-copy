@@ -202,13 +202,49 @@ const generateInvoiceExcel = async (req, res) => {
     worksheet.getCell('D11').value = `${invoiceData.bank_name ?? ''} ${invoiceData.bank_branch_name ?? ''}`.trim();
     worksheet.getCell('D12').value = `${invoiceData.bank_account_type ?? ''} ${invoiceData.bank_account_number ?? ''}`.trim();
     worksheet.getCell('D13').value = invoiceData.bank_account_name ?? '';
-    worksheet.getCell('L15').value = `担当者： ${userInfo[0].name}`;
-    worksheet.getCell('D16').value = invoiceData.invoice_total_value;
+    // 支払い方法別の表示名マッピング
+    const getPaymentDisplayName = (paymentType) => {
+      const displayNames = {
+        'cash': 'ご入金（現金）',
+        'credit': 'ご入金（クレジットカード）',
+        'discount': 'お値引き',
+        'point': 'ご入金（ネットポイント）',
+        'wire': 'ご入金（事前振り込み）'
+      };
+      return displayNames[paymentType] || `ご入金（${paymentType}）`;
+    };
 
-    // Populate Main Invoice Rows (Accommodation vs Addons)
+    // 支払い詳細から請求書以外の支払いを抽出
+    const payments = invoiceData.details || [];
+    const otherPayments = payments.filter(p => p.payment_type_transaction !== 'bill');
+
+    // 支払い方法別に集計
+    const paymentsByType = otherPayments.reduce((acc, payment) => {
+      const type = payment.payment_type_transaction;
+      if (!acc[type]) {
+        acc[type] = {
+          total: 0,
+          displayName: getPaymentDisplayName(type)
+        };
+      }
+      acc[type].total += parseFloat(payment.value);
+      return acc;
+    }, {});
+
+    // 実際の請求額を計算（総額 - 既入金額）
+    const totalPaidAmount = Object.values(paymentsByType).reduce((sum, info) => sum + info.total, 0);
+    const actualInvoiceAmount = invoiceData.invoice_total_value - totalPaidAmount;
+
+    worksheet.getCell('L15').value = `担当者： ${userInfo[0].name}`;
+    worksheet.getCell('D16').value = actualInvoiceAmount; // 実際の請求額を表示
+
+    // Populate Main Invoice Rows (Accommodation vs Addons + Payment Details)
     if (invoiceData.items && Array.isArray(invoiceData.items)) {
       let currentRow = 20;
-      invoiceData.items.forEach((item, index) => {
+      let itemNumber = 1;
+      
+      // 1. 宿泊料・アドオン項目
+      invoiceData.items.forEach((item) => {
         const baseLabel = item.name || (item.category === 'accommodation' ? '宿泊料' : 'その他');
         const taxLabel = item.tax_rate ? ` (${(parseFloat(item.tax_rate) * 100).toLocaleString()}%)` : '';
         const label = `${baseLabel}${taxLabel}`;
@@ -217,7 +253,7 @@ const generateInvoiceExcel = async (req, res) => {
         const quantity = isRoomCharge ? (invoiceData.invoice_total_stays || item.total_quantity || 1) : (item.total_quantity || 1);
 
         // No.
-        worksheet.getCell(`A${currentRow}`).value = index + 1;
+        worksheet.getCell(`A${currentRow}`).value = itemNumber;
         // Description/Item Name
         worksheet.getCell(`B${currentRow}`).value = label;
         // Quantity
@@ -228,6 +264,16 @@ const generateInvoiceExcel = async (req, res) => {
         worksheet.getCell(`J${currentRow}`).value = item.total_price;
 
         currentRow++;
+        itemNumber++;
+      });
+
+      // 2. 支払い方法別の入金・値引き行
+      Object.entries(paymentsByType).forEach(([type, info]) => {
+        worksheet.getCell(`A${currentRow}`).value = itemNumber;
+        worksheet.getCell(`B${currentRow}`).value = info.displayName;
+        worksheet.getCell(`J${currentRow}`).value = -info.total; // マイナス表示
+        currentRow++;
+        itemNumber++;
       });
     } else {
       // Fallback for backward compatibility
@@ -246,27 +292,52 @@ const generateInvoiceExcel = async (req, res) => {
     let taxAmount0 = 0;
 
     if (invoiceData.items && Array.isArray(invoiceData.items)) {
+      // 元の総額と実際の請求額の比率を計算
+      const totalOriginalAmount = invoiceData.items.reduce((sum, item) => sum + item.total_price, 0);
+      const adjustmentRatio = actualInvoiceAmount / totalOriginalAmount;
+
+      // 元のロジックを維持しつつ、比例調整
       invoiceData.items.forEach(item => {
         const rate = parseFloat(item.tax_rate);
-        const net = item.total_net_price;
-        const tax = item.total_price - item.total_net_price;
+        
+        // 元の精密な計算結果を比例調整
+        const adjustedTotalPrice = Math.round(item.total_price * adjustmentRatio);
+        const adjustedNetPrice = Math.round(item.total_net_price * adjustmentRatio);
+        const adjustedTax = adjustedTotalPrice - adjustedNetPrice;
 
-        totalTax += tax;
+        totalTax += adjustedTax;
 
         // Categorize by tax rate (allowing for small floating point differences)
         if (Math.abs(rate - 0.10) < 0.001) {
-          totalNet10 += net;
-          taxAmount10 += tax;
+          totalNet10 += adjustedNetPrice;
+          taxAmount10 += adjustedTax;
         } else if (Math.abs(rate - 0.08) < 0.001) {
-          totalNet8 += net;
-          taxAmount8 += tax;
+          totalNet8 += adjustedNetPrice;
+          taxAmount8 += adjustedTax;
         } else if (Math.abs(rate) < 0.001) {
-          totalNet0 += net;
-          taxAmount0 += tax;
+          totalNet0 += adjustedNetPrice;
+          taxAmount0 += adjustedTax;
         }
       });
+
+      // 最終的な整合性チェック（元のロジックと同様）
+      const calculatedTotal = totalNet10 + totalNet8 + totalNet0 + totalTax;
+      const difference = actualInvoiceAmount - calculatedTotal;
+      
+      // 1円の誤差があれば最大の税率グループで調整
+      if (Math.abs(difference) >= 1) {
+        if (totalNet10 > 0) {
+          totalNet10 += difference;
+        } else if (totalNet8 > 0) {
+          totalNet8 += difference;
+        } else if (totalNet0 > 0) {
+          totalNet0 += difference;
+        }
+      }
     }
-    worksheet.getCell('I24').value = invoiceData.invoice_total_value;
+    
+    // 実際の請求額を使用（総額から既入金を差し引いた金額）
+    worksheet.getCell('I24').value = actualInvoiceAmount;
     worksheet.getCell('I25').value = totalTax;
 
     // 10% Subject (Net) and Tax
