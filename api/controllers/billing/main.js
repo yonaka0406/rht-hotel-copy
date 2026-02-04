@@ -345,35 +345,56 @@ const generateInvoiceExcel = async (req, res) => {
       const totalOriginalAmount = invoiceData.items.reduce((sum, item) => sum + item.total_price, 0);
       const adjustmentRatio = actualInvoiceAmount / totalOriginalAmount;
 
-      // 元のロジックを維持しつつ、比例調整
+      // 統一ルール：税率別に税込合計額を集計してから消費税を計算
+      const taxGroups = {
+        '0.10': { totalInclusive: 0, rate: 0.10 },
+        '0.08': { totalInclusive: 0, rate: 0.08 },
+        '0.00': { totalInclusive: 0, rate: 0.00 }
+      };
+
+      // Step 1: 税率別に調整後の税込合計額を集計
       invoiceData.items.forEach(item => {
         const rate = parseFloat(item.tax_rate);
-        
-        // 元の精密な計算結果を比例調整
         const adjustedTotalPrice = Math.round(item.total_price * adjustmentRatio);
-        const adjustedNetPrice = Math.round(item.total_net_price * adjustmentRatio);
-        const adjustedTax = adjustedTotalPrice - adjustedNetPrice;
-
-        totalTax += adjustedTax;
-
-        // Categorize by tax rate (allowing for small floating point differences)
+        
+        // 税率別にグループ化（小数点誤差を考慮）
         if (Math.abs(rate - 0.10) < 0.001) {
-          totalNet10 += adjustedNetPrice;
-          taxAmount10 += adjustedTax;
+          taxGroups['0.10'].totalInclusive += adjustedTotalPrice;
         } else if (Math.abs(rate - 0.08) < 0.001) {
-          totalNet8 += adjustedNetPrice;
-          taxAmount8 += adjustedTax;
+          taxGroups['0.08'].totalInclusive += adjustedTotalPrice;
         } else if (Math.abs(rate) < 0.001) {
-          totalNet0 += adjustedNetPrice;
-          taxAmount0 += adjustedTax;
+          taxGroups['0.00'].totalInclusive += adjustedTotalPrice;
         }
       });
 
-      // 最終的な整合性チェック（元のロジックと同様）
+      // Step 2: 税率別に統一ルールで消費税を計算（切り捨て）
+      Object.entries(taxGroups).forEach(([rateKey, group]) => {
+        if (group.totalInclusive > 0) {
+          // 統一ルール：税込合計額から消費税を切り捨て計算
+          const calculatedTax = Math.floor(group.totalInclusive * group.rate / (1 + group.rate));
+          const calculatedNet = group.totalInclusive - calculatedTax;
+          
+          // 税率別に結果を設定
+          if (rateKey === '0.10') {
+            taxAmount10 = calculatedTax;
+            totalNet10 = calculatedNet;
+          } else if (rateKey === '0.08') {
+            taxAmount8 = calculatedTax;
+            totalNet8 = calculatedNet;
+          } else if (rateKey === '0.00') {
+            taxAmount0 = calculatedTax;
+            totalNet0 = calculatedNet;
+          }
+          
+          totalTax += calculatedTax;
+        }
+      });
+
+      // 最終的な整合性チェック（1円未満の調整のみ）
       const calculatedTotal = totalNet10 + totalNet8 + totalNet0 + totalTax;
       const difference = actualInvoiceAmount - calculatedTotal;
       
-      // 1円の誤差があれば最大の税率グループで調整
+      // 1円の誤差があれば最大の税率グループで微調整
       if (Math.abs(difference) >= 1) {
         if (totalNet10 > 0) {
           totalNet10 += difference;
