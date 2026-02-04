@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.12] - 2026-02-04
+
+- New Feature: Added account-type (debit/credit) classification with UI controls and auto-infer from group defaults; new type column and badges in settings.
+- Improvement: Budget/actual calculations now aggregate all matching items; reporting and summaries carry account-type for accurate P&L and monthly views.
+- Improvement: Query/view performance improved via an optimized unpivot approach and additional forecast indexes.
+
+---
+
 ## [1.4.11] - 2026-02-03
 
 - New Feature: Added Budget vs Actual comparison dashboard with department-level financial analysis capabilities.
