@@ -9,6 +9,18 @@ const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
 
+// 支払い方法別の表示名マッピング
+const getPaymentDisplayName = (paymentType) => {
+  const displayNames = {
+    'cash': 'ご入金（現金）',
+    'credit': 'ご入金（クレジットカード）',
+    'discount': 'お値引き',
+    'point': 'ご入金（ネットポイント）',
+    'wire': 'ご入金（事前振り込み）'
+  };
+  return displayNames[paymentType] || `ご入金（${paymentType}）`;
+};
+
 const getBillableListView = async (req, res) => {
   const hotelId = req.params.hid;
   const startDate = req.params.sdate;
@@ -82,18 +94,6 @@ const generateInvoice = async (req, res) => {
       invoiceData.invoice_number = generateNewInvoiceNumber(maxInvoiceNumData, hotelId, invoiceData.date);
     }
 
-    // 支払い方法別の表示名マッピング
-    const getPaymentDisplayName = (paymentType) => {
-      const displayNames = {
-        'cash': 'ご入金（現金）',
-        'credit': 'ご入金（クレジットカード）',
-        'discount': 'お値引き',
-        'point': 'ご入金（ネットポイント）',
-        'wire': 'ご入金（事前振り込み）'
-      };
-      return displayNames[paymentType] || `ご入金（${paymentType}）`;
-    };
-
     // 支払い詳細から請求書以外の支払いを抽出
     const payments = invoiceData.details || [];
     const otherPayments = payments.filter(p => p.payment_type_transaction !== 'bill');
@@ -107,7 +107,17 @@ const generateInvoice = async (req, res) => {
           displayName: getPaymentDisplayName(type)
         };
       }
-      acc[type].total += parseFloat(payment.value);
+      
+      // payment.valueの安全な処理
+      if (payment.value != null) {
+        const v = parseFloat(payment.value);
+        if (Number.isFinite(v)) {
+          acc[type].total += v;
+        } else {
+          logger.warn(`Invalid payment value for type ${type}: ${payment.value}`);
+        }
+      }
+      
       return acc;
     }, {});
 
@@ -251,17 +261,6 @@ const generateInvoiceExcel = async (req, res) => {
     worksheet.getCell('D11').value = `${invoiceData.bank_name ?? ''} ${invoiceData.bank_branch_name ?? ''}`.trim();
     worksheet.getCell('D12').value = `${invoiceData.bank_account_type ?? ''} ${invoiceData.bank_account_number ?? ''}`.trim();
     worksheet.getCell('D13').value = invoiceData.bank_account_name ?? '';
-    // 支払い方法別の表示名マッピング
-    const getPaymentDisplayName = (paymentType) => {
-      const displayNames = {
-        'cash': 'ご入金（現金）',
-        'credit': 'ご入金（クレジットカード）',
-        'discount': 'お値引き',
-        'point': 'ご入金（ネットポイント）',
-        'wire': 'ご入金（事前振り込み）'
-      };
-      return displayNames[paymentType] || `ご入金（${paymentType}）`;
-    };
 
     // 支払い詳細から請求書以外の支払いを抽出
     const payments = invoiceData.details || [];
@@ -276,7 +275,17 @@ const generateInvoiceExcel = async (req, res) => {
           displayName: getPaymentDisplayName(type)
         };
       }
-      acc[type].total += parseFloat(payment.value);
+      
+      // payment.valueの安全な処理
+      if (payment.value != null) {
+        const v = parseFloat(payment.value);
+        if (Number.isFinite(v)) {
+          acc[type].total += v;
+        } else {
+          logger.warn(`Invalid payment value for type ${type}: ${payment.value}`);
+        }
+      }
+      
       return acc;
     }, {});
 
@@ -343,7 +352,22 @@ const generateInvoiceExcel = async (req, res) => {
     if (invoiceData.items && Array.isArray(invoiceData.items)) {
       // 元の総額と実際の請求額の比率を計算
       const totalOriginalAmount = invoiceData.items.reduce((sum, item) => sum + item.total_price, 0);
-      const adjustmentRatio = actualInvoiceAmount / totalOriginalAmount;
+      
+      let adjustmentRatio;
+      let useEvenDistribution = false;
+      
+      // totalOriginalAmountが0の場合のガード処理
+      if (invoiceData.items.length === 0) {
+        // アイテムが存在しない場合は調整比率を0に設定してスキップ
+        adjustmentRatio = 0;
+      } else if (totalOriginalAmount === 0) {
+        // アイテムは存在するが合計が0の場合は均等分配
+        adjustmentRatio = actualInvoiceAmount / invoiceData.items.length;
+        useEvenDistribution = true;
+      } else {
+        // 通常の比率計算
+        adjustmentRatio = actualInvoiceAmount / totalOriginalAmount;
+      }
 
       // 統一ルール：税率別に税込合計額を集計してから消費税を計算
       const taxGroups = {
@@ -355,7 +379,18 @@ const generateInvoiceExcel = async (req, res) => {
       // Step 1: 税率別に調整後の税込合計額を集計
       invoiceData.items.forEach(item => {
         const rate = parseFloat(item.tax_rate);
-        const adjustedTotalPrice = Math.round(item.total_price * adjustmentRatio);
+        let adjustedTotalPrice;
+        
+        if (invoiceData.items.length === 0) {
+          // アイテムが存在しない場合はスキップ
+          return;
+        } else if (useEvenDistribution) {
+          // 均等分配の場合
+          adjustedTotalPrice = Math.round(adjustmentRatio);
+        } else {
+          // 通常の比率計算
+          adjustedTotalPrice = Math.round(item.total_price * adjustmentRatio);
+        }
         
         // 税率別にグループ化（小数点誤差を考慮）
         if (Math.abs(rate - 0.10) < 0.001) {
