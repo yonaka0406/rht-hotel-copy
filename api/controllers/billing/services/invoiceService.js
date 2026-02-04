@@ -189,6 +189,10 @@ function generateInvoiceHTML(html, data, userName) {
       <td class="title-cell">${(summary.rate * 100).toLocaleString()}％対象</td>
       <td class="cell-right">¥ ${summary.net.toLocaleString()}</td>
     </tr>
+    <tr>        
+      <td class="title-cell">消費税</td>
+      <td class="cell-right">¥ ${summary.tax.toLocaleString()}</td>
+    </tr>
 `).join('');
 
   modifiedHTML = modifiedHTML.replace(/{{ taxable_details }}/g, taxitems);

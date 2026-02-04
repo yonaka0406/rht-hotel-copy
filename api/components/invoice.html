@@ -147,8 +147,8 @@
         <div style="width: 40%; font-size: 12pt;"></div>
     </div>
 
-    <div class="invoice-flex-block" style="margin-top: 20px;">
-        <table class="table2" style="width: 99%;">
+    <div class="invoice-flex-block" style="margin-top: 20px; display: flex; justify-content: flex-end;">
+        <table class="table2" style="width: 99%; margin: 0;">
             <thead>
                 <tr>
                     <th>No.</th>
@@ -163,25 +163,25 @@
                     <td colspan="3" style="text-align: right;">合計金額</td>
                     <td class="cell-right">¥ {{ details_total_value }}</td>
                 </tr>
+                <tr class="total-row">
+                    <td colspan="3" style="text-align: right;">内消費税</td>
+                    <td class="cell-right">¥ {{ total_tax_value }}</td>
+                </tr>
             </tbody>
         </table>
     </div>
 
-    <div class="invoice-flex-block">
-        <div style="width:60%"></div>
-        <div style="width:40%">
-            <table class="table1" style="width: 90%;">
-                <tr>
-                    <td class="title-cell">消費税</td>
-                    <td class="cell-right">¥ {{ total_tax_value }}</td>
-                </tr>
-                {{ taxable_details }}                
+    <div class="invoice-flex-block" style="display: flex; justify-content: flex-end;">
+        <div style="width: 40%;">
+            <div style="margin-top: 25px; margin-bottom: 0px; font-weight: bold; text-align: left;">内訳</div>
+            <table class="table1" style="width: 100%; margin: 0;">
+                {{ taxable_details }}
             </table>
         </div>
     </div>
 
-    <div class="invoice-flex-block" style="margin-top: 20px;">
-        <table class="table1" style="width: 99%;">            
+    <div class="invoice-flex-block" style="margin-top: 20px; display: flex; justify-content: flex-end;">
+        <table class="table1" style="width: 99%; margin: 0; border-collapse: collapse;">            
             <tr>
                 <td class="title-cell" style="width: 10%">備考</td>
                 <td>
@@ -190,6 +190,7 @@
                 </td>
             </tr>
         </table>
-    </div> 
+    </div>
+
 </body>
 </html>
