@@ -276,59 +276,67 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,(
         SELECT json_agg(taxed_group)
         FROM (
-          SELECT 
-            (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END) as tax_rate, 
+          SELECT
+            tax_rate,
             category,
             item_name,
-            SUM(item_quantity) as total_quantity,
-            SUM(total_price) as total_price, 
-            ROUND(SUM(total_price)::numeric / (1 + (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END))::numeric) as total_net_price
+            total_quantity,
+            total_price,
+            (total_price - FLOOR(total_price::numeric * tax_rate::numeric / (1 + tax_rate)::numeric)) as total_net_price
           FROM (
             SELECT
-              rr.tax_rate,
-              'accommodation' as category,
-              '宿泊料' as item_name,
-              1 as item_quantity,
-              -- User-Requested Heuristic:
-              -- Calculate breakdown based on reservation_rates.
-              -- If sum(rr.price) != rd.price, apply the difference to the rate with the HIGHEST tax rate.
-              -- This handles implicit discounts/rounding that should likely apply to the main tax bucket.
-              CASE
-                WHEN ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id) = 1 THEN
-                    rr.price + (rd.price - SUM(rr.price) OVER (PARTITION BY rd.id))
-                ELSE
-                    rr.price
-              END AS total_price
-            FROM
-              reservation_details rd
-              JOIN reservation_rates rr ON rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id
-            WHERE
-              rd.hotel_id = reservations.hotel_id
-              AND rd.reservation_id = reservations.id
-              AND rd.billable = TRUE
-              AND rd.hotel_id = $1           
-              AND rd.date >= date_trunc('month', $2::date)
-              AND rd.date < date_trunc('month', $2::date) + interval '1 month'
+              (CASE WHEN COALESCE(tax_rate, 0) > 1 THEN tax_rate / 100.0 ELSE COALESCE(tax_rate, 0) END) as tax_rate,
+              category,
+              item_name,
+              SUM(item_quantity) as total_quantity,
+              SUM(total_price) as total_price
+            FROM (
+              SELECT
+                rr.tax_rate,
+                'accommodation' as category,
+                '宿泊料' as item_name,
+                1 as item_quantity,
+                -- User-Requested Heuristic:
+                -- Calculate breakdown based on reservation_rates.
+                -- If sum(rr.price) != rd.price, apply the difference to the rate with the HIGHEST tax rate.
+                -- This handles implicit discounts/rounding that should likely apply to the main tax bucket.
+                CASE
+                  WHEN ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id) = 1 THEN
+                      rr.price + (rd.price - SUM(rr.price) OVER (PARTITION BY rd.id))
+                  ELSE
+                      rr.price
+                END AS total_price
+              FROM
+                reservation_details rd
+                JOIN reservation_rates rr ON rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id
+              WHERE
+                rd.hotel_id = reservations.hotel_id
+                AND rd.reservation_id = reservations.id
+                AND rd.billable = TRUE
+                AND rd.hotel_id = $1
+                AND rd.date >= date_trunc('month', $2::date)
+                AND rd.date < date_trunc('month', $2::date) + interval '1 month'
 
-            UNION ALL
-            SELECT
-              ra.tax_rate,
-              (CASE WHEN ra.sales_category = 'other' THEN 'other' ELSE 'accommodation' END) as category,
-              COALESCE(ra.addon_name, 'その他') as item_name,
-              ra.quantity as item_quantity,
-              (ra.price * ra.quantity) AS total_price
-            FROM
-              reservation_details rd
-              JOIN reservation_addons ra ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
-            WHERE
-              rd.hotel_id = reservations.hotel_id
-              AND rd.reservation_id = reservations.id
-              AND rd.billable = TRUE
-              AND rd.hotel_id = $1           
-              AND rd.date >= date_trunc('month', $2::date)
-              AND rd.date < date_trunc('month', $2::date) + interval '1 month'
-          ) AS inside
-          GROUP BY (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END), category, item_name
+              UNION ALL
+              SELECT
+                ra.tax_rate,
+                (CASE WHEN ra.sales_category = 'other' THEN 'other' ELSE 'accommodation' END) as category,
+                COALESCE(ra.addon_name, 'その他') as item_name,
+                ra.quantity as item_quantity,
+                (ra.price * ra.quantity) AS total_price
+              FROM
+                reservation_details rd
+                JOIN reservation_addons ra ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
+              WHERE
+                rd.hotel_id = reservations.hotel_id
+                AND rd.reservation_id = reservations.id
+                AND rd.billable = TRUE
+                AND rd.hotel_id = $1
+                AND rd.date >= date_trunc('month', $2::date)
+                AND rd.date < date_trunc('month', $2::date) + interval '1 month'
+            ) AS inside
+            GROUP BY (CASE WHEN COALESCE(tax_rate, 0) > 1 THEN tax_rate / 100.0 ELSE COALESCE(tax_rate, 0) END), category, item_name
+          ) AS summarized
         ) AS taxed_group
       ) AS reservation_rates_json
     FROM
