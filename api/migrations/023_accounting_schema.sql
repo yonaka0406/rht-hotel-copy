@@ -296,33 +296,106 @@ CREATE INDEX idx_acc_accounting_mappings_account_code ON acc_accounting_mappings
 
 -- 6. Yayoi Export Data
 -- Stores aggregated transaction data ready for export in Yayoi format (25 Columns).
+-- This table is a staging area that mirrors the standard Yayoi Import CSV format.
 CREATE TABLE acc_yayoi_data (
     batch_id UUID, -- To group records by export session
+
+    -- 1(A) [必須] 識別フラグ (Identification Flag) | 4文字
+    -- 2000:伝票以外, 2111:1行伝票, 2110:複数行1行目, 2100:中間行, 2101:最終行
     identification_flag VARCHAR(4) DEFAULT '2111' NOT NULL, 
+
+    -- 2(B) 伝票No (Slip Number) | 6数字
+    -- 複数行の場合は1行目を反映
     slip_number VARCHAR(6), 
+
+    -- 3(C) 決算 (Settlement/Closing) | 4文字
+    -- Blank:通常, 中決:中間決算, 本決:本決算
     settlement_type VARCHAR(4), 
+
+    -- 4(D) [必須] 取引日付 (Transaction Date) | 10日付
+    -- 西暦または和暦 (YYYY/MM/DD等)
     transaction_date DATE NOT NULL,
+
+    -- 5(E) [必須] 借方勘定科目 (Debit Account) | 24文字
+    -- 複数行で科目がない場合は空白可
     debit_account_code VARCHAR(24), 
+
+    -- 6(F) 借方補助科目 (Debit Sub-Account) | 24文字
     debit_sub_account VARCHAR(24),
+
+    -- 7(G) 借方部門 (Debit Department) | 24文字
     debit_department VARCHAR(24),
+
+    -- 8(H) [必須] 借方税区分 (Debit Tax Class) | 32文字
+    -- 科目がない場合は「対象外」
     debit_tax_class VARCHAR(32) NOT NULL DEFAULT '対象外',
+
+    -- 9(I) [必須] 借方金額 (Debit Amount) | 11金額
+    -- 整数(税込)。科目がない場合は0
     debit_amount NUMERIC(11, 0) NOT NULL DEFAULT 0,
+
+    -- 10(J) 借方税金額 (Debit Tax Amount) | 11金額
+    -- 整数。税抜処理の場合は入力必須
     debit_tax_amount NUMERIC(11, 0) DEFAULT 0,
+
+    -- 11(K) [必須] 貸方勘定科目 (Credit Account) | 24文字
+    -- 複数行で科目がない場合は空白可
     credit_account_code VARCHAR(24),
+
+    -- 12(L) 貸方補助科目 (Credit Sub-Account) | 24文字
     credit_sub_account VARCHAR(24),
+
+    -- 13(M) 貸方部門 (Credit Department) | 24文字
     credit_department VARCHAR(24),
+
+    -- 14(N) [必須] 貸方税区分 (Credit Tax Class) | 32文字
+    -- 「借方税区分」と同じルール
     credit_tax_class VARCHAR(32) NOT NULL DEFAULT '対象外',
+
+    -- 15(O) [必須] 貸方金額 (Credit Amount) | 11金額
+    -- 整数(税込)。科目がない場合は0
     credit_amount NUMERIC(11, 0) NOT NULL DEFAULT 0,
+
+    -- 16(P) 貸方税金額 (Credit Tax Amount) | 11金額
+    -- 整数
     credit_tax_amount NUMERIC(11, 0) DEFAULT 0,
+
+    -- 17(Q) 摘要 (Summary) | 64文字
+    -- 半角64桁を超える文字は切り捨て
     summary VARCHAR(64),
+
+    -- 18(R) 番号 (Journal Number) | 10文字
+    -- 手形番号等。半角10桁超は切り捨て
     journal_number VARCHAR(10),
+
+    -- 19(S) 期日 (Due Date) | 10日付
     due_date DATE,
+
+    -- 20(T) [必須] タイプ (Type) | 1数字
+    -- 0:仕訳, 1:出金伝票, 2:入金伝票, 3:振替伝票
     ledger_type VARCHAR(1) NOT NULL DEFAULT '0',
+
+    -- 21(U) 生成元 (Source) | 4文字
+    -- 全角2桁(受手,給与等)
     source_name VARCHAR(4),
+
+    -- 22(V) 仕訳メモ (Journal Memo) | 180文字
+    -- 半角180桁超は切り捨て
     journal_memo VARCHAR(180),
+
+    -- 23(W) 付箋1 (Sticky Note 1) | 3数字
+    -- 0～5。空欄は0
     sticky_note1 VARCHAR(3) DEFAULT '0',
+
+    -- 24(X) 付箋2 (Sticky Note 2) | 1数字
+    -- 0は付箋なし
     sticky_note2 VARCHAR(1) DEFAULT '0',
+
+    -- 25(Y) [必須] 調整 (Adjustment) | 文字
+    -- yes/true/on/1/-1 or no
     adjustment_flag VARCHAR(5) NOT NULL DEFAULT 'no', 
+
+    -- Internal Metadata (Not exported to Yayoi)
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id)
 );
