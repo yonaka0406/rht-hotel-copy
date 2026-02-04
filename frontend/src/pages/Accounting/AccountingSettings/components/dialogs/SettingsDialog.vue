@@ -17,7 +17,15 @@
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-black text-slate-500 uppercase">管理区分</label>
                     <Select v-model="form.management_group_id" :options="settings.groups" optionLabel="name"
-                        optionValue="id" placeholder="区分を選択" showClear fluid />
+                        optionValue="id" placeholder="区分を選択" showClear fluid @change="onGroupChange" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-black text-slate-500 uppercase">貸借区分 <span
+                            class="text-rose-500">*</span></label>
+                    <Select v-model="form.account_type" :options="[
+                        { label: '借方 (Debit)', value: 'debit' },
+                        { label: '貸方 (Credit)', value: 'credit' }
+                    ]" optionLabel="label" optionValue="value" placeholder="区分を選択" fluid />
                 </div>
                 <div class="flex items-center gap-2">
                     <Checkbox v-model="form.is_active" :binary="true" />
@@ -31,6 +39,14 @@
                     <label class="text-xs font-black text-slate-500 uppercase">区分名 <span
                             class="text-rose-500">*</span></label>
                     <InputText v-model="form.name" placeholder="例: 売上高" fluid />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-black text-slate-500 uppercase">デフォルト貸借区分 <span
+                            class="text-rose-500">*</span></label>
+                    <Select v-model="form.default_account_type" :options="[
+                        { label: '借方 (Debit)', value: 'debit' },
+                        { label: '貸方 (Credit)', value: 'credit' }
+                    ]" optionLabel="label" optionValue="value" placeholder="区分を選択" fluid />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-black text-slate-500 uppercase">表示順序</label>
@@ -244,7 +260,9 @@ const form = reactive({
     target_id: null,
     account_code_id: null,
     department_group_id: null,
-    description: ''
+    description: '',
+    account_type: 'debit',
+    default_account_type: 'debit'
 });
 
 // Watch for initialData changes or visibility to populate local form
@@ -269,11 +287,22 @@ watch(() => props.visible, (newVal) => {
                 target_id: null,
                 account_code_id: null,
                 department_group_id: null,
-                description: ''
+                description: '',
+                account_type: 'debit',
+                default_account_type: 'debit'
             });
         }
     }
 });
+
+const onGroupChange = (e) => {
+    if (props.type === 'code' && e.value) {
+        const group = props.settings?.groups?.find(g => g.id === e.value);
+        if (group && group.default_account_type) {
+            form.account_type = group.default_account_type;
+        }
+    }
+};
 
 const modalTitle = computed(() => {
     const action = props.isEdit ? '編集' : '新規作成';

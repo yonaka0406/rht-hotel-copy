@@ -37,6 +37,7 @@ const getComparison = async (requestId, filters, dbClient = null) => {
                 management_group_display_order,
                 account_code,
                 account_name,
+                account_type,
                 SUM(net_amount) as amount
             FROM acc_profit_loss
             WHERE month BETWEEN $1 AND $2
@@ -58,7 +59,7 @@ const getComparison = async (requestId, filters, dbClient = null) => {
         }
 
         actualQuery += `
-            GROUP BY management_group_id, management_group_name, management_group_display_order, account_code, account_name
+            GROUP BY management_group_id, management_group_name, management_group_display_order, account_code, account_name, account_type
         `;
 
         // 2. Fetch Budget Data from du_forecast_entries
@@ -69,7 +70,8 @@ const getComparison = async (requestId, filters, dbClient = null) => {
                 mg.display_order as management_group_display_order,
                 ac.code as account_code,
                 ac.name as account_name,
-                SUM(e.amount) as amount
+                ac.account_type,
+                SUM(CASE WHEN ac.account_type = 'credit' THEN e.amount ELSE -e.amount END) as amount
             FROM du_forecast_entries e
             JOIN acc_account_codes ac ON e.account_name = ac.name
             JOIN acc_management_groups mg ON ac.management_group_id = mg.id
@@ -92,7 +94,7 @@ const getComparison = async (requestId, filters, dbClient = null) => {
         }
 
         budgetQuery += `
-            GROUP BY ac.management_group_id, mg.name, mg.display_order, ac.code, ac.name
+            GROUP BY ac.management_group_id, mg.name, mg.display_order, ac.code, ac.name, ac.account_type
         `;
 
         // 3. Fetch Occupancy Data
@@ -174,7 +176,7 @@ const getComparison = async (requestId, filters, dbClient = null) => {
             SELECT
                 COALESCE(e.hotel_id, 0) as hotel_id,
                 COALESCE(h.name, '未割当') as hotel_name,
-                SUM(CASE WHEN mg.display_order = 1 THEN e.amount ELSE -e.amount END) as amount
+                SUM(CASE WHEN ac.account_type = 'credit' THEN e.amount ELSE -e.amount END) as amount
             FROM du_forecast_entries e
             JOIN acc_account_codes ac ON e.account_name = ac.name
             JOIN acc_management_groups mg ON ac.management_group_id = mg.id

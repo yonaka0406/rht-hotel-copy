@@ -39,8 +39,9 @@ const rows = computed(() => {
     if (!props.data || !props.data.actual || !props.data.budget) return [];
 
     const findAmount = (list, mgId) => {
-        const item = list.find(i => i.management_group_id === mgId || i.id === mgId);
-        return item ? parseFloat(item.amount) : 0;
+        return list
+            .filter(i => i.management_group_id === mgId)
+            .reduce((sum, i) => sum + parseFloat(i.amount || 0), 0);
     };
 
     const actual = props.data.actual;
