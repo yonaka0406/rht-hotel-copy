@@ -13,3 +13,7 @@
 ## 2026-02-02 - [Segmented Coloring within Unified Blocks]
 **Learning:** For unified reservation blocks, using a neutral background can feel "strange" if the rest of the calendar is colorful. A better strategy is to color each day segment with its specific plan color while using a darkened version for the indicator strip. This maintains the "one block" feel (via shared borders and sticky headers) while preserving the information density of plan-specific coloring.
 **Action:** Use `getItemColor` for segment backgrounds and a `darkenColor` utility for the corresponding indicator strip segments. Ensure color priority matches the system legend (e.g., Hold and Employee statuses override plan colors).
+
+## 2026-02-03 - [Truncated Tax Calculation for Japanese Accounting]
+**Learning:** In Japanese accounting practices, when calculating net prices from tax-inclusive totals, it is standard to calculate the tax portion first and truncate it (`floor`), then subtract this tax amount from the total to get the net price. This differs from simple rounding or floating-point division and must be consistently applied across frontend (Vue), backend (SQL/JS), and database schema (Generated Columns) to prevent penny-off discrepancies in invoices and receipts.
+**Action:** Always use the formula `tax_amount = floor(total * rate / (1 + rate))` and `net_price = total - tax_amount` for Japanese tax-inclusive calculations. Ensure all layers (DB, API, UI) are synchronized with this logic.
