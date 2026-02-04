@@ -104,9 +104,13 @@ function generateInvoiceHTML(html, data, userName) {
       }
 
       // 金額の表示（マイナス金額も適切に表示）
-      const amountDisplay = item.total_price >= 0 
-        ? `¥ ${item.total_price.toLocaleString()}`
-        : `¥ ${item.total_price.toLocaleString()}`; // マイナス記号も含めて表示
+      let amountDisplay;
+      if (item.total_price === null || item.total_price === undefined) {
+        amountDisplay = '¥ -';
+      } else {
+        const value = Number(item.total_price);
+        amountDisplay = `¥ ${value.toLocaleString()}`;
+      }
 
       dtlitems += `
       <tr>
@@ -119,18 +123,20 @@ function generateInvoiceHTML(html, data, userName) {
     });
   } else {
     // Fallback if no items array
+    const safeInvoiceTotal = (data.invoice_total_value !== null && data.invoice_total_value !== undefined) ? Number(data.invoice_total_value).toLocaleString() : '0';
     dtlitems = `
     <tr>
         <td class="cell-center">1</td>
         <td>宿泊料</td>                    
         <td class="cell-right">${data.invoice_total_stays} 泊</td>
-        <td class="cell-right">¥ ${data.invoice_total_value.toLocaleString()}</td>
+        <td class="cell-right">¥ ${safeInvoiceTotal}</td>
     </tr>
     `;
   }
 
   modifiedHTML = modifiedHTML.replace(/{{ detail_items }}/g, dtlitems);
-  modifiedHTML = modifiedHTML.replace(/{{ details_total_value }}/g, data.invoice_total_value.toLocaleString());
+  const safeTotalValue = (data.invoice_total_value !== null && data.invoice_total_value !== undefined) ? Number(data.invoice_total_value).toLocaleString() : '0';
+  modifiedHTML = modifiedHTML.replace(/{{ details_total_value }}/g, safeTotalValue);
 
   // Taxable items - 支払い項目を除外して計算
   let taxValue = 0;
@@ -185,22 +191,29 @@ function generateInvoiceHTML(html, data, userName) {
       taxValue = Object.values(taxSummary).reduce((sum, summary) => sum + summary.tax, 0);
     }
   }
-  modifiedHTML = modifiedHTML.replace(/{{ total_tax_value }}/g, taxValue.toLocaleString());
+  const safeTaxValue = (taxValue !== null && taxValue !== undefined) ? Number(taxValue).toLocaleString() : '0';
+  modifiedHTML = modifiedHTML.replace(/{{ total_tax_value }}/g, safeTaxValue);
 
   // Generate breakdown HTML, sorted by rate descending, filtering out 0s
   let taxitems = Object.values(taxSummary)
     .filter(summary => summary.net !== 0 || summary.tax !== 0)
     .sort((a, b) => b.rate - a.rate)
-    .map(summary => `
+    .map(summary => {
+      const safeRate = (summary.rate !== null && summary.rate !== undefined) ? Number(summary.rate * 100).toLocaleString() : '0';
+      const safeNet = (summary.net !== null && summary.net !== undefined) ? Number(summary.net).toLocaleString() : '0';
+      const safeTax = (summary.tax !== null && summary.tax !== undefined) ? Number(summary.tax).toLocaleString() : '0';
+      
+      return `
     <tr>        
-      <td class="title-cell">${(summary.rate * 100).toLocaleString()}％対象</td>
-      <td class="cell-right">¥ ${summary.net.toLocaleString()}</td>
+      <td class="title-cell">${safeRate}％対象</td>
+      <td class="cell-right">¥ ${safeNet}</td>
     </tr>
     <tr>        
       <td class="title-cell">消費税</td>
-      <td class="cell-right">¥ ${summary.tax.toLocaleString()}</td>
+      <td class="cell-right">¥ ${safeTax}</td>
     </tr>
-`).join('');
+`;
+    }).join('');
 
   modifiedHTML = modifiedHTML.replace(/{{ taxable_details }}/g, taxitems);
 

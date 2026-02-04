@@ -338,8 +338,6 @@ const openInvoiceDialog = (data) => {
             total_people: item.total_people
         }))
     };
-    
-    console.log('DEBUG: allPaymentData.details:', allPaymentData.details);
 
     const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
@@ -638,7 +636,9 @@ const openInvoiceDialog = (data) => {
     const groupedRates = {};
     let hasBackendRateData = false;
 
-        console.log('Aggregating tax rates for invoice. Input blocks:', uniqueReservationBlocks);
+    if (import.meta.env.DEV) {
+      console.log('Aggregating tax rates for invoice. Input blocks:', uniqueReservationBlocks);
+    }
 
     // 1. Sum up from backend provided 'rates' (reservation_rates_json)
     uniqueReservationBlocks.forEach(block => {
@@ -669,7 +669,9 @@ const openInvoiceDialog = (data) => {
 
     // 2. Fallback logic: If no backend rate data found at all, estimate based on payment values (default 10%)
     if (!hasBackendRateData) {
-            console.log('No backend rate data found. Falling back to payment-based estimation.');
+        if (import.meta.env.DEV) {
+          console.log('No backend rate data found. Falling back to payment-based estimation.');
+        }
         data.details.forEach(block => {
             const rate = block.tax_rate || 0.1;
             const category = 'accommodation'; // Default to accommodation
@@ -707,7 +709,9 @@ const openInvoiceDialog = (data) => {
         }
     }
 
-    console.log('Final grouped rates:', groupedRates);
+    if (import.meta.env.DEV) {
+      console.log('Final grouped rates:', groupedRates);
+    }
 
     // 全ての支払い方法を含む合計金額を手動で計算
     const calculatedTotalValue = allPaymentData.details.reduce((sum, detail) => {
@@ -772,7 +776,9 @@ const openInvoiceDialog = (data) => {
 const generatePdf = async () => {
     isGenerating.value = true;
     //  Trigger server-side PDF generation        
-    console.log('Generate PDF clicked', invoiceData.value);
+    if (import.meta.env.DEV) {
+      console.log('Generate PDF clicked', invoiceData.value);
+    }
     await generateInvoicePdf(invoiceData.value.hotel_id, invoiceData.value.invoice_number, invoiceData.value);
 
     await fetchBilledListView(selectedHotelId.value, formatDate(new Date(selectedMonth.value)));
@@ -783,7 +789,6 @@ const generatePdf = async () => {
 const generateExcel = async () => {
     isGenerating.value = true;
     //  Trigger server-side Excel generation
-    // console.log('Generate Excel clicked', invoiceData.value);
     await generateInvoiceExcel(invoiceData.value.hotel_id, invoiceData.value.invoice_number, invoiceData.value);
 
     await fetchBilledListView(selectedHotelId.value, formatDate(new Date(selectedMonth.value)));
@@ -794,7 +799,6 @@ const generateExcel = async () => {
 watch([selectedHotelId, selectedMonth], async ([newHotelId, newMonth]) => {
     if (newHotelId && newMonth) {
         await fetchBilledListView(newHotelId, formatDate(newMonth));
-        // console.log("Summarized Billed List:", summarizedBilledList.value);
     }
 }, { immediate: true }
 );
