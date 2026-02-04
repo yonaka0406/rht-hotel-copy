@@ -5,7 +5,7 @@ const pgFormat = require('pg-format');
 /**
  * Upsert Forecast Entries
  * @param {string} requestId 
- * @param {Array} entries Array of objects { hotel_id, month, account_name, amount }
+ * @param {Array} entries Array of objects { hotel_id, department_name, month, account_name, sub_account_name, amount }
  * @param {number} userId 
  */
 const upsertForecastEntries = async (requestId, entries, userId, dbClient = null) => {
@@ -36,7 +36,8 @@ const upsertForecastEntries = async (requestId, entries, userId, dbClient = null
             const subAccountId = accountId && e.sub_account_name ? subAccountMap[`${accountId}:${e.sub_account_name}`] : null;
 
             return [
-                e.hotel_id,
+                e.hotel_id || null,
+                e.department_name || null,
                 e.month,
                 accountId,
                 e.account_name,
@@ -50,7 +51,7 @@ const upsertForecastEntries = async (requestId, entries, userId, dbClient = null
 
         const query = pgFormat(
             `INSERT INTO du_forecast_entries (
-                hotel_id, month, account_code_id, account_name, 
+                hotel_id, department_name, month, account_code_id, account_name, 
                 sub_account_id, sub_account_name, amount, created_by, updated_by
              )
              VALUES %L
@@ -75,9 +76,9 @@ const upsertForecastEntries = async (requestId, entries, userId, dbClient = null
 };
 
 /**
- * Get Entries (Forecast) for a specific hotel and month range
+ * Get Entries (Forecast) for a specific hotel/department and month range
  */
-const getEntries = async (requestId, type, hotelId, startMonth, endMonth, dbClient = null) => {
+const getEntries = async (requestId, type, hotelId, startMonth, endMonth, departmentName = null, dbClient = null) => {
     const pool = getPool(requestId);
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
@@ -92,12 +93,14 @@ const getEntries = async (requestId, type, hotelId, startMonth, endMonth, dbClie
         SELECT e.*, a.code as account_code, a.management_group_id
         FROM du_forecast_entries e
         LEFT JOIN acc_account_codes a ON e.account_name = a.name
-        WHERE e.hotel_id = $1 AND e.month BETWEEN $2 AND $3
+        WHERE (e.hotel_id = $1 OR ($1 IS NULL AND e.hotel_id IS NULL))
+        AND (e.department_name = $4 OR ($4 IS NULL AND e.department_name IS NULL))
+        AND e.month BETWEEN $2 AND $3
         ORDER BY e.month, e.account_name, e.sub_account_name
     `;
 
     try {
-        const result = await client.query(query, [hotelId, startMonth, endMonth]);
+        const result = await client.query(query, [hotelId, startMonth, endMonth, departmentName]);
         return result.rows;
     } catch (err) {
         logger.error(`Error fetching forecast entries:`, err);

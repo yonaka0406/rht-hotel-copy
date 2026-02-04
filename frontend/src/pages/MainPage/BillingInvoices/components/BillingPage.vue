@@ -687,23 +687,22 @@ const openInvoiceDialog = (data) => {
                 };
             }
             groupedRates[key].total_price += block.value;
-            groupedRates[key].total_price += block.value;
             groupedRates[key].total_quantity += (data.invoice_total_stays || 1);
-
-            // For 0% tax (or explicit 0 rate), Net Price should equal Total Price
-            if (Number(rate) === 0) {
-                groupedRates[key].total_net_price = groupedRates[key].total_price;
-            }
         });
 
         for (const key in groupedRates) {
             const item = groupedRates[key];
 
-            // Only calculate net price if it wasn't already set (e.g. for non-0% items)
-            if (item.total_net_price === 0 && item.tax_rate !== 0) {
-                const grossTotal = item.total_price;
-                // Using Math.round to match backend ROUND logic
-                item.total_net_price = Math.round(grossTotal / (1 + parseFloat(item.tax_rate)));
+            const grossTotal = item.total_price;
+            let taxRate = parseFloat(item.tax_rate) || 0;
+            if (taxRate > 1) taxRate = taxRate / 100.0;
+
+            if (taxRate === 0) {
+                item.total_net_price = grossTotal;
+            } else {
+                // New logic: net_price = price - floor(price * rate / (1 + rate))
+                const taxAmount = Math.floor(grossTotal * taxRate / (1 + taxRate));
+                item.total_net_price = grossTotal - taxAmount;
             }
         }
     }

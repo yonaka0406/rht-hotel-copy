@@ -4,6 +4,7 @@ const integrity = require('./integrity');
 const receivables = require('./receivables');
 const entries = require('./entries');
 const tables = require('./tables');
+const budgetActual = require('./budgetActual');
 
 module.exports = {
     accountingRead: read,
@@ -11,5 +12,6 @@ module.exports = {
     integrity,
     receivables: receivables,
     forecastEntries: entries,
-    operationalTables: tables
+    operationalTables: tables,
+    budgetActual
 };

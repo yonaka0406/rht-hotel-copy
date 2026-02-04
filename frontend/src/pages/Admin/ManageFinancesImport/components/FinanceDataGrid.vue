@@ -3,8 +3,10 @@
         <div class="flex flex-col gap-4 mb-6">
             <!-- Row 1: Selection -->
             <div class="flex flex-wrap items-center gap-3">
-                <Select v-model="selectedHotel" :options="hotels" optionLabel="name" placeholder="ホテルを選択"
-                    class="w-64" />
+                <SelectButton v-if="viewFilter === 'account'" v-model="targetType" :options="targetTypeOptions"
+                    optionLabel="label" optionValue="value" />
+                <Select v-model="selectedContext" :options="availableTargets" optionLabel="name"
+                    :placeholder="targetType === 'hotel' ? 'ホテルを選択' : '部門を選択'" class="w-64" filter />
                 <DatePicker v-model="selectedMonth" view="month" dateFormat="yy/mm" placeholder="開始月を選択" />
                 <Button label="読み込み" icon="pi pi-refresh" @click="loadData" :loading="loading" />
             </div>
@@ -40,7 +42,7 @@
             <i class="pi pi-info-circle text-primary text-xl"></i>
             <div>
                 <span class="text-xs text-gray-500 block">表示中のデータ:</span>
-                <span class="font-bold text-lg text-primary">{{ loadedHotelName }}</span>
+                <span class="font-bold text-lg text-primary">{{ loadedTargetName }}</span>
                 <span class="mx-2 text-gray-400">|</span>
                 <span class="text-gray-700">{{ loadedMonthRangeLabel }}</span>
             </div>
@@ -168,18 +170,9 @@ const toast = useToast();
 const confirm = useConfirm();
 
 const hotels = computed(() => hotelStore.hotels.value || []);
-const selectedHotel = ref(null);
+const departments = ref([]);
+const selectedContext = ref(null);
 const selectedMonth = ref(new Date());
-const loading = ref(false);
-const saving = ref(false);
-const gridData = ref([]);
-const accountCodes = ref([]);
-const subAccounts = ref([]);
-const hasChanges = ref(false);
-const pasteInfo = ref(null);
-const hideZeroRows = ref(false);
-const loadedHotelName = ref('');
-const loadedMonthRangeLabel = ref('');
 
 // View Filter State
 const viewFilter = ref('operational'); // 'operational' or 'account'
@@ -189,6 +182,57 @@ const viewOptions = computed(() => {
         options.push({ label: '勘定科目を表示', value: 'account' });
     }
     return options;
+});
+
+const targetType = ref('hotel');
+const targetTypeOptions = [
+    { label: 'ホテル', value: 'hotel' },
+    { label: '本部・部門', value: 'department' }
+];
+
+const availableTargets = computed(() => {
+    if (viewFilter.value === 'operational' || targetType.value === 'hotel') {
+        return hotels.value.map(h => ({
+            type: 'hotel',
+            id: h.id,
+            name: h.name,
+            baseName: h.name
+        }));
+    }
+    
+    // Department mode (only in account view when department is selected)
+    return departments.value
+        .filter(d => !d.hotel_id && d.is_current)
+        .map(d => ({
+            type: 'department',
+            name: d.name,
+            baseName: d.name
+        }));
+});
+
+const loading = ref(false);
+const saving = ref(false);
+const gridData = ref([]);
+const accountCodes = ref([]);
+const subAccounts = ref([]);
+const hasChanges = ref(false);
+const pasteInfo = ref(null);
+const hideZeroRows = ref(false);
+const loadedTargetName = ref('');
+const loadedMonthRangeLabel = ref('');
+
+// Watchers to reset selection when mode changes
+watch(viewFilter, (newVal) => {
+    if (newVal === 'operational') {
+        targetType.value = 'hotel';
+    }
+    selectedContext.value = null;
+    gridData.value = [];
+});
+
+watch(targetType, () => {
+    selectedContext.value = null;
+    gridData.value = [];
 });
 
 const hideZeroRowsOptions = ref([
@@ -322,13 +366,17 @@ const months = computed(() => {
 });
 
 const loadData = async () => {
-    if (!selectedHotel.value || !selectedMonth.value) return;
+    if (!selectedContext.value || !selectedMonth.value) return;
 
     loading.value = true;
     try {
         const start = months.value[0].value;
         const end = months.value[11].value;
-        const response = await importStore.getFinancesData(selectedHotel.value.id, start, end);
+        
+        const hotelId = selectedContext.value.type === 'hotel' ? selectedContext.value.id : null;
+        const departmentName = selectedContext.value.type === 'department' ? selectedContext.value.baseName : null;
+
+        const response = await importStore.getFinancesData(hotelId, start, end, departmentName);
 
         accountCodes.value = response.accountCodes;
         const entries = props.type === 'forecast' ? response.forecast : [];
@@ -337,68 +385,67 @@ const loadData = async () => {
 
         const dataMap = {};
 
-        // 1. Global Operational Metrics
-        const globalMetrics = [
-            { name: '営業日数', key: 'operating_days', group: '運用指標 (全体)' },
-            { name: '客室数', key: 'available_room_nights', group: '運用指標 (全体)' },
-            { name: '宿泊外販売客室数', key: 'non_accommodation_sold_rooms', group: '運用指標 (全体)' },
-            { name: '宿泊外売上', key: 'non_accommodation_revenue', group: '運用指標 (全体)' },
-        ];
+        // 1. Global Operational Metrics (Only for hotels)
+        if (hotelId) {
+            const globalMetrics = [
+                { name: '営業日数', key: 'operating_days', group: '運用指標 (全体)' },
+                { name: '客室数', key: 'available_room_nights', group: '運用指標 (全体)' },
+                { name: '宿泊外販売客室数', key: 'non_accommodation_sold_rooms', group: '運用指標 (全体)' },
+                { name: '宿泊外売上', key: 'non_accommodation_revenue', group: '運用指標 (全体)' },
+            ];
 
-        globalMetrics.forEach(m => {
-            const rowKey = `global_${m.key}`;
-            dataMap[rowKey] = {
-                row_key: rowKey,
-                account_name: m.name,
-                management_group_name: m.group,
-                group_sort_order: 10,
-                is_operational: true,
-                is_global: true,
-                metric_key: m.key,
-                ...months.value.reduce((acc, mo) => ({ ...acc, [mo.value]: 0 }), {})
-            };
-        });
-
-        // 2. Categorized Operational Metrics
-        const categorizedMetrics = [
-            { name: '販売客室数', key: 'rooms_sold_nights' },
-            { name: '宿泊売上', key: 'accommodation_revenue' },
-        ];
-
-        const combinations = new Set();
-        // Use all combinations for both forecast and accounting to keep grid structure consistent
-        typeCategories.forEach(tc => {
-            packageCategories.forEach(pc => {
-                combinations.add(`${tc.id}_${pc.id}`);
-            });
-        });
-
-        // Ensure we include the 0_0 combination for unset categories
-        combinations.add('0_0');
-
-        combinations.forEach(combo => {
-            const [typeId, pkgId] = combo.split('_');
-            if (typeId === 'null') return;
-
-            const typeName = typeCategories.find(c => c.id === parseInt(typeId))?.name || '未設定';
-            const pkgName = packageCategories.find(c => c.id === parseInt(pkgId))?.name || '未設定';
-
-            categorizedMetrics.forEach(m => {
-                const rowKey = `categorized_${combo}_${m.key}`;
+            globalMetrics.forEach(m => {
+                const rowKey = `global_${m.key}`;
                 dataMap[rowKey] = {
                     row_key: rowKey,
-                    account_name: `[${pkgName}] ${m.name}`,
-                    management_group_name: typeName, // Plan Type is the Group Header
-                    group_sort_order: 20,
+                    account_name: m.name,
+                    management_group_name: m.group,
+                    group_sort_order: 10,
                     is_operational: true,
-                    is_global: false,
+                    is_global: true,
                     metric_key: m.key,
-                    plan_type_category_id: parseInt(typeId),
-                    plan_package_category_id: pkgId ? parseInt(pkgId) : 0,
                     ...months.value.reduce((acc, mo) => ({ ...acc, [mo.value]: 0 }), {})
                 };
             });
-        });
+
+            // 2. Categorized Operational Metrics (Only for hotels)
+            const categorizedMetrics = [
+                { name: '販売客室数', key: 'rooms_sold_nights' },
+                { name: '宿泊売上', key: 'accommodation_revenue' },
+            ];
+
+            const combinations = new Set();
+            typeCategories.forEach(tc => {
+                packageCategories.forEach(pc => {
+                    combinations.add(`${tc.id}_${pc.id}`);
+                });
+            });
+            combinations.add('0_0');
+
+            combinations.forEach(combo => {
+                const [typeId, pkgId] = combo.split('_');
+                if (typeId === 'null') return;
+
+                const typeName = typeCategories.find(c => c.id === parseInt(typeId))?.name || '未設定';
+                const pkgName = packageCategories.find(c => c.id === parseInt(pkgId))?.name || '未設定';
+
+                categorizedMetrics.forEach(m => {
+                    const rowKey = `categorized_${combo}_${m.key}`;
+                    dataMap[rowKey] = {
+                        row_key: rowKey,
+                        account_name: `[${pkgName}] ${m.name}`,
+                        management_group_name: typeName, // Plan Type is the Group Header
+                        group_sort_order: 20,
+                        is_operational: true,
+                        is_global: false,
+                        metric_key: m.key,
+                        plan_type_category_id: parseInt(typeId),
+                        plan_package_category_id: pkgId ? parseInt(pkgId) : 0,
+                        ...months.value.reduce((acc, mo) => ({ ...acc, [mo.value]: 0 }), {})
+                    };
+                });
+            });
+        }
 
         // 3. Financial Accounts
         if (props.type === 'forecast') {
@@ -447,60 +494,30 @@ const loadData = async () => {
             }
         });
 
-        tableRecords.forEach(tr => {
-            const mDate = tr.forecast_month || tr.accounting_month;
-            const mKey = formatDate(mDate);
+        if (hotelId) {
+            const globalMetrics = [
+                { name: '営業日数', key: 'operating_days', group: '運用指標 (全体)' },
+                { name: '客室数', key: 'available_room_nights', group: '運用指標 (全体)' },
+                { name: '宿泊外販売客室数', key: 'non_accommodation_sold_rooms', group: '運用指標 (全体)' },
+                { name: '宿泊外売上', key: 'non_accommodation_revenue', group: '運用指標 (全体)' },
+            ];
+            const categorizedMetrics = [
+                { name: '販売客室数', key: 'rooms_sold_nights' },
+                { name: '宿泊売上', key: 'accommodation_revenue' },
+            ];
 
-            if (tr.plan_type_category_id === null && tr.plan_package_category_id === null) {
-                globalMetrics.forEach(m => {
-                    if (m.key === 'non_accommodation_revenue') return;
+            tableRecords.forEach(tr => {
+                const mDate = tr.forecast_month || tr.accounting_month;
+                const mKey = formatDate(mDate);
 
-                    const rowKey = `global_${m.key}`;
-                    if (dataMap[rowKey]) {
-                        const oldValue = dataMap[rowKey][mKey] || 0;
-                        const newValue = parseFloat(tr[m.key] || 0);
-
-                        if (m.key === 'operating_days' || m.key === 'available_room_nights') {
-                            dataMap[rowKey][mKey] = Math.max(oldValue, newValue);
-                        } else {
-                            dataMap[rowKey][mKey] = oldValue + newValue;
-                        }
-                    }
-                });
-            } else if (tr.plan_type_category_id !== null && tr.plan_type_category_id !== 0) {
-                const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
-                categorizedMetrics.forEach(m => {
-                    const rowKey = `categorized_${combo}_${m.key}`;
-                    if (dataMap[rowKey]) dataMap[rowKey][mKey] = parseFloat(tr[m.key] || 0);
-                });
-            } else {
-                // For plan_type_category_id: 0 - process accommodation_revenue and other metrics to categorized
-                if (tr.plan_type_category_id === 0) {
-                    if (tr.accommodation_revenue && tr.accommodation_revenue > 0) {
-                        const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
-                        const rowKey = `categorized_${combo}_accommodation_revenue`;
-                        if (dataMap[rowKey]) {
-                            dataMap[rowKey][mKey] = parseFloat(tr.accommodation_revenue || 0);
-                        }
-                    }
-
-                    // Handle other metrics for categorized section
-                    const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
-                    ['rooms_sold_nights'].forEach(metricKey => {
-                        const rowKey = `categorized_${combo}_${metricKey}`;
-                        if (dataMap[rowKey]) {
-                            dataMap[rowKey][mKey] = parseFloat(tr[metricKey] || 0);
-                        }
-                    });
-
-                    // Handle other global metrics (operating_days, available_room_nights, non_accommodation_sold_rooms)
+                if (tr.plan_type_category_id === null && tr.plan_package_category_id === null) {
                     globalMetrics.forEach(m => {
-                        if (m.key === 'non_accommodation_revenue') return; // Already handled below
+                        if (m.key === 'non_accommodation_revenue') return;
 
                         const rowKey = `global_${m.key}`;
                         if (dataMap[rowKey]) {
-                            const newValue = parseFloat(tr[m.key] || 0);
                             const oldValue = dataMap[rowKey][mKey] || 0;
+                            const newValue = parseFloat(tr[m.key] || 0);
 
                             if (m.key === 'operating_days' || m.key === 'available_room_nights') {
                                 dataMap[rowKey][mKey] = Math.max(oldValue, newValue);
@@ -509,19 +526,58 @@ const loadData = async () => {
                             }
                         }
                     });
+                } else if (tr.plan_type_category_id !== null && tr.plan_type_category_id !== 0) {
+                    const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
+                    categorizedMetrics.forEach(m => {
+                        const rowKey = `categorized_${combo}_${m.key}`;
+                        if (dataMap[rowKey]) dataMap[rowKey][mKey] = parseFloat(tr[m.key] || 0);
+                    });
+                } else {
+                    if (tr.plan_type_category_id === 0) {
+                        if (tr.accommodation_revenue && tr.accommodation_revenue > 0) {
+                            const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
+                            const rowKey = `categorized_${combo}_accommodation_revenue`;
+                            if (dataMap[rowKey]) {
+                                dataMap[rowKey][mKey] = parseFloat(tr.accommodation_revenue || 0);
+                            }
+                        }
 
-                    // Also aggregate non_accommodation_revenue from 0/0 records to global
-                    if (tr.non_accommodation_revenue !== undefined && tr.non_accommodation_revenue !== null) {
-                        const globalRowKey = 'global_non_accommodation_revenue';
-                        if (dataMap[globalRowKey]) {
-                            const oldValue = dataMap[globalRowKey][mKey] || 0;
-                            const newValue = parseFloat(tr.non_accommodation_revenue || 0);
-                            dataMap[globalRowKey][mKey] = oldValue + newValue;
+                        const combo = `${tr.plan_type_category_id}_${tr.plan_package_category_id === null ? 0 : tr.plan_package_category_id}`;
+                        ['rooms_sold_nights'].forEach(metricKey => {
+                            const rowKey = `categorized_${combo}_${metricKey}`;
+                            if (dataMap[rowKey]) {
+                                dataMap[rowKey][mKey] = parseFloat(tr[metricKey] || 0);
+                            }
+                        });
+
+                        globalMetrics.forEach(m => {
+                            if (m.key === 'non_accommodation_revenue') return;
+
+                            const rowKey = `global_${m.key}`;
+                            if (dataMap[rowKey]) {
+                                const newValue = parseFloat(tr[m.key] || 0);
+                                const oldValue = dataMap[rowKey][mKey] || 0;
+
+                                if (m.key === 'operating_days' || m.key === 'available_room_nights') {
+                                    dataMap[rowKey][mKey] = Math.max(oldValue, newValue);
+                                } else {
+                                    dataMap[rowKey][mKey] = oldValue + newValue;
+                                }
+                            }
+                        });
+
+                        if (tr.non_accommodation_revenue !== undefined && tr.non_accommodation_revenue !== null) {
+                            const globalRowKey = 'global_non_accommodation_revenue';
+                            if (dataMap[globalRowKey]) {
+                                const oldValue = dataMap[globalRowKey][mKey] || 0;
+                                const newValue = parseFloat(tr.non_accommodation_revenue || 0);
+                                dataMap[globalRowKey][mKey] = oldValue + newValue;
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
 
         gridData.value = Object.values(dataMap).sort((a, b) => {
             if (a.group_sort_order !== b.group_sort_order) return a.group_sort_order - b.group_sort_order;
@@ -531,7 +587,7 @@ const loadData = async () => {
         });
 
         // Update loaded context labels
-        loadedHotelName.value = selectedHotel.value.name;
+        loadedTargetName.value = selectedContext.value.name;
         loadedMonthRangeLabel.value = `${months.value[0].label} 〜 ${months.value[11].label}`;
 
         hasChanges.value = false;
@@ -544,12 +600,15 @@ const loadData = async () => {
 };
 
 const saveData = async () => {
-    if (!selectedHotel.value) return;
+    if (!selectedContext.value) return;
 
     saving.value = true;
     try {
         const entries = [];
         const tableDataMap = {};
+        
+        const hotelId = selectedContext.value.type === 'hotel' ? selectedContext.value.id : null;
+        const departmentName = selectedContext.value.type === 'department' ? selectedContext.value.baseName : null;
 
         gridData.value.forEach(row => {
             months.value.forEach(m => {
@@ -573,7 +632,7 @@ const saveData = async () => {
 
                     if (!tableDataMap[mapKey]) {
                         tableDataMap[mapKey] = {
-                            hotel_id: selectedHotel.value.id,
+                            hotel_id: hotelId,
                             [props.type === 'forecast' ? 'forecast_month' : 'accounting_month']: m.value,
                             plan_type_category_id: planTypeId,
                             plan_package_category_id: planPackageId
@@ -583,7 +642,8 @@ const saveData = async () => {
 
                 } else if (amount !== 0) {
                     entries.push({
-                        hotel_id: selectedHotel.value.id,
+                        hotel_id: hotelId,
+                        department_name: departmentName,
                         month: m.value,
                         account_name: row.base_account_name || row.account_name,
                         sub_account_name: row.sub_account_name || null,
@@ -764,6 +824,7 @@ onMounted(async () => {
         if (settings) {
             if (settings.codes) accountCodes.value = settings.codes;
             if (settings.subAccounts) subAccounts.value = settings.subAccounts;
+            if (settings.departments) departments.value = settings.departments;
         }
     } catch (e) {
         console.error('Failed to load initial account codes:', e);

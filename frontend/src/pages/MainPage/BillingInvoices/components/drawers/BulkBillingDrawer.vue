@@ -33,41 +33,20 @@
                     <div class="grid grid-cols-1">
                         <p class="mb-1">選択中予約をまとめて請求書作成</p>
                         <div class="grid grid-cols-2 flex justify-between items-center mb-2 mt-5">
-                            <FloatLabel>
-                                <AutoComplete
-                                    v-model="client"
-                                    :suggestions="filteredClients"
-                                    optionLabel="display_name"
-                                    @complete="filterClients"
-                                    field="id"
-                                    @option-select="onClientSelect"                                        
-                                    fluid
-                                    required
-                                >
-                                    <template #option="slotProps">                                            
-                                        <div>
-                                            <p>
-                                                <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
-                                                <i v-else class="pi pi-user"></i>
-                                                {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
-                                                <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
-                                            </p>
-                                            <div class="flex items-center gap-2">
-                                                <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-                                                <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
-                                                <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
-                                            </div>
-                                        </div>                                            
-                                    </template>
-                                </AutoComplete>
-                                <label>請求先</label>
-                            </FloatLabel>                                
+                            <ClientAutoCompleteWithStore
+                                v-model="client"
+                                label="請求先"
+                                @option-select="onClientSelect"
+                                fluid
+                                required
+                            />
                             <FloatLabel>
                                 <DatePicker 
                                     v-model="billingForm.date"
                                     dateFormat="yy-mm-dd"                                        
                                     :selectOtherMonths="true"   
                                     class="ml-2"
+                                    fluid
                                 />
                                 <label for="billingForm.date">請求日</label>
                             </FloatLabel>
@@ -127,12 +106,11 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { useToast } from "primevue/usetoast";
-import { Drawer, Card, AutoComplete, DatePicker, FloatLabel, InputText, Button, DataTable, Column, Badge } from 'primevue';
-import { useClientStore } from '@/composables/useClientStore';
+import { Drawer, Card, DatePicker, FloatLabel, InputText, Button, DataTable, Column, Badge } from 'primevue';
+import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
 import { useReservationStore } from '@/composables/useReservationStore';
 
 const toast = useToast();
-const { clients } = useClientStore();
 const { addBulkReservationPayment } = useReservationStore();
 
 const props = defineProps({
@@ -172,27 +150,6 @@ const formatCurrency = (value) => {
     if (value == null) return '';
     return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
 };
-const normalizeKana = (str) => {
-    if (!str) return '';
-    let normalizedStr = str.normalize('NFKC');
-    // Convert Hiragana to Katakana
-    normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) => 
-    String.fromCharCode(char.charCodeAt(0) + 0x60)  
-    );
-    // Convert half-width Katakana to full-width Katakana
-    normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) => 
-    String.fromCharCode(char.charCodeAt(0) - 0xFEC0) 
-    );
-    return normalizedStr;
-};
-const normalizePhone = (phone) => {
-    if (!phone) return '';
-    // Remove all non-numeric characters
-    let normalized = phone.replace(/\D/g, '');
-    // Remove leading zeros
-    normalized = normalized.replace(/^0+/, '');
-    return normalized;
-};
 
 // Computed
 const totalPeople = computed(() => {
@@ -221,7 +178,6 @@ const billingForm = ref({
 });    
 const selectedClient = ref(null);
 const client = ref({});
-const filteredClients = ref([]);
 
 watch(() => props.selectedReservations, (newVal) => {
     billingForm.value.reservations = newVal;
@@ -230,34 +186,6 @@ watch(() => props.selectedReservations, (newVal) => {
 watch(() => props.defaultDate, (newVal) => {
     if(newVal) billingForm.value.date = newVal;
 }, { immediate: true });
-
-
-const filterClients = (event) => {
-    const query = event.query.toLowerCase();
-    const normalizedQuery = normalizePhone(query);
-    const isNumericQuery = /^\d+$/.test(normalizedQuery);
-
-    if (!query || !clients.value || !Array.isArray(clients.value)) {
-        filteredClients.value = [];
-        return;
-    }
-
-    filteredClients.value = clients.value.filter((client) => {
-        // Name filtering (case-insensitive)
-        const matchesName = 
-            (client.name && client.name.toLowerCase().includes(query)) || 
-            (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) || 
-            (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
-        // Phone/Fax filtering (only for numeric queries)
-        const matchesPhoneFax = isNumericQuery &&
-            ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) || 
-            (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
-        // Email filtering (case-insensitive)
-        const matchesEmail = client.email && client.email.toLowerCase().includes(query);
-
-        return matchesName || matchesPhoneFax || matchesEmail;
-    });
-};
 
 const onClientSelect = (event) => {
     selectedClient.value = event.value;

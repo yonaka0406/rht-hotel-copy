@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.12] - 2026-02-04
+
+- Bug Fix: Standardized tax calculation methodology across the application for consistent, accurate tax-exclusive pricing in invoices and receipts.
+- New Feature: Added account-type (debit/credit) classification with UI controls and auto-infer from group defaults; new type column and badges in settings.
+- Improvement: Budget/actual calculations now aggregate all matching items; reporting and summaries carry account-type for accurate P&L and monthly views.
+- Improvement: Query/view performance improved via an optimized unpivot approach and additional forecast indexes.
+
+---
+
+## [1.4.11] - 2026-02-03
+
+- New Feature: Added Budget vs Actual comparison dashboard with department-level financial analysis capabilities.
+- New Feature: Introduced occupancy and operating profit comparison reports.
+- New Feature: Enhanced finance data import and synchronization to support department-specific targeting alongside hotel-level tracking.
+- New Feature: Extended forecasting system to track financial data at department level for improved budget tracking.
+- New Feature: Floating bulk action bar appears when items are selected, showing count and quick access to bulk invoice creation with expand/collapse interactions.
+
+---
+
 ## [1.4.10] - 2026-02-02
 
 - Bug Fix: Fixed invoice PDF generation issue where the company stamp image failed to load in Playwright due to Helmet's Content Security Policy restrictions. The stamp image is now embedded as a base64 data URI, eliminating the need for HTTP requests and ensuring compatibility with CSP headers.

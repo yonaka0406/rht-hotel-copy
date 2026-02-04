@@ -33,3 +33,7 @@
 ## 2026-02-02 - Using v-memo for High-Frequency Grid Rendering
 **Learning:** In large grids where mouse-over effects (row/column highlighting) trigger frequent re-renders, the entire grid template is often re-evaluated, leading to UI stuttering. Applying `v-memo` to the grid rows allows Vue to skip re-rendering rows that haven't changed their data, highlight state, or view mode, keeping the main thread free for smooth interactions.
 **Action:** Use `v-memo` on rows in large calendar or grid components, specifically targeting data and visual state dependencies.
+
+## 2026-02-02 - Optimizing Accounting Views with LATERAL Unpivot
+**Learning:** Using `UNION ALL` to aggregate different columns (like debit/credit amounts) from the same large table in a view causes the database to perform multiple full scans. Replacing `UNION ALL` with `CROSS JOIN LATERAL` allows the database to read each row once and "unpivot" it in memory, significantly reducing I/O and improving view query performance.
+**Action:** Prefer `CROSS JOIN LATERAL` for unpivoting data from a single table over `UNION ALL` of multiple scans.

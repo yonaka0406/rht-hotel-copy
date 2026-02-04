@@ -9,20 +9,22 @@ const logger = require('../../config/logger');
  */
 const getFinancesData = async (req, res) => {
     const { requestId } = req;
-    const { hotelId, startMonth, endMonth } = req.query;
+    const { hotelId, departmentName, startMonth, endMonth } = req.query;
 
-    if (!hotelId || !startMonth || !endMonth) {
-        return res.status(400).json({ error: 'Missing required parameters: hotelId, startMonth, endMonth' });
+    if ((!hotelId && !departmentName) || !startMonth || !endMonth) {
+        return res.status(400).json({ error: 'Missing required parameters: (hotelId or departmentName), startMonth, endMonth' });
     }
 
-    logger.info(`Fetching finance grid data for hotelId: ${hotelId}, range: ${startMonth} to ${endMonth}`);
+    const hotelIdNum = hotelId ? parseInt(hotelId) : null;
+
+    logger.info(`Fetching finance grid data for hotelId: ${hotelIdNum}, departmentName: ${departmentName}, range: ${startMonth} to ${endMonth}`);
 
     try {
         const [forecast, accountCodes, forecastTable, actualsTable, typeCategories, packageCategories] = await Promise.all([
-            accountingModel.forecastEntries.getEntries(requestId, 'forecast', hotelId, startMonth, endMonth),
+            accountingModel.forecastEntries.getEntries(requestId, 'forecast', hotelIdNum, startMonth, endMonth, departmentName),
             accountingModel.accountingRead.getAccountCodes(requestId),
-            accountingModel.operationalTables.getForecastTable(requestId, hotelId, startMonth, endMonth),
-            accountingModel.operationalTables.getAccountingTable(requestId, hotelId, startMonth, endMonth),
+            hotelIdNum ? accountingModel.operationalTables.getForecastTable(requestId, hotelIdNum, startMonth, endMonth) : Promise.resolve([]),
+            hotelIdNum ? accountingModel.operationalTables.getAccountingTable(requestId, hotelIdNum, startMonth, endMonth) : Promise.resolve([]),
             planModel.selectAllPlanTypeCategories(requestId),
             planModel.selectAllPlanPackageCategories(requestId)
         ]);
@@ -61,17 +63,16 @@ const getFinancesData = async (req, res) => {
     }
 };
 
-/**
- * Upsert Finance Grid Data
- */
 const upsertFinancesData = async (req, res) => {
-    const { requestId, session } = req;
+    const { requestId, user } = req;
     const { type, entries, tableData } = req.body; // type: 'forecast' or 'accounting'
-    const userId = session.userId || 1;
+    const userId = user?.id || 1;
 
     try {
         let entryResult = [];
         let tableResult = [];
+
+        logger.debug(`[${requestId}] Upserting ${type} data for user ${userId}. Entries: ${entries?.length || 0}, Table records: ${tableData?.length || 0}`);
 
         if (entries && Array.isArray(entries) && entries.length > 0) {
             if (type === 'forecast') {
@@ -99,36 +100,42 @@ const upsertFinancesData = async (req, res) => {
 
 /**
  * Sync from Yayoi
- * Aggregates acc_yayoi_data by month and account for a specific hotel
+ * Aggregates acc_yayoi_data by month and account for a specific hotel/department
  */
 const syncFromYayoi = async (req, res) => {
     const { requestId } = req;
-    const { hotelId, month } = req.body;
+    const { hotelId, departmentName, month } = req.body;
 
-    if (!hotelId || !month) {
-        return res.status(400).json({ error: 'Missing hotelId or month' });
+    if ((!hotelId && !departmentName) || !month) {
+        return res.status(400).json({ error: 'Missing hotelId/departmentName or month' });
     }
 
     try {
         const pool = getPool(requestId);
 
+        const hotelIdNum = hotelId ? parseInt(hotelId) : null;
+
         const query = `
             SELECT 
                 amas.account_name,
                 ac.id as account_code_id,
-                amas.total_net_amount as amount
+                SUM(amas.total_net_amount) as amount
             FROM acc_monthly_account_summary amas
-            JOIN acc_departments ad ON amas.department = ad.name
             JOIN acc_account_codes ac ON amas.account_name = ac.name
-            WHERE ad.hotel_id = $1 AND amas.month = $2
+            LEFT JOIN acc_departments ad ON amas.department = ad.name
+            WHERE ($1::int IS NULL OR ad.hotel_id = $1)
+            AND ($3::varchar IS NULL OR amas.department = $3)
+            AND amas.month = $2
+            GROUP BY amas.account_name, ac.id
         `;
 
-        const result = await pool.query(query, [hotelId, month]);
+        const result = await pool.query(query, [hotelIdNum, month, departmentName]);
 
         res.json({
             success: true,
             month,
-            hotelId,
+            hotelId: hotelIdNum,
+            departmentName,
             entries: result.rows
         });
     } catch (error) {
