@@ -163,12 +163,19 @@ function generateInvoiceHTML(html, data, userName) {
     if (originalTaxableTotal > 0 && actualTaxableAmount !== originalTaxableTotal) {
       const adjustmentRatio = actualTaxableAmount / originalTaxableTotal;
       
-      // 税額サマリーを調整
+      // 税額サマリーを調整 - Excel出力と同じロジックに統一
       Object.keys(taxSummary).forEach(rateKey => {
         const summary = taxSummary[rateKey];
-        const adjustedTotalPrice = Math.round(summary.net * (1 + summary.rate) * adjustmentRatio);
-        const adjustedNet = Math.round(adjustedTotalPrice / (1 + summary.rate));
-        const adjustedTax = adjustedTotalPrice - adjustedNet;
+        const rate = parseFloat(rateKey);
+        
+        // 調整後の税込金額を計算
+        const adjustedTotalPrice = Math.round(summary.net * (1 + rate) * adjustmentRatio);
+        
+        // まず消費税を切り捨てで計算
+        const adjustedTax = Math.floor(adjustedTotalPrice * rate / (1 + rate));
+        
+        // 税込金額 - 消費税 = 税抜金額
+        const adjustedNet = adjustedTotalPrice - adjustedTax;
         
         summary.net = adjustedNet;
         summary.tax = adjustedTax;
