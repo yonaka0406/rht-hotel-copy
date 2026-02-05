@@ -58,7 +58,7 @@
             </Column>
             <Column field="type" header="種類">
                  <template #body="{data}">
-                    <Tag v-if="data.dataType === 'action'" style="background: transparent;" :value="translateActionType(data.type)" :severity="getActionTypeSeverity(data.type)" />
+                    <Tag v-if="data.dataType === 'action'" :value="translateActionType(data.type)" :severity="getActionTypeSeverity(data.type)" />
                     <span v-else>{{ translateReservationType(data.type) }}</span>
                 </template>
             </Column>
@@ -245,7 +245,7 @@
             other: 'secondary',
             construction_site: 'success',
             office_visit: 'primary',
-            wh: 'contrast'
+            wh: 'info'
         };
         return severities[actionType] || 'info';
     };
