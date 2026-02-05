@@ -11,6 +11,18 @@ const MAX_RETRIES = 5; // Max retries for a queued item
 const POLL_INTERVAL = 2000; // Poll every 2 seconds
 const BATCH_SIZE = 3; // Process up to 3 items per poll cycle
 
+/**
+ * Helper to detect if an error is related to a database connection or a serious Postgres failure
+ * that warrants connection recovery.
+ */
+const isDbError = (error) => {
+    const pgConnectionErrors = ['57P01', '57P02', '08006', '08003', '08000', '08001', '08004', '08007', '08P01'];
+    return error instanceof DatabaseError ||
+           error.name === 'DatabaseError' ||
+           pgConnectionErrors.includes(error.code) ||
+           (error.code && typeof error.code === 'string' && error.code.startsWith('ECONN'));
+};
+
 async function fetchPendingRequests(dbClient, limit) {
     const fetchRequestId = `ota-poller-fetch-${Date.now()}`;
     try {
@@ -31,6 +43,12 @@ async function fetchPendingRequests(dbClient, limit) {
         return result.rows;
     } catch (error) {
         logger.error('Error fetching pending OTA XML requests:', { requestId: fetchRequestId, error: error.message, stack: error.stack });
+
+        // If it's a database error, re-throw so the main loop can handle connection recovery
+        if (isDbError(error)) {
+            throw error;
+        }
+
         return [];
     }
 }
@@ -200,13 +218,7 @@ async function otaXmlPollerLoop() {
             }
 
             // If it's a database error or connection issue, release the client and wait longer
-            const pgConnectionErrors = ['57P01', '57P02', '08006', '08003', '08000', '08001', '08004', '08007', '08P01'];
-            const isDbError = error instanceof DatabaseError ||
-                              error.name === 'DatabaseError' ||
-                              pgConnectionErrors.includes(error.code) ||
-                              (error.code && typeof error.code === 'string' && error.code.startsWith('ECONN'));
-
-            if (isDbError) {
+            if (isDbError(error)) {
                 if (dbClient) {
                     try {
                         dbClient.release();

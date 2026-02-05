@@ -13,8 +13,9 @@ const crypto = require('crypto');
 /**
  * Generates a robust 8-character unique request ID.
  * Combines timestamp, process ID, and randomness to minimize collisions.
+ * Derived from an MD5 hash of the combined inputs.
  * @param {number|string} [seed=0] Optional seed (e.g. batch number) to further differentiate.
- * @returns {string} 8-character uppercase alphanumeric ID.
+ * @returns {string} 8-character uppercase hexadecimal string.
  */
 const generateRequestId = (seed = 0) => {
     const timestamp = Date.now();
@@ -1077,7 +1078,7 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
     }
 
     if (sDate > eDate) {
-        console.warn(`Start date ${startDate} is after end date ${endDate}. Returning empty result.`);
+        logger.warn(`Start date ${startDate} is after end date ${endDate}. Returning empty result.`);
         return [];
     }
 
