@@ -154,7 +154,17 @@ async function otaXmlPollerLoop() {
 
                 // Basic connection health check/setup
                 dbClient.on('error', (err) => {
-                    logger.error('Persistent dbClient error in OTA XML Poller:', err);
+                    const pool = getProdPool();
+                    logger.error('Persistent dbClient error in OTA XML Poller', {
+                        error: err.message,
+                        stack: err.stack,
+                        processID: dbClient.processID,
+                        poolStatus: {
+                            totalCount: pool.totalCount,
+                            idleCount: pool.idleCount,
+                            waitingCount: pool.waitingCount
+                        }
+                    });
                     dbClient = null; // Mark for re-acquisition
                 });
             }
