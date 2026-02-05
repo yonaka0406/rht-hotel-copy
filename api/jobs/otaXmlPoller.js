@@ -1,3 +1,4 @@
+const { DatabaseError } = require('pg');
 const { getPool, getProdPool } = require('../config/database');
 const logger = require('../config/logger');
 const { submitXMLTemplate, selectXMLTemplate } = require('../ota/xmlController'); // We will need a modified submitXMLTemplate
@@ -11,7 +12,7 @@ const POLL_INTERVAL = 2000; // Poll every 2 seconds
 const BATCH_SIZE = 3; // Process up to 3 items per poll cycle
 
 async function fetchPendingRequests(dbClient, limit) {
-    const requestId = `ota-poller-fetch-${Date.now()}`;
+    const fetchRequestId = `ota-poller-fetch-${Date.now()}`;
     try {
         // Select pending requests, ordered by creation time, and mark them as processing
         const result = await dbClient.query(
@@ -29,7 +30,7 @@ async function fetchPendingRequests(dbClient, limit) {
         );
         return result.rows;
     } catch (error) {
-        logger.error('Error fetching pending OTA XML requests:', { requestId, error: error.message, stack: error.stack });
+        logger.error('Error fetching pending OTA XML requests:', { requestId: fetchRequestId, error: error.message, stack: error.stack });
         return [];
     }
 }
@@ -188,8 +189,14 @@ async function otaXmlPollerLoop() {
                 await completeLog(logId, 'failed', { error: error.message });
             }
 
-            // If it's a database error, release the client and wait longer
-            if (error.code || error.message.includes('connection') || error.message.includes('terminated')) {
+            // If it's a database error or connection issue, release the client and wait longer
+            const pgConnectionErrors = ['57P01', '57P02', '08006', '08003', '08000', '08001', '08004', '08007', '08P01'];
+            const isDbError = error instanceof DatabaseError ||
+                              error.name === 'DatabaseError' ||
+                              pgConnectionErrors.includes(error.code) ||
+                              (error.code && typeof error.code === 'string' && error.code.startsWith('ECONN'));
+
+            if (isDbError) {
                 if (dbClient) {
                     try {
                         dbClient.release();
@@ -198,7 +205,7 @@ async function otaXmlPollerLoop() {
                     }
                     dbClient = null;
                 }
-                logger.warn('Database error detected in poller, waiting 5 seconds before retry...');
+                logger.warn('Database connection error detected in poller, waiting 5 seconds before retry...', { errorCode: error.code });
                 await delay(5000);
             } else {
                 await delay(POLL_INTERVAL);

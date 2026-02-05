@@ -8,6 +8,21 @@ class OtaApiError extends Error {
 
 require("dotenv").config();
 const xml2js = require('xml2js');
+const crypto = require('crypto');
+
+/**
+ * Generates a robust 8-character unique request ID.
+ * Combines timestamp, process ID, and randomness to minimize collisions.
+ * @param {number|string} [seed=0] Optional seed (e.g. batch number) to further differentiate.
+ * @returns {string} 8-character uppercase alphanumeric ID.
+ */
+const generateRequestId = (seed = 0) => {
+    const timestamp = Date.now();
+    const pid = process.pid;
+    const random = crypto.randomBytes(4).readUInt32BE(0);
+    const combined = `${timestamp}-${pid}-${random}-${seed}`;
+    return crypto.createHash('md5').update(combined).digest('hex').slice(0, 8).toUpperCase();
+};
 const {
     selectXMLTemplate,
     selectXMLRecentResponses,
@@ -574,7 +589,22 @@ const postXMLResponse = async (req, res) => {
     }
 };
 
-// Lincoln
+/**
+ * Submits an XML template to the third-party OTA API.
+ *
+ * @WARNING If a `dbClient` is provided (e.g. within a transaction), this function will
+ * keep that connection/transaction open while awaiting the external HTTP response.
+ * Callers should be aware of potential connection pool exhaustion or long-held locks
+ * during slow API responses.
+ *
+ * @param {object} req Express request object (must have requestId).
+ * @param {object} res Express response object.
+ * @param {number} hotel_id Hotel ID.
+ * @param {string} name API service name.
+ * @param {string} xml XML body to send.
+ * @param {object} [dbClient=null] Optional database client for persistent connection reuse or transactions.
+ * @returns {Promise<object>} Parsed JSON response.
+ */
 const submitXMLTemplate = async (req, res, hotel_id, name, xml, dbClient = null) => {
     // logger.debug('submitXMLTemplate', name, xml);    
 
@@ -1118,7 +1148,6 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
 };
 const updateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
-    const log_id = req.params.log_id;
     const inventory = req.body;
     if (!Array.isArray(inventory)) {
         return res.status(400).send({ error: 'Inventory data must be an array.' });
@@ -1317,8 +1346,8 @@ const updateInventoryMultipleDays = async (req, res) => {
             adjustmentTargetXml
         );
 
-        // Generate a robust 8-character unique request ID based on timestamp and batch number
-        const currentRequestId = (Date.now() + batch_no).toString(36).slice(-8).toUpperCase();
+        // Generate a robust 8-character unique request ID
+        const currentRequestId = generateRequestId(batch_no);
 
         // Replace requestId placeholder in XML body
         xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
@@ -1379,7 +1408,6 @@ const updateInventoryMultipleDays = async (req, res) => {
 
 const manualUpdateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
-    const log_id = req.params.log_id;
     const inventory = req.body;
     // logger.debug('manualUpdateInventoryMultipleDays triggered')
 
@@ -1510,8 +1538,8 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             adjustmentTargetXml
         );
 
-        // Generate a robust 8-character unique request ID based on timestamp and batch number
-        const currentRequestId = (Date.now() + batch_no).toString(36).slice(-8).toUpperCase();
+        // Generate a robust 8-character unique request ID
+        const currentRequestId = generateRequestId(batch_no);
 
         xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
 
@@ -1651,8 +1679,7 @@ const setDatesNotForSale = async (req, res, hotel_id, inventory) => {
 
         // Replace request ID placeholder if it exists in the template
         if (xmlBody.includes('{{requestId}}')) {
-            // Use a unique ID based on timestamp for non-batch requests
-            const reqId = Date.now().toString(36).slice(-8).toUpperCase();
+            const reqId = generateRequestId();
             xmlBody = xmlBody.replace('{{requestId}}', reqId);
         }
 

@@ -391,11 +391,11 @@ const insertTLPlanMaster = async (requestId, data, dbClient = null) => {
     }
 
     // 受信したデータをログ出力
-    console.log('[insertTLPlanMaster] 受信したデータ:', JSON.stringify(data, null, 2));
+    logger.debug('[insertTLPlanMaster] 受信したデータ', { data });
     
     // 各アイテムの詳細をログ出力
     data.forEach((item, index) => {
-        console.log(`[insertTLPlanMaster] アイテム ${index}:`, {
+        logger.debug(`[insertTLPlanMaster] アイテム ${index}`, {
             hotel_id: item.hotel_id,
             plangroupcode: item.plangroupcode,
             plangroupname: item.plangroupname,
@@ -414,7 +414,7 @@ const insertTLPlanMaster = async (requestId, data, dbClient = null) => {
         // Insert the new records
         const results = [];
         for (const item of data) {
-            console.log(`[insertTLPlanMaster] 挿入中: ${item.plangroupcode} "${item.plangroupname}"`, {
+            logger.debug(`[insertTLPlanMaster] 挿入中: ${item.plangroupcode} "${item.plangroupname}"`, {
                 plans_global_id: item.plans_global_id,
                 plans_hotel_id: item.plans_hotel_id,
                 plan_key: item.plan_key
@@ -433,12 +433,12 @@ const insertTLPlanMaster = async (requestId, data, dbClient = null) => {
                 ]
             );
             
-            console.log(`[insertTLPlanMaster] 挿入結果:`, result.rows[0]);
+            logger.debug(`[insertTLPlanMaster] 挿入結果`, { result: result.rows[0] });
             results.push(result.rows[0]);
         };
 
         if (shouldRelease) await client.query('COMMIT');
-        console.log(`[insertTLPlanMaster] 全${results.length}件の挿入完了`);
+        logger.debug(`[insertTLPlanMaster] 全${results.length}件の挿入完了`);
         return results;
     } catch (error) {
         if (shouldRelease) await client.query('ROLLBACK');
