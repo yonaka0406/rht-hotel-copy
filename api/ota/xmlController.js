@@ -1149,6 +1149,7 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
 };
 const updateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
+    const log_id = req.params.log_id;
     const inventory = req.body;
     if (!Array.isArray(inventory)) {
         return res.status(400).send({ error: 'Inventory data must be an array.' });
@@ -1297,6 +1298,7 @@ const updateInventoryMultipleDays = async (req, res) => {
     const processInventoryBatch = async (batch, batch_no) => {
         logger.warn(`Processing batch ${batch_no} for hotel ${hotel_id}`, {
             hotel_id: hotel_id,
+            log_id: log_id,
             batch_no: batch_no,
             batch_size: batch.length
         });
@@ -1409,6 +1411,7 @@ const updateInventoryMultipleDays = async (req, res) => {
 
 const manualUpdateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
+    const log_id = req.params.log_id;
     const inventory = req.body;
     // logger.debug('manualUpdateInventoryMultipleDays triggered')
 
@@ -1484,6 +1487,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
     const processInventoryBatch = async (batch, batch_no) => {
         logger.warn(`Processing manual batch ${batch_no} for hotel ${hotel_id}`, {
             hotel_id: hotel_id,
+            log_id: log_id,
             batch_no: batch_no,
             batch_size: batch.length
         });
