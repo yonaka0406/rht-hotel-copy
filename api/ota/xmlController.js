@@ -8,6 +8,34 @@ class OtaApiError extends Error {
 
 require("dotenv").config();
 const xml2js = require('xml2js');
+const crypto = require('crypto');
+
+/**
+ * Generates a robust 8-character unique request ID to satisfy TL-Lincoln requirements.
+ *
+ * WHY THIS WORKS (Entropy Explanation):
+ * 1. Collision Resistance: Uses an MD5 hash to distribute even similar inputs uniformly
+ *    across the output space (16^8 or ~4.3B possibilities). This solves the issue where
+ *    simple decimal-based IDs (like log_id.batch_no) would collide after truncation.
+ * 2. Entropy Sources: Combines four distinct sources:
+ *    - Timestamp (millisecond precision)
+ *    - Process PID (uniqueness across instances)
+ *    - Cryptographic Randomness (4 bytes)
+ *    - Seed (log_id-batch_no combination)
+ * 3. Freshness on Retry: Including the current timestamp and randomness ensures that
+ *    retried or re-queued requests receive a fresh ID, avoiding "duplicated request id"
+ *    errors from the third-party API.
+ *
+ * @param {number|string} [seed=0] Optional seed (e.g. batch number) to further differentiate.
+ * @returns {string} 8-character uppercase hexadecimal string.
+ */
+const generateRequestId = (seed = 0) => {
+    const timestamp = Date.now();
+    const pid = process.pid;
+    const random = crypto.randomBytes(4).readUInt32BE(0);
+    const combined = `${timestamp}-${pid}-${random}-${seed}`;
+    return crypto.createHash('md5').update(combined).digest('hex').slice(0, 8).toUpperCase();
+};
 const {
     selectXMLTemplate,
     selectXMLRecentResponses,
@@ -33,7 +61,7 @@ const logger = require('../config/logger'); // Winston logger
 
 
 
-async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, currentRequestId, options = {}) {
+async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, currentRequestId, options = {}, dbClient = null) {
     const { batch_no = 'N/A' } = options;
 
     logger.info(`Queuing batch ${batch_no} for hotel ${hotel_id} with service ${serviceName}.`, {
@@ -50,7 +78,7 @@ async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, curr
             service_name: serviceName,
             xml_body: xmlBody,
             current_request_id: currentRequestId
-        });
+        }, dbClient);
         return { success: true, message: 'Request successfully queued.' };
     } catch (error) {
         logger.error(`Failed to queue batch ${batch_no} for hotel ${hotel_id} with service ${serviceName}.`, {
@@ -574,13 +602,28 @@ const postXMLResponse = async (req, res) => {
     }
 };
 
-// Lincoln
-const submitXMLTemplate = async (req, res, hotel_id, name, xml, dbPool = null) => {
+/**
+ * Submits an XML template to the third-party OTA API.
+ *
+ * @WARNING If a `dbClient` is provided (e.g. within a transaction), this function will
+ * keep that connection/transaction open while awaiting the external HTTP response.
+ * Callers should be aware of potential connection pool exhaustion or long-held locks
+ * during slow API responses.
+ *
+ * @param {object} req Express request object (must have requestId).
+ * @param {object} res Express response object.
+ * @param {number} hotel_id Hotel ID.
+ * @param {string} name API service name.
+ * @param {string} xml XML body to send.
+ * @param {object} [dbClient=null] Optional database client for persistent connection reuse or transactions.
+ * @returns {Promise<object>} Parsed JSON response.
+ */
+const submitXMLTemplate = async (req, res, hotel_id, name, xml, dbClient = null) => {
     // logger.debug('submitXMLTemplate', name, xml);    
 
     try {
         // Save the request in the database
-        await insertXMLRequest(req.requestId, hotel_id, name, xml, dbPool);
+        await insertXMLRequest(req.requestId, hotel_id, name, xml, dbClient);
 
         const url = `${process.env.XML_REQUEST_URL}${name}`;
         const response = await fetch(url, {
@@ -607,7 +650,7 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml, dbPool = null) =
         const responseXml = await response.text();
         // logger.debug('Response XML:', responseXml);
         // logger.debug('Inserting XML response into database...');
-        await insertXMLResponse(req.requestId, hotel_id, name, responseXml, dbPool);
+        await insertXMLResponse(req.requestId, hotel_id, name, responseXml, dbClient);
 
         // Parse the XML response using xml2js
         const parsedJson = new Promise((resolve, reject) => {
@@ -1047,7 +1090,7 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
     }
 
     if (sDate > eDate) {
-        console.warn(`Start date ${startDate} is after end date ${endDate}. Returning empty result.`);
+        logger.warn(`Start date ${startDate} is after end date ${endDate}. Returning empty result.`);
         return [];
     }
 
@@ -1267,6 +1310,7 @@ const updateInventoryMultipleDays = async (req, res) => {
     const processInventoryBatch = async (batch, batch_no) => {
         logger.warn(`Processing batch ${batch_no} for hotel ${hotel_id}`, {
             hotel_id: hotel_id,
+            log_id: log_id,
             batch_no: batch_no,
             batch_size: batch.length
         });
@@ -1317,11 +1361,8 @@ const updateInventoryMultipleDays = async (req, res) => {
             adjustmentTargetXml
         );
 
-        let currentRequestId = log_id + (batch_no / 100);
-        currentRequestId = currentRequestId.toString();
-        if (currentRequestId.length > 8) {
-            currentRequestId = currentRequestId.slice(-8); // keep the last 8 characters
-        }
+        // Generate a robust 8-character unique request ID including log_id and batch_no
+        const currentRequestId = generateRequestId(`${log_id}-${batch_no}`);
 
         // Replace requestId placeholder in XML body
         xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
@@ -1458,6 +1499,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
     const processInventoryBatch = async (batch, batch_no) => {
         logger.warn(`Processing manual batch ${batch_no} for hotel ${hotel_id}`, {
             hotel_id: hotel_id,
+            log_id: log_id,
             batch_no: batch_no,
             batch_size: batch.length
         });
@@ -1513,11 +1555,9 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             adjustmentTargetXml
         );
 
-        let currentRequestId = log_id + (batch_no / 100);
-        currentRequestId = currentRequestId.toString();
-        if (currentRequestId.length > 8) {
-            currentRequestId = currentRequestId.slice(-8); // keep the last 8 characters
-        }
+        // Generate a robust 8-character unique request ID including log_id and batch_no
+        const currentRequestId = generateRequestId(`${log_id}-${batch_no}`);
+
         xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
 
         // logger.debug('updateInventoryMultipleDays xmlBody:', xmlBody);
@@ -1656,10 +1696,7 @@ const setDatesNotForSale = async (req, res, hotel_id, inventory) => {
 
         // Replace request ID placeholder if it exists in the template
         if (xmlBody.includes('{{requestId}}')) {
-            let reqId = (requestId).toString();
-            if (reqId.length > 8) {
-                reqId = reqId.slice(-8);
-            }
+            const reqId = generateRequestId();
             xmlBody = xmlBody.replace('{{requestId}}', reqId);
         }
 
