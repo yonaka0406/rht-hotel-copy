@@ -27,12 +27,15 @@ async function fetchPendingRequests(dbClient, limit) {
     const fetchRequestId = `ota-poller-fetch-${Date.now()}`;
     try {
         // Select pending requests, ordered by creation time, and mark them as processing
+        // Also include items stuck in 'processing' for more than 10 minutes
         const result = await dbClient.query(
             `UPDATE ota_xml_queue
              SET status = 'processing', processed_at = CURRENT_TIMESTAMP
              WHERE id IN (
                  SELECT id FROM ota_xml_queue
-                 WHERE status = 'pending' OR (status = 'failed' AND retries < $1)
+                 WHERE status = 'pending'
+                    OR (status = 'failed' AND retries < $1)
+                    OR (status = 'processing' AND processed_at < CURRENT_TIMESTAMP - INTERVAL '10 minutes')
                  ORDER BY created_at ASC
                  LIMIT $2
                  FOR UPDATE SKIP LOCKED
