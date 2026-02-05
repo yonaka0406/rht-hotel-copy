@@ -12,7 +12,6 @@
                 v-model:selectedMonth="selectedMonth"
                 v-model:viewMode="viewMode"
                 :viewOptions="viewOptions"
-                v-model:comparePreviousYear="comparePreviousYear"
             />
 
             <div v-if="!hasData" class="col-span-12 py-20 flex flex-col items-center justify-center bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -25,7 +24,8 @@
                 <AccountingDataChart
                     :data="displayData"
                     :hasData="hasData"
-                    :comparePreviousYear="comparePreviousYear"
+                    v-model:comparePreviousYear="comparePreviousYear"
+                    :viewMode="viewMode"
                 />
 
                 <AccountingDataTable

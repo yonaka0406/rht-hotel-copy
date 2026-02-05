@@ -1,5 +1,20 @@
 <template>
-    <Panel header="要約損益計算書" toggleable class="col-span-12">
+    <Panel toggleable class="col-span-12">
+        <template #header>
+            <div class="flex items-center justify-between w-full mr-4">
+                <span class="font-bold">要約損益計算書</span>
+                <div class="flex items-center gap-2">
+                    <SelectButton
+                        v-model="comparisonMode"
+                        :options="comparisonOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        multiple
+                        class="p-button-sm"
+                    />
+                </div>
+            </div>
+        </template>
         <Card>
             <template #content>
                 <DataTable :value="tableData" class="p-datatable-sm tabular-nums" :rowClass="rowClass">
@@ -11,14 +26,14 @@
                             {{ slotProps.data.isAverage ? '-' : formatCurrency(slotProps.data.revenue) }}
                         </template>
                     </Column>
-                    <Column v-if="showGrowth" field="revenueMoM" header="売上 MoM" header-class="text-center" body-class="text-right">
+                    <Column v-if="showMoM" field="revenueMoM" header="売上 MoM" header-class="text-center" body-class="text-right">
                         <template #body="slotProps">
                             <span v-if="!slotProps.data.isAverage" :class="getGrowthClass(slotProps.data.revenueMoM)">
                                 {{ formatPercentage(slotProps.data.revenueMoM) }}
                             </span>
                         </template>
                     </Column>
-                    <Column v-if="showGrowth" field="revenueYoY" header="売上 YoY" header-class="text-center" body-class="text-right">
+                    <Column v-if="showYoY" field="revenueYoY" header="売上 YoY" header-class="text-center" body-class="text-right">
                         <template #body="slotProps">
                             <span v-if="!slotProps.data.isAverage" :class="getGrowthClass(slotProps.data.revenueYoY)">
                                 {{ formatPercentage(slotProps.data.revenueYoY) }}
@@ -50,14 +65,14 @@
                             </span>
                         </template>
                     </Column>
-                    <Column v-if="showGrowth" field="profitMoM" header="利益 MoM" header-class="text-center" body-class="text-right">
+                    <Column v-if="showMoM" field="profitMoM" header="利益 MoM" header-class="text-center" body-class="text-right">
                         <template #body="slotProps">
                             <span v-if="!slotProps.data.isAverage" :class="getGrowthClass(slotProps.data.profitMoM)">
                                 {{ formatPercentage(slotProps.data.profitMoM) }}
                             </span>
                         </template>
                     </Column>
-                    <Column v-if="showGrowth" field="profitYoY" header="利益 YoY" header-class="text-center" body-class="text-right">
+                    <Column v-if="showYoY" field="profitYoY" header="利益 YoY" header-class="text-center" body-class="text-right">
                         <template #body="slotProps">
                             <span v-if="!slotProps.data.isAverage" :class="getGrowthClass(slotProps.data.profitYoY)">
                                 {{ formatPercentage(slotProps.data.profitYoY) }}
@@ -78,8 +93,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { Card, Panel, DataTable, Column } from 'primevue';
+import { ref, computed } from 'vue';
+import { Card, Panel, DataTable, Column, SelectButton } from 'primevue';
 
 const props = defineProps({
     data: {
@@ -89,12 +104,17 @@ const props = defineProps({
     viewMode: {
         type: String,
         required: true
-    },
-    showGrowth: {
-        type: Boolean,
-        default: true
     }
 });
+
+const comparisonMode = ref([]);
+const comparisonOptions = [
+    { label: 'MoM', value: 'mom' },
+    { label: 'YoY', value: 'yoy' }
+];
+
+const showMoM = computed(() => comparisonMode.value.includes('mom'));
+const showYoY = computed(() => comparisonMode.value.includes('yoy'));
 
 const tableData = computed(() => {
     if (props.viewMode !== 'yearCumulative' || props.data.length === 0) {

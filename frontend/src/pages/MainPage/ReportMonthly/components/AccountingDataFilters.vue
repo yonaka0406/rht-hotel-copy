@@ -12,10 +12,6 @@
                     <SelectButton v-model="viewMode" :options="viewOptions" optionLabel="name" optionValue="value"
                         class="w-full sm:w-auto" />
                 </div>
-                <div class="col-span-12 md:col-span-3 flex items-center gap-2">
-                    <ToggleButton v-model="comparePreviousYear" onLabel="前年比較 ON" offLabel="前年比較 OFF"
-                        onIcon="pi pi-check" offIcon="pi pi-times" class="w-full" />
-                </div>
             </div>
         </template>
     </Card>
@@ -23,7 +19,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { Card, DatePicker, SelectButton, ToggleButton } from 'primevue';
+import { Card, DatePicker, SelectButton } from 'primevue';
 
 const props = defineProps({
     selectedMonth: {
@@ -37,14 +33,10 @@ const props = defineProps({
     viewOptions: {
         type: Array,
         required: true
-    },
-    comparePreviousYear: {
-        type: Boolean,
-        required: true
     }
 });
 
-const emit = defineEmits(['update:selectedMonth', 'update:viewMode', 'update:comparePreviousYear']);
+const emit = defineEmits(['update:selectedMonth', 'update:viewMode']);
 
 const selectedMonth = computed({
     get: () => props.selectedMonth,
@@ -54,10 +46,5 @@ const selectedMonth = computed({
 const viewMode = computed({
     get: () => props.viewMode,
     set: (value) => emit('update:viewMode', value)
-});
-
-const comparePreviousYear = computed({
-    get: () => props.comparePreviousYear,
-    set: (value) => emit('update:comparePreviousYear', value)
 });
 </script>
