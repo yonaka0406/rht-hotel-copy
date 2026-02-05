@@ -8,8 +8,12 @@
 
         <!-- Main Content -->
         <div v-else class="grid grid-cols-12 gap-4">
-            <ReportSelectionCard v-model:selectedMonth="selectedMonth" v-model:viewMode="viewMode"
-                :viewOptions="viewOptions" />
+            <AccountingDataFilters
+                v-model:selectedMonth="selectedMonth"
+                v-model:viewMode="viewMode"
+                :viewOptions="viewOptions"
+                v-model:comparePreviousYear="comparePreviousYear"
+            />
 
             <div v-if="!hasData" class="col-span-12 py-20 flex flex-col items-center justify-center bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                 <i class="pi pi-info-circle text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
@@ -18,83 +22,37 @@
             </div>
 
             <template v-else>
-                <!-- Evolution Chart Panel -->
-                <Panel header="損益推移" toggleable class="col-span-12">
-                    <Card>
-                        <template #content>
-                            <div ref="evolutionChartRef" class="w-full h-80"></div>
-                        </template>
-                    </Card>
-                </Panel>
+                <AccountingDataChart
+                    :data="displayData"
+                    :hasData="hasData"
+                    :comparePreviousYear="comparePreviousYear"
+                />
 
-                <!-- Simplified P&L Table Panel -->
-                <Panel header="要約損益計算書" toggleable class="col-span-12">
-                    <Card>
-                        <template #content>
-                            <DataTable :value="aggregatedData" class="p-datatable-sm tabular-nums">
-                                <Column field="monthLabel" header="月" header-class="text-center" />
-                                <Column field="revenue" header="売上高" header-class="text-center" body-class="text-right">
-                                    <template #body="slotProps">
-                                        {{ formatCurrency(slotProps.data.revenue) }}
-                                    </template>
-                                </Column>
-                                <Column field="costs" header="売上原価・経費" header-class="text-center" body-class="text-right">
-                                    <template #body="slotProps">
-                                        <span class="text-orange-600">
-                                            {{ formatCurrency(slotProps.data.costs) }}
-                                        </span>
-                                    </template>
-                                </Column>
-                                <Column field="operatingProfit" header="営業利益" header-class="text-center" body-class="text-right">
-                                    <template #body="slotProps">
-                                        <span :class="slotProps.data.operatingProfit < 0 ? 'text-red-500 font-bold' : 'text-emerald-600 font-bold'">
-                                            {{ formatCurrency(slotProps.data.operatingProfit) }}
-                                        </span>
-                                    </template>
-                                </Column>
-                                <Column field="costRatio" header="経費率" header-class="text-center" body-class="text-right">
-                                    <template #body="slotProps">
-                                        <span class="text-xs text-gray-500">
-                                            {{ slotProps.data.costRatio.toFixed(1) }}%
-                                        </span>
-                                    </template>
-                                </Column>
-                                <Column field="margin" header="営業利益率" header-class="text-center" body-class="text-right">
-                                    <template #body="slotProps">
-                                        <span :class="['font-semibold', slotProps.data.margin < 0 ? 'text-red-400' : 'text-emerald-500']">
-                                            {{ slotProps.data.margin.toFixed(1) }}%
-                                        </span>
-                                    </template>
-                                </Column>
-                            </DataTable>
-                        </template>
-                    </Card>
-                </Panel>
+                <AccountingDataTable
+                    :data="displayData"
+                    :viewMode="viewMode"
+                />
             </template>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import { ProgressSpinner, Card, Panel, DataTable, Column } from 'primevue';
-import ReportSelectionCard from './components/ReportSelectionCard.vue';
+import { ref, computed, watch, onMounted } from 'vue';
+import { ProgressSpinner } from 'primevue';
+import AccountingDataFilters from './components/AccountingDataFilters.vue';
+import AccountingDataChart from './components/AccountingDataChart.vue';
+import AccountingDataTable from './components/AccountingDataTable.vue';
 import { useReportStore } from '@/composables/useReportStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { formatDate } from '@/utils/dateUtils';
-import * as echarts from 'echarts/core';
-import { TooltipComponent, GridComponent, LegendComponent } from 'echarts/components';
-import { LineChart } from 'echarts/charts';
-import { UniversalTransition } from 'echarts/features';
-import { CanvasRenderer } from 'echarts/renderers';
-
-echarts.use([TooltipComponent, GridComponent, LegendComponent, LineChart, UniversalTransition, CanvasRenderer]);
 
 const reportStore = useReportStore();
 const hotelStore = useHotelStore();
 
 const selectedMonth = ref(new Date());
 const viewMode = ref('yearCumulative');
+const comparePreviousYear = ref(false);
 const viewOptions = ref([
     { name: '単月表示', value: 'month' },
     { name: '年度累計表示', value: 'yearCumulative' }
@@ -102,37 +60,39 @@ const viewOptions = ref([
 
 const isLoading = ref(false);
 const rawData = ref([]);
-const evolutionChartRef = ref(null);
-let myChart = null;
 
-const hasData = computed(() => rawData.value.length > 0);
+const hasData = computed(() => rawData.value.some(item => {
+    const itemDate = new Date(item.month);
+    return itemDate.getFullYear() === selectedMonth.value.getFullYear();
+}));
 
-const dateRange = computed(() => {
-    const date = new Date(selectedMonth.value);
-    const year = date.getFullYear();
+const fetchData = async () => {
+    if (!hotelStore.selectedHotelId.value) return;
 
-    if (viewMode.value === 'month') {
-        const start = new Date(year, date.getMonth(), 1);
+    isLoading.value = true;
+    try {
+        const date = new Date(selectedMonth.value);
+        const year = date.getFullYear();
+
+        // Fetch from Jan of previous year to support YoY and MoM
+        const start = new Date(year - 1, 0, 1);
         const end = new Date(year, date.getMonth() + 1, 0);
-        return { start: formatDate(start), end: formatDate(end) };
-    } else {
-        const start = new Date(year, 0, 1);
-        const end = new Date(year, date.getMonth() + 1, 0);
-        return { start: formatDate(start), end: formatDate(end) };
+
+        rawData.value = await reportStore.fetchAccountingProfitLoss(hotelStore.selectedHotelId.value, formatDate(start), formatDate(end));
+    } catch (error) {
+        console.error('Error fetching accounting P&L:', error);
+    } finally {
+        isLoading.value = false;
     }
-});
+};
 
-const aggregatedData = computed(() => {
-    if (!rawData.value.length) return [];
-
-    // Group by month
+const processedDataByMonth = computed(() => {
     const monthGroups = {};
     rawData.value.forEach(item => {
         const month = formatDate(new Date(item.month)).substring(0, 7);
         if (!monthGroups[month]) {
             monthGroups[month] = {
                 month,
-                monthLabel: `${month.substring(0, 4)}年${month.substring(5, 7)}月`,
                 revenue: 0,
                 costs: 0,
                 operatingProfit: 0
@@ -149,141 +109,74 @@ const aggregatedData = computed(() => {
         }
     });
 
-    return Object.values(monthGroups).map(m => {
-        const opProfit = m.revenue + m.costs;
-        return {
-            ...m,
-            operatingProfit: opProfit,
-            costRatio: m.revenue !== 0 ? (Math.abs(m.costs) / m.revenue) * 100 : 0,
-            margin: m.revenue !== 0 ? (opProfit / m.revenue) * 100 : 0
-        };
-    }).sort((a, b) => a.month.localeCompare(b.month));
+    // Compute operating profit for all months
+    Object.values(monthGroups).forEach(m => {
+        m.operatingProfit = m.revenue + m.costs;
+        m.costRatio = m.revenue !== 0 ? (Math.abs(m.costs) / m.revenue) * 100 : 0;
+        m.margin = m.revenue !== 0 ? (m.operatingProfit / m.revenue) * 100 : 0;
+    });
+
+    return monthGroups;
 });
 
-const fetchData = async () => {
-    if (!hotelStore.selectedHotelId.value) return;
+const displayData = computed(() => {
+    const year = selectedMonth.value.getFullYear();
+    const result = [];
 
-    isLoading.value = true;
-    try {
-        const { start, end } = dateRange.value;
-        rawData.value = await reportStore.fetchAccountingProfitLoss(hotelStore.selectedHotelId.value, start, end);
-    } catch (error) {
-        console.error('Error fetching accounting P&L:', error);
-    } finally {
-        isLoading.value = false;
-        await nextTick();
-        initChart();
-    }
-};
+    let startMonthIdx = 0;
+    let endMonthIdx = selectedMonth.value.getMonth();
 
-const formatCurrency = (value) => {
-    return new Intl.NumberFormat('ja-JP', {
-        style: 'currency',
-        currency: 'JPY',
-        minimumFractionDigits: 0
-    }).format(value);
-};
-
-const initChart = () => {
-    if (!evolutionChartRef.value || !hasData.value) return;
-
-    if (!myChart) {
-        myChart = echarts.init(evolutionChartRef.value);
+    if (viewMode.value === 'month') {
+        startMonthIdx = endMonthIdx;
     }
 
-    const months = aggregatedData.value.map(d => d.monthLabel);
-    const revenueData = aggregatedData.value.map(d => d.revenue);
-    const costsData = aggregatedData.value.map(d => Math.abs(d.costs));
-    const profitData = aggregatedData.value.map(d => d.operatingProfit);
+    for (let i = startMonthIdx; i <= endMonthIdx; i++) {
+        const monthStr = `${year}-${String(i + 1).padStart(2, '0')}`;
+        const currentData = processedDataByMonth.value[monthStr] || { month: monthStr, revenue: 0, costs: 0, operatingProfit: 0, costRatio: 0, margin: 0 };
 
-    const option = {
-        tooltip: {
-            trigger: 'axis',
-            formatter: (params) => {
-                let res = `${params[0].name}<br/>`;
-                params.forEach(p => {
-                    res += `${p.marker} ${p.seriesName}: ${formatCurrency(p.value)}<br/>`;
-                });
-                return res;
-            }
-        },
-        legend: {
-            data: ['売上高', '費用', '営業利益'],
-            bottom: 0
-        },
-        grid: {
-            top: '10%',
-            left: '3%',
-            right: '4%',
-            bottom: '15%',
-            containLabel: true
-        },
-        xAxis: {
-            type: 'category',
-            data: months
-        },
-        yAxis: {
-            type: 'value',
-            axisLabel: {
-                formatter: (value) => {
-                    if (Math.abs(value) >= 1000000) return (value / 1000000).toFixed(1) + 'M';
-                    if (Math.abs(value) >= 1000) return (value / 1000).toFixed(0) + 'K';
-                    return value;
-                }
-            }
-        },
-        series: [
-            {
-                name: '売上高',
-                type: 'line',
-                data: revenueData,
-                itemStyle: { color: '#10b981' }, // Emerald-500
-                smooth: true
-            },
-            {
-                name: '費用',
-                type: 'line',
-                data: costsData,
-                itemStyle: { color: '#f97316' }, // Orange-500
-                smooth: true
-            },
-            {
-                name: '営業利益',
-                type: 'line',
-                data: profitData,
-                itemStyle: { color: '#3b82f6' }, // Blue-500
-                smooth: true,
-                areaStyle: {
-                    opacity: 0.1
-                }
-            }
-        ]
-    };
+        // Calculate MoM
+        const prevMonthDate = new Date(year, i - 1, 1);
+        const prevMonthStr = formatDate(prevMonthDate).substring(0, 7);
+        const prevMonthData = processedDataByMonth.value[prevMonthStr];
 
-    myChart.setOption(option);
-};
+        const revenueMoM = (prevMonthData && prevMonthData.revenue !== 0)
+            ? ((currentData.revenue - prevMonthData.revenue) / prevMonthData.revenue) * 100
+            : null;
+        const profitMoM = (prevMonthData && prevMonthData.operatingProfit !== 0)
+            ? ((currentData.operatingProfit - prevMonthData.operatingProfit) / Math.abs(prevMonthData.operatingProfit)) * 100
+            : null;
 
-const handleResize = () => {
-    if (myChart) myChart.resize();
-};
+        // Calculate YoY
+        const prevYearMonthStr = `${year - 1}-${String(i + 1).padStart(2, '0')}`;
+        const prevYearData = processedDataByMonth.value[prevYearMonthStr];
+
+        const revenueYoY = (prevYearData && prevYearData.revenue !== 0)
+            ? ((currentData.revenue - prevYearData.revenue) / prevYearData.revenue) * 100
+            : null;
+        const profitYoY = (prevYearData && prevYearData.operatingProfit !== 0)
+            ? ((currentData.operatingProfit - prevYearData.operatingProfit) / Math.abs(prevYearData.operatingProfit)) * 100
+            : null;
+
+        result.push({
+            ...currentData,
+            monthLabel: `${year}年${i + 1}月`,
+            revenueMoM,
+            profitMoM,
+            revenueYoY,
+            profitYoY,
+            prevRevenue: prevYearData?.revenue || 0,
+            prevOperatingProfit: prevYearData?.operatingProfit || 0
+        });
+    }
+
+    return result;
+});
 
 onMounted(async () => {
     await hotelStore.fetchHotels();
     await hotelStore.fetchHotel();
     fetchData();
-    window.addEventListener('resize', handleResize);
 });
 
-onBeforeUnmount(() => {
-    window.removeEventListener('resize', handleResize);
-    if (myChart) myChart.dispose();
-});
-
-watch([selectedMonth, viewMode, () => hotelStore.selectedHotelId.value], fetchData);
+watch([selectedMonth, () => hotelStore.selectedHotelId.value], fetchData);
 </script>
-
-<style scoped>
-.tabular-nums {
-    font-variant-numeric: tabular-nums;
-}
-</style>
