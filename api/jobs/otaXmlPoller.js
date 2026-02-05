@@ -205,7 +205,12 @@ async function otaXmlPollerLoop() {
                 await processQueueItem(dbClient, item);
             }
 
-            await completeLog(logId, 'success', { processedItems: pendingRequests.length }, dbClient);
+            try {
+                await completeLog(logId, 'success', { processedItems: pendingRequests.length }, dbClient);
+                logId = null; // Mark as completed to avoid duplicate logging in catch block
+            } catch (logError) {
+                logger.error('Failed to complete success log in OTA XML Poller:', { logId, error: logError.message, originalError: logError });
+            }
 
             // Small delay between batches to prevent tight loops
             await delay(POLL_INTERVAL);
@@ -214,7 +219,12 @@ async function otaXmlPollerLoop() {
             logger.error('Error in OTA XML Poller loop:', { requestId, error: error.message, stack: error.stack });
 
             if (logId) {
-                await completeLog(logId, 'failed', { error: error.message }, dbClient);
+                try {
+                    await completeLog(logId, 'failed', { error: error.message }, dbClient);
+                } catch (logError) {
+                    logger.error('Failed to complete failure log in OTA XML Poller:', { logId, error: logError.message, innerError: logError });
+                    // Do not rethrow to avoid masking the original error
+                }
             }
 
             // If it's a database error or connection issue, release the client and wait longer

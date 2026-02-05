@@ -33,13 +33,13 @@ const getAllHotels = async (requestId) => {
     throw new Error('Database error');
   }
 };
-const getHotelByID = async (requestId, id, dbPool = null) => {
-  const selectedPool = dbPool || getPool(requestId);
+const getHotelByID = async (requestId, id, dbClient = null) => {
+  const selectedResource = dbClient || getPool(requestId);
   const query = 'SELECT hotels.* FROM hotels WHERE hotels.id = $1';
   const values = [id];
 
   try {
-    const result = await selectedPool.query(query, values);
+    const result = await selectedResource.query(query, values);
     return result.rows[0]; // Return the first user found (or null if none)
   } catch (err) {
     logger.error(`[${requestId}] Error finding hotel by id:`, err);
@@ -48,7 +48,6 @@ const getHotelByID = async (requestId, id, dbPool = null) => {
 };
 const getAllHotelSiteController = async (requestId, dbClient = null) => {
   logger.debug(`[${requestId}] [getAllHotelSiteController] Starting`);
-  const pool = getPool(requestId);
   const query = `
     SELECT sc_user_info.* 
     FROM sc_user_info 
@@ -58,7 +57,7 @@ const getAllHotelSiteController = async (requestId, dbClient = null) => {
   logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query: ${query}`);
 
   try {
-    const client = dbClient || await pool.connect();
+    const client = dbClient || await getPool(requestId).connect();
     const shouldRelease = !dbClient;
 
     try {
@@ -183,8 +182,8 @@ const getVehicleCategoryCapacity = async (requestId, vehicle_category_id) => {
 };
 
 
-const getAllHotelsWithEmail = async (requestId, dbPool = null) => {
-  const pool = dbPool || getPool(requestId);
+const getAllHotelsWithEmail = async (requestId, dbClient = null) => {
+  const resource = dbClient || getPool(requestId);
   const query = `
     SELECT
       id,
@@ -196,7 +195,7 @@ const getAllHotelsWithEmail = async (requestId, dbPool = null) => {
   `;
 
   try {
-    const result = await pool.query(query);
+    const result = await resource.query(query);
     return result.rows;
   } catch (err) {
     logger.error(`[${requestId}] Error retrieving hotels with email:`, err);

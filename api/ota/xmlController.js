@@ -754,10 +754,10 @@ const getOTAReservations = async (req, res) => {
 
     logger.debug(`[${requestId}] Starting getOTAReservations`);
 
+    let sharedClient = null;
     try {
         // Get database pool and client with error handling
         const pool = getPool(requestId);
-        let sharedClient = null;
 
         try {
             sharedClient = await pool.connect();
@@ -777,7 +777,6 @@ const getOTAReservations = async (req, res) => {
                 const errorMsg = 'No hotels found.';
                 logger.error(`[${requestId}] ${errorMsg}`);
                 logger.warn(errorMsg);
-                if (sharedClient) sharedClient.release();
                 return res.status(404).send({ error: errorMsg });
             }
         } catch (hotelError) {
@@ -862,7 +861,8 @@ const getOTAReservations = async (req, res) => {
                         const queuedReservation = await processAndQueueReservation(
                             requestId,
                             allotmentBookingReport,
-                            hotelId
+                            hotelId,
+                            dbClient
                         );
 
                         if (queuedReservation._queueStatus === 'queued') {
@@ -1019,16 +1019,6 @@ const getOTAReservations = async (req, res) => {
             }
         }
 
-        // Release the shared connection
-        if (sharedClient) {
-            try {
-                await sharedClient.release();
-                logger.debug(`[${requestId}] Released shared connection for getOTAReservations`);
-            } catch (releaseError) {
-                logger.error(`[${requestId}] Error releasing shared connection: ${releaseError.message}`);
-            }
-        }
-
         logger.debug(`[${requestId}] Completed processing all hotels`);
         return res.status(200).send({ message: 'Processed all hotels.' });
 
@@ -1044,6 +1034,15 @@ const getOTAReservations = async (req, res) => {
             error: 'An unexpected error occurred while processing hotels.',
             details: error.message
         });
+    } finally {
+        if (sharedClient) {
+            try {
+                sharedClient.release();
+                logger.debug(`[${requestId}] Released shared connection for getOTAReservations`);
+            } catch (releaseError) {
+                logger.error(`[${requestId}] Error releasing shared connection: ${releaseError.message}`);
+            }
+        }
     }
 };
 const successOTAReservations = async (req, res, hotel_id, outputId, dbClient = null) => {
@@ -1392,7 +1391,13 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
                 const netRmTypeGroupCode = parseInt(item.netRmTypeGroupCode);
                 let remainingCount = Math.max(0, parseInt(item.pmsRemainingCount));
                 let salesStatus = parseInt(item.salesStatus);
-                if (salesStatus === 0) salesStatus = 3;
+                if (salesStatus === 0) {
+                    salesStatus = 3; // No change
+                } else if (salesStatus === 1) {
+                    salesStatus = 1; // Start sales
+                } else {
+                    salesStatus = 2; // Stop sales
+                }
 
                 adjustmentTargetXml += `
                     <adjustmentTarget>
