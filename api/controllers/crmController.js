@@ -167,6 +167,15 @@ const editAction = async (req, res) => {
       }
     }
 
+    // Ensure critical fields are explicitly passed if they are in req.body.actionFields
+    // The model loop should handle them now, but we want to be 100% sure.
+    const criticalFields = ['client_id', 'clientId', 'action_type', 'actionType', 'subject'];
+    criticalFields.forEach(f => {
+      if (req.body.actionFields.hasOwnProperty(f)) {
+        actionFields[f] = req.body.actionFields[f];
+      }
+    });
+
     const result = await crmModel.updateAction(req.requestId, actionId, actionFields, userId);
     res.status(200).json(result);
   } catch (error) {

@@ -223,13 +223,14 @@ const populateForm = async (data) => {
   };
 
   if (currentActionFormData.value.client_id) {
+    const targetId = currentActionFormData.value.client_id;
     // Try to find in the provided list first
-    const clientObj = props.allClients.find(c => (c.id === currentActionFormData.value.client_id || c.client_id === currentActionFormData.value.client_id));
+    const clientObj = props.allClients.find(c => (c.id === targetId || c.client_id === targetId));
     if (clientObj) {
       selectedClientObjectForForm.value = {
         ...clientObj,
-        id: clientObj.id || clientObj.client_id || currentActionFormData.value.client_id,
-        display_name: clientObj.display_name || clientObj.name_kanji || clientObj.name_kana || clientObj.name || clientObj.client_name || `クライアントID: ${clientObj.id || currentActionFormData.value.client_id}`
+        id: clientObj.id || clientObj.client_id || targetId,
+        display_name: clientObj.display_name || clientObj.name_kanji || clientObj.name_kana || clientObj.name || clientObj.client_name || `クライアントID: ${targetId}`
       };
     } else {
       // Fetch individual client if not in current list
@@ -239,14 +240,14 @@ const populateForm = async (data) => {
         if (fetchedClient) {
           selectedClientObjectForForm.value = {
             ...fetchedClient,
-            id: fetchedClient.id || currentActionFormData.value.client_id,
-            display_name: fetchedClient.display_name || fetchedClient.name_kanji || fetchedClient.name_kana || fetchedClient.name || fetchedClient.client_name || `クライアントID: ${fetchedClient.id || currentActionFormData.value.client_id}`
+            id: fetchedClient.id || targetId,
+            display_name: fetchedClient.display_name || fetchedClient.name_kanji || fetchedClient.name_kana || fetchedClient.name || fetchedClient.client_name || `クライアントID: ${targetId}`
           };
         } else {
           // Final fallback: use what we have in currentActionFormData
           selectedClientObjectForForm.value = {
-            id: currentActionFormData.value.client_id,
-            display_name: `クライアントID: ${currentActionFormData.value.client_id}`
+            id: targetId,
+            display_name: `クライアントID: ${targetId}`
           };
         }
       } catch (e) {

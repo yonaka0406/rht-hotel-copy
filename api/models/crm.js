@@ -176,6 +176,8 @@ const updateAction = async (requestId, actionId, actionFields, userId) => {
     
     // Fields from actionFields
     const fieldMap = {
+        client_id: 'client_id',
+        clientId: 'client_id',
         action_type: 'action_type',
         actionType: 'action_type',
         action_datetime: 'action_datetime',
@@ -190,24 +192,28 @@ const updateAction = async (requestId, actionId, actionFields, userId) => {
         status: 'status'
     };
 
+    const providedFields = Object.keys(actionFields);
     for (const [objField, dbField] of Object.entries(fieldMap)) {
-        if (objField in actionFields && actionFields[objField] !== undefined) {
-            // Avoid duplicate additions if both snake_case and camelCase are present
-            if (!setClauses.some(c => c.startsWith(`${dbField} =`))) {
-                addFieldToUpdate(dbField, actionFields[objField]);
+        if (providedFields.includes(objField)) {
+            const val = actionFields[objField];
+            if (val !== undefined) {
+                // Avoid duplicate additions if both snake_case and camelCase are present
+                if (!setClauses.some(c => c.startsWith(`${dbField} =`))) {
+                    addFieldToUpdate(dbField, val);
+                }
             }
         }
     }
     
     // Google Calendar specific fields
-    if ('google_calendar_event_id' in actionFields || 'googleCalendarEventId' in actionFields) {
+    if (providedFields.includes('google_calendar_event_id') || providedFields.includes('googleCalendarEventId')) {
         addFieldToUpdate('google_calendar_event_id', actionFields.google_calendar_event_id || actionFields.googleCalendarEventId || null);
     }
-    if ('google_calendar_html_link' in actionFields || 'googleCalendarHtmlLink' in actionFields) {
+    if (providedFields.includes('google_calendar_html_link') || providedFields.includes('googleCalendarHtmlLink')) {
         addFieldToUpdate('google_calendar_html_link', actionFields.google_calendar_html_link || actionFields.googleCalendarHtmlLink || null);
     }
-    if ('synced_with_google_calendar' in actionFields || 'syncedWithGoogleCalendar' in actionFields) {
-        addFieldToUpdate('synced_with_google_calendar', 'synced_with_google_calendar' in actionFields ? actionFields.synced_with_google_calendar : actionFields.syncedWithGoogleCalendar);
+    if (providedFields.includes('synced_with_google_calendar') || providedFields.includes('syncedWithGoogleCalendar')) {
+        addFieldToUpdate('synced_with_google_calendar', ('synced_with_google_calendar' in actionFields) ? actionFields.synced_with_google_calendar : actionFields.syncedWithGoogleCalendar);
     }
 
     // Always update updated_by and updated_at
