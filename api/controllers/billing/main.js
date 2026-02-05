@@ -381,10 +381,7 @@ const generateInvoiceExcel = async (req, res) => {
         const rate = parseFloat(item.tax_rate);
         let adjustedTotalPrice;
         
-        if (invoiceData.items.length === 0) {
-          // アイテムが存在しない場合はスキップ
-          return;
-        } else if (useEvenDistribution) {
+        if (useEvenDistribution) {
           // 均等分配の場合
           adjustedTotalPrice = Math.round(adjustmentRatio);
         } else {

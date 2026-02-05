@@ -124,11 +124,12 @@ function generateInvoiceHTML(html, data, userName) {
   } else {
     // Fallback if no items array
     const safeInvoiceTotal = (data.invoice_total_value !== null && data.invoice_total_value !== undefined) ? Number(data.invoice_total_value).toLocaleString() : '0';
+    const safeInvoiceStays = (data.invoice_total_stays !== null && data.invoice_total_stays !== undefined) ? Number(data.invoice_total_stays).toLocaleString() : '0';
     dtlitems = `
     <tr>
         <td class="cell-center">1</td>
         <td>宿泊料</td>                    
-        <td class="cell-right">${data.invoice_total_stays} 泊</td>
+        <td class="cell-right">${safeInvoiceStays} 泊</td>
         <td class="cell-right">¥ ${safeInvoiceTotal}</td>
     </tr>
     `;
