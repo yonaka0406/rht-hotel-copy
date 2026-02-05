@@ -1349,8 +1349,8 @@ const updateInventoryMultipleDays = async (req, res) => {
             adjustmentTargetXml
         );
 
-        // Generate a robust 8-character unique request ID
-        const currentRequestId = generateRequestId(batch_no);
+        // Generate a robust 8-character unique request ID including log_id and batch_no
+        const currentRequestId = generateRequestId(`${log_id}-${batch_no}`);
 
         // Replace requestId placeholder in XML body
         xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
@@ -1543,8 +1543,8 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             adjustmentTargetXml
         );
 
-        // Generate a robust 8-character unique request ID
-        const currentRequestId = generateRequestId(batch_no);
+        // Generate a robust 8-character unique request ID including log_id and batch_no
+        const currentRequestId = generateRequestId(`${log_id}-${batch_no}`);
 
         xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
 
