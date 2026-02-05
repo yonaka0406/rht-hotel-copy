@@ -315,6 +315,11 @@ const insertTLRoomMaster = async (requestId, data, dbClient = null) => {
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
 
+    if (!Array.isArray(data) || data.length === 0 || !data[0].hotel_id) {
+        if (shouldRelease) client.release();
+        throw new Error('Invalid or empty data provided to insertTLRoomMaster');
+    }
+
     // console.log('insertTLRoomMaster', data)
 
     try {
@@ -379,6 +384,11 @@ const insertTLPlanMaster = async (requestId, data, dbClient = null) => {
     const pool = getPool(requestId);
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
+
+    if (!Array.isArray(data) || data.length === 0 || !data[0].hotel_id) {
+        if (shouldRelease) client.release();
+        throw new Error('Invalid or empty data provided to insertTLPlanMaster');
+    }
 
     // 受信したデータをログ出力
     console.log('[insertTLPlanMaster] 受信したデータ:', JSON.stringify(data, null, 2));
