@@ -211,39 +211,43 @@ const populateForm = async (data) => {
   currentActionFormData.value = {
     ...initialFormData, // Start with defaults to ensure all fields are present
     id: data?.id || null,
-    client_id: data?.client_id || null,
-    action_type: data?.action_type || 'call',
+    client_id: data?.client_id || data?.clientId || null,
+    action_type: data?.action_type || data?.actionType || 'call',
     subject: data?.subject || '',
     details: data?.details || '',
     outcome: data?.outcome || '',
-    assigned_to: data?.assigned_to || null,
+    assigned_to: data?.assigned_to || data?.assignedTo || null,
     status: data?.status || 'pending',
-    action_datetime: data?.action_datetime ? new Date(data.action_datetime) : new Date(),
-    due_date: data?.due_date ? new Date(data.due_date) : null,
+    action_datetime: data?.action_datetime || data?.actionDateTime ? new Date(data.action_datetime || data.actionDateTime) : new Date(),
+    due_date: data?.due_date || data?.dueDate ? new Date(data.due_date || data.dueDate) : null,
   };
 
   if (currentActionFormData.value.client_id) {
     // Try to find in the provided list first
-    const clientObj = props.allClients.find(c => c.id === currentActionFormData.value.client_id);
+    const clientObj = props.allClients.find(c => (c.id === currentActionFormData.value.client_id || c.client_id === currentActionFormData.value.client_id));
     if (clientObj) {
       selectedClientObjectForForm.value = {
         ...clientObj,
-        id: clientObj.id,
-        display_name: clientObj.name_kanji || clientObj.name_kana || clientObj.name || `クライアントID: ${clientObj.id}`
+        id: clientObj.id || clientObj.client_id || currentActionFormData.value.client_id,
+        display_name: clientObj.display_name || clientObj.name_kanji || clientObj.name_kana || clientObj.name || clientObj.client_name || `クライアントID: ${clientObj.id || currentActionFormData.value.client_id}`
       };
     } else {
       // Fetch individual client if not in current list
       try {
         const result = await fetchClient(currentActionFormData.value.client_id);
-        const fetchedClient = result.client;
+        const fetchedClient = result.client?.client || result.client;
         if (fetchedClient) {
           selectedClientObjectForForm.value = {
             ...fetchedClient,
-            id: fetchedClient.id,
-            display_name: fetchedClient.name_kanji || fetchedClient.name_kana || fetchedClient.name || `クライアントID: ${fetchedClient.id}`
+            id: fetchedClient.id || currentActionFormData.value.client_id,
+            display_name: fetchedClient.display_name || fetchedClient.name_kanji || fetchedClient.name_kana || fetchedClient.name || fetchedClient.client_name || `クライアントID: ${fetchedClient.id || currentActionFormData.value.client_id}`
           };
         } else {
-          selectedClientObjectForForm.value = null;
+          // Final fallback: use what we have in currentActionFormData
+          selectedClientObjectForForm.value = {
+            id: currentActionFormData.value.client_id,
+            display_name: `クライアントID: ${currentActionFormData.value.client_id}`
+          };
         }
       } catch (e) {
         console.error('Failed to fetch client for action form:', e);
