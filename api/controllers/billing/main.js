@@ -450,12 +450,12 @@ const generateInvoiceExcel = async (req, res) => {
     worksheet.getCell('I30').value = totalNet8 !== 0 ? totalNet8 : '';
     worksheet.getCell('I31').value = taxAmount8 !== 0 ? taxAmount8 : '';
 
-    // 0% (Non-taxable) Subject and Tax
-    worksheet.getCell('I33').value = (totalNet0 !== 0 || taxAmount0 !== 0) ? totalNet0 : '';
-    worksheet.getCell('I34').value = (totalNet0 !== 0 || taxAmount0 !== 0) ? taxAmount0 : '';
+    // 非課税対象 (Non-taxable) Subject - 33行目に設定
+    worksheet.getCell('I33').value = totalNet0 !== 0 ? totalNet0 : '';
 
-    worksheet.getCell('C33').value = invoiceData.comment;
-    worksheet.getCell('C33').alignment = { wrapText: true, vertical: 'top' };
+    // 備考欄を35行目に移動（2行下へ）
+    worksheet.getCell('C35').value = invoiceData.comment;
+    worksheet.getCell('C35').alignment = { wrapText: true, vertical: 'top' };
 
     // Populate the details sheet
     const dailyDetails = invoiceData.daily_details || [];
