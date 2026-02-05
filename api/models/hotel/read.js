@@ -46,7 +46,7 @@ const getHotelByID = async (requestId, id, dbPool = null) => {
     throw new Error('Database error');
   }
 };
-const getAllHotelSiteController = async (requestId) => {
+const getAllHotelSiteController = async (requestId, dbClient = null) => {
   logger.debug(`[${requestId}] [getAllHotelSiteController] Starting`);
   const pool = getPool(requestId);
   const query = `
@@ -58,8 +58,8 @@ const getAllHotelSiteController = async (requestId) => {
   logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query: ${query}`);
 
   try {
-    logger.debug(`[${requestId}] [getAllHotelSiteController] Getting client from pool`);
-    const client = await pool.connect();
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
 
     try {
       logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query`);
@@ -76,8 +76,10 @@ const getAllHotelSiteController = async (requestId) => {
 
       return result.rows;
     } finally {
-      logger.debug(`[${requestId}] [getAllHotelSiteController] Releasing client back to pool`);
-      client.release();
+      if (shouldRelease) {
+        logger.debug(`[${requestId}] [getAllHotelSiteController] Releasing client back to pool`);
+        client.release();
+      }
     }
   } catch (err) {
     logger.error(`[${requestId}] [getAllHotelSiteController] Error executing query:`, {

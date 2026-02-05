@@ -197,7 +197,7 @@ async function otaXmlPollerLoop() {
             }
 
             // 3. Process requests sequentially
-            logId = await startLog('OTA XML Poller');
+            logId = await startLog('OTA XML Poller', dbClient);
             logger.info(`Poller fetched ${pendingRequests.length} pending requests.`, { requestId });
 
             for (const item of pendingRequests) {
@@ -205,7 +205,7 @@ async function otaXmlPollerLoop() {
                 await processQueueItem(dbClient, item);
             }
 
-            await completeLog(logId, 'success', { processedItems: pendingRequests.length });
+            await completeLog(logId, 'success', { processedItems: pendingRequests.length }, dbClient);
 
             // Small delay between batches to prevent tight loops
             await delay(POLL_INTERVAL);
@@ -214,7 +214,7 @@ async function otaXmlPollerLoop() {
             logger.error('Error in OTA XML Poller loop:', { requestId, error: error.message, stack: error.stack });
 
             if (logId) {
-                await completeLog(logId, 'failed', { error: error.message });
+                await completeLog(logId, 'failed', { error: error.message }, dbClient);
             }
 
             // If it's a database error or connection issue, release the client and wait longer

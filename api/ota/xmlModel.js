@@ -195,11 +195,11 @@ const processXMLResponse = async (requestId, id) => {
     }
 };
 
-const selectXMLTemplate = async (requestId, hotel_id, name) => {
+const selectXMLTemplate = async (requestId, hotel_id, name, dbClient = null) => {
     try {
-        const pool = getPool(requestId);
+        const executor = dbClient || getPool(requestId);
 
-        const result = await pool.query(
+        const result = await executor.query(
             "SELECT template FROM xml_templates WHERE name = $1",
             [name]
         );
@@ -207,7 +207,7 @@ const selectXMLTemplate = async (requestId, hotel_id, name) => {
             throw new Error("XML template not found in database.");
         }
 
-        const login = await pool.query(
+        const login = await executor.query(
             `SELECT user_id, password 
                 FROM sc_user_info 
                 WHERE hotel_id = $1 AND name = 'TL-リンカーン'
@@ -459,6 +459,7 @@ const insertTLPlanMaster = async (requestId, data, dbClient = null) => {
  * @param {object} options.reservationData - Parsed reservation data
  * @param {string} [options.status='pending'] - Status of the reservation (pending/processed/failed)
  * @param {object} [options.conflictDetails=null] - Details of any conflicts
+ * @param {object} [dbClient=null] - Optional database client
  * @returns {Promise<object>} The created/updated queue entry
  */
 const insertOTAReservationQueue = async (requestId, {
@@ -468,11 +469,11 @@ const insertOTAReservationQueue = async (requestId, {
     reservationData,
     status = 'pending',
     conflictDetails = null
-}) => {
-    const pool = getPool(requestId);
+}, dbClient = null) => {
+    const executor = dbClient || getPool(requestId);
 
     try {
-        const result = await pool.query(
+        const result = await executor.query(
             `INSERT INTO ota_reservation_queue 
              (hotel_id, ota_reservation_id, transaction_id, reservation_data, status, conflict_details)
              VALUES ($1, $2, $3, $4, $5, $6)
@@ -505,13 +506,14 @@ const insertOTAReservationQueue = async (requestId, {
  * @param {number} id - Queue entry ID
  * @param {string} status - New status (pending/processed/failed)
  * @param {object} [conflictDetails=null] - Optional conflict details
+ * @param {object} [dbClient=null] - Optional database client
  * @returns {Promise<object>} The updated queue entry
  */
-const updateOTAReservationQueue = async (requestId, id, status, conflictDetails = null) => {
-    const pool = getPool(requestId);
+const updateOTAReservationQueue = async (requestId, id, status, conflictDetails = null, dbClient = null) => {
+    const executor = dbClient || getPool(requestId);
 
     try {
-        const result = await pool.query(
+        const result = await executor.query(
             `UPDATE ota_reservation_queue 
              SET status = $1, 
                  conflict_details = COALESCE($2, conflict_details),
