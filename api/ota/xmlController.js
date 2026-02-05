@@ -11,9 +11,21 @@ const xml2js = require('xml2js');
 const crypto = require('crypto');
 
 /**
- * Generates a robust 8-character unique request ID.
- * Combines timestamp, process ID, and randomness to minimize collisions.
- * Derived from an MD5 hash of the combined inputs.
+ * Generates a robust 8-character unique request ID to satisfy TL-Lincoln requirements.
+ *
+ * WHY THIS WORKS (Entropy Explanation):
+ * 1. Collision Resistance: Uses an MD5 hash to distribute even similar inputs uniformly
+ *    across the output space (16^8 or ~4.3B possibilities). This solves the issue where
+ *    simple decimal-based IDs (like log_id.batch_no) would collide after truncation.
+ * 2. Entropy Sources: Combines four distinct sources:
+ *    - Timestamp (millisecond precision)
+ *    - Process PID (uniqueness across instances)
+ *    - Cryptographic Randomness (4 bytes)
+ *    - Seed (log_id-batch_no combination)
+ * 3. Freshness on Retry: Including the current timestamp and randomness ensures that
+ *    retried or re-queued requests receive a fresh ID, avoiding "duplicated request id"
+ *    errors from the third-party API.
+ *
  * @param {number|string} [seed=0] Optional seed (e.g. batch number) to further differentiate.
  * @returns {string} 8-character uppercase hexadecimal string.
  */
