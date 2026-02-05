@@ -204,11 +204,13 @@ function generateInvoiceHTML(html, data, userName) {
       const safeTax = (summary.tax !== null && summary.tax !== undefined) ? Number(summary.tax).toLocaleString() : '0';
       
       return `
-    <tr>        
+    <tr>      
+      <td style="border:none;"></td>
       <td class="title-cell">${safeRate}％対象</td>
       <td class="cell-right">¥ ${safeNet}</td>
     </tr>
     <tr>        
+      <td style="border:none;"></td>
       <td class="title-cell">消費税</td>
       <td class="cell-right">¥ ${safeTax}</td>
     </tr>
