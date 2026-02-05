@@ -3,6 +3,7 @@ const { selectCountReservation, selectCountReservationDetailsPlans, selectCountR
   selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectParkingReservationsForGoogle,
   selectActiveReservationsChange,
   selectMonthlyReservationEvolution, selectSalesByPlan, selectOccupationBreakdown, selectChannelSummary, selectCheckInOutReport,
+  selectAccountingProfitLoss,
   // Backward compatibility aliases
   selectForecastDataByPlan, selectAccountingDataByPlan } = require('../../models/report');
 const { authorize, appendDataToSheet, createSheet } = require('../../utils/googleUtils');
@@ -510,6 +511,25 @@ const getCheckInOutReport = async (req, res) => {
   }
 };
 
+const getAccountingProfitLoss = async (req, res) => {
+  const hotelId = req.params.hid;
+  const startDate = req.params.sdate;
+  const endDate = req.params.edate;
+
+  try {
+    const data = await selectAccountingProfitLoss(req.requestId, hotelId, startDate, endDate);
+
+    if (!data || data.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    res.json(data);
+  } catch (err) {
+    logger.error(`[getAccountingProfitLoss] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getCountReservation,
   getCountReservationDetails,
@@ -534,4 +554,5 @@ module.exports = {
   // Backward compatibility - keep old function names
   getForecastDataByPlan,
   getAccountingDataByPlan,
+  getAccountingProfitLoss,
 }

@@ -43,6 +43,7 @@ router.get('/report/sales-by-plan/:hid/:sdate/:edate', authMiddleware, reportCon
 router.get('/report/occupation-breakdown/:hid/:sdate/:edate', authMiddleware, reportController.getOccupationBreakdown);
 router.post('/report/channel-summary', authMiddleware, reportController.getChannelSummary);
 router.get('/report/checkin-out/:hid/:sdate/:edate', authMiddleware, reportController.getCheckInOutReport);
+router.get('/report/accounting-profit-loss/:hid/:sdate/:edate', authMiddleware, reportController.getAccountingProfitLoss);
 
 // PDF Report Generation Routes
 router.post('/report/download/daily-template-pdf', authMiddleware, reportController.getDailyTemplatePdf);

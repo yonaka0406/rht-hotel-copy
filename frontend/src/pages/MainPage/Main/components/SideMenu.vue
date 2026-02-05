@@ -229,6 +229,7 @@ const updateMenuItems = () => {
 
   items.push(
     { label: '月次集計', icon: 'pi pi-fw pi-calendar-plus', route: '/report/monthly', type: 'link', command: () => router.push('/report/monthly') },
+    { label: '会計データ', icon: 'pi pi-fw pi-calculator', route: '/report/accounting-data', type: 'link', command: () => router.push('/report/accounting-data') },
     { label: '請求', type: 'header', icon: 'pi pi-file-edit' },
     { label: '請求書', icon: 'pi pi-fw pi-file', route: '/billing/invoices', type: 'link', command: () => router.push('/billing/invoices') },
     { label: '領収書', icon: 'pi pi-fw pi-receipt', route: '/billing/receipts', type: 'link', command: () => router.push({ name: 'Receipts' }) },
@@ -261,6 +262,7 @@ const menubarItems = computed(() => {
         { label: '予約照会', icon: 'pi pi-fw pi-calendar', command: () => router.push('/reservations/static-calendar') },
         { label: '予約一覧', icon: 'pi pi-fw pi-list', command: () => router.push('/reservations/list') },
         { label: '月次集計', icon: 'pi pi-fw pi-calendar-plus', command: () => router.push('/report/monthly') },
+        { label: '会計データ', icon: 'pi pi-fw pi-calculator', command: () => router.push('/report/accounting-data') },
       ]
     },
     {

@@ -40,6 +40,7 @@ const BillingInvoices = () => import('@/pages/MainPage/BillingInvoices/BillingIn
 const ReceiptsPage = () => import('@/pages/MainPage/ReceiptsPage.vue'); // Added import
 const ReportDaily = () => import('@/pages/MainPage/ReportDaily.vue');
 const ReportMonthly = () => import('@/pages/MainPage/ReportMonthly/ReportMonthly.vue');
+const ReportAccountingData = () => import('@/pages/MainPage/ReportMonthly/AccountingData.vue');
 
 const ClientHomePage = () => import('@/pages/CRM/ClientHomePage.vue');
 const ClientDashboard = () => import('@/pages/CRM/ClientDashboard.vue');
@@ -91,6 +92,7 @@ const routes = [
       { path: '/billing/receipts', name: 'Receipts', component: ReceiptsPage }, // Added route
       { path: '/report/daily', name: 'ReportDaily', component: ReportDaily },
       { path: '/report/monthly', name: 'ReportMonthly', component: ReportMonthly },
+      { path: '/report/accounting-data', name: 'ReportAccountingData', component: ReportAccountingData },
     ],
     meta: { requiresAuth: true },
   },

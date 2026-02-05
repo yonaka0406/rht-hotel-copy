@@ -128,6 +128,19 @@ export function useReportStore() {
         }
     };
 
+    const fetchAccountingProfitLoss = async (hotelId, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                return getLimitedFunctionalityResponse();
+            }
+            const data = await api.get(`/report/accounting-profit-loss/${hotelId}/${startDate}/${endDate}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch accounting profit loss data:', error);
+            return [];
+        }
+    };
+
     const fetchCountReservationDetails = async (hotelId, startDate, endDate) => {
         try {
             // If API is not available, return limited functionality response
@@ -1141,6 +1154,7 @@ export function useReportStore() {
         fetchPaymentTimingBreakdown,
         fetchChannelSummary,
         fetchCheckInOutReport,
+        fetchAccountingProfitLoss,
         fetchBookerTypeBreakdown,
         fetchForecastDataByPlan,
         fetchAccountingDataByPlan,
