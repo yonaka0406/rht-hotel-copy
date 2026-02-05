@@ -456,11 +456,11 @@ const insertOTAReservationQueue = async (requestId, {
     reservationData,
     status = 'pending',
     conflictDetails = null
-}) => {
-    const pool = getPool(requestId);
+}, dbClient = null) => {
+    const connection = dbClient || getPool(requestId);
 
     try {
-        const result = await pool.query(
+        const result = await connection.query(
             `INSERT INTO ota_reservation_queue 
              (hotel_id, ota_reservation_id, transaction_id, reservation_data, status, conflict_details)
              VALUES ($1, $2, $3, $4, $5, $6)
@@ -495,11 +495,11 @@ const insertOTAReservationQueue = async (requestId, {
  * @param {object} [conflictDetails=null] - Optional conflict details
  * @returns {Promise<object>} The updated queue entry
  */
-const updateOTAReservationQueue = async (requestId, id, status, conflictDetails = null) => {
-    const pool = getPool(requestId);
+const updateOTAReservationQueue = async (requestId, id, status, conflictDetails = null, dbClient = null) => {
+    const connection = dbClient || getPool(requestId);
 
     try {
-        const result = await pool.query(
+        const result = await connection.query(
             `UPDATE ota_reservation_queue 
              SET status = $1, 
                  conflict_details = COALESCE($2, conflict_details),

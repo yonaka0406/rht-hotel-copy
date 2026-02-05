@@ -13,8 +13,9 @@ const getPool = () => {
  * @param {string} jobName - Name of the cron job
  * @returns {Promise<string>} - The ID of the log entry
  */
-const startLog = async (jobName) => {
-    const client = await getPool().connect();
+const startLog = async (jobName, dbClient = null) => {
+    const client = dbClient || await getPool().connect();
+    const shouldRelease = !dbClient;
     try {
         const query = `
             INSERT INTO logs_cron (job_name, status, start_time)
@@ -27,7 +28,7 @@ const startLog = async (jobName) => {
         logger.error(`Failed to start cron log for ${jobName}`, { error: error.message });
         return null; // Don't break the job if logging fails
     } finally {
-        client.release();
+        if (shouldRelease) client.release();
     }
 };
 
@@ -36,11 +37,13 @@ const startLog = async (jobName) => {
  * @param {string} logId - The ID of the log entry to update
  * @param {string} status - 'success' or 'failed'
  * @param {object} details - JSON object with job details
+ * @param {object} dbClient - Optional shared database client
  */
-const completeLog = async (logId, status, details = {}) => {
+const completeLog = async (logId, status, details = {}, dbClient = null) => {
     if (!logId) return;
 
-    const client = await getPool().connect();
+    const client = dbClient || await getPool().connect();
+    const shouldRelease = !dbClient;
     try {
         const query = `
             UPDATE logs_cron
@@ -55,7 +58,7 @@ const completeLog = async (logId, status, details = {}) => {
     } catch (error) {
         logger.error(`Failed to complete cron log ${logId}`, { error: error.message });
     } finally {
-        client.release();
+        if (shouldRelease) client.release();
     }
 };
 
