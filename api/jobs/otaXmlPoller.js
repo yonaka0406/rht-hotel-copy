@@ -209,7 +209,12 @@ async function otaXmlPollerLoop() {
                 await completeLog(logId, 'success', { processedItems: pendingRequests.length }, dbClient);
                 logId = null; // Mark as completed to avoid duplicate logging in catch block
             } catch (logError) {
-                logger.error('Failed to complete success log in OTA XML Poller:', { logId, error: logError.message, originalError: logError });
+                // TODO: Implement a cleanup/retry strategy for orphaned logs
+                logger.error('Failed to complete success log in OTA XML Poller:', {
+                    logId,
+                    originalError: logError.message,
+                    originalErrorStack: logError
+                });
             }
 
             // Small delay between batches to prevent tight loops
@@ -222,7 +227,12 @@ async function otaXmlPollerLoop() {
                 try {
                     await completeLog(logId, 'failed', { error: error.message }, dbClient);
                 } catch (logError) {
-                    logger.error('Failed to complete failure log in OTA XML Poller:', { logId, error: logError.message, innerError: logError });
+                    // TODO: Implement a cleanup/retry strategy for orphaned logs
+                    logger.error('Failed to complete failure log in OTA XML Poller:', {
+                        logId,
+                        originalError: logError.message,
+                        originalErrorStack: logError
+                    });
                     // Do not rethrow to avoid masking the original error
                 }
             }

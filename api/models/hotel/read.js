@@ -56,9 +56,14 @@ const getAllHotelSiteController = async (requestId, dbClient = null) => {
 
   logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query: ${query}`);
 
+  let client = dbClient;
+  let shouldRelease = false;
+
   try {
-    const client = dbClient || await getPool(requestId).connect();
-    const shouldRelease = !dbClient;
+    if (!client) {
+      client = await getPool(requestId).connect();
+      shouldRelease = true;
+    }
 
     try {
       logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query`);

@@ -15,9 +15,15 @@ const getPool = () => {
  * @returns {Promise<string>} - The ID of the log entry
  */
 const startLog = async (jobName, dbClient = null) => {
-    const client = dbClient || await getPool().connect();
-    const shouldRelease = !dbClient;
+    let client = dbClient;
+    let shouldRelease = false;
+
     try {
+        if (!client) {
+            client = await getPool().connect();
+            shouldRelease = true;
+        }
+
         const query = `
             INSERT INTO logs_cron (job_name, status, start_time)
             VALUES ($1, 'running', CURRENT_TIMESTAMP)
@@ -26,10 +32,10 @@ const startLog = async (jobName, dbClient = null) => {
         const result = await client.query(query, [jobName]);
         return result.rows[0].id;
     } catch (error) {
-        logger.error(`Failed to start cron log for ${jobName}`, { error: error.message });
+        logger.error(`Failed to start cron log for ${jobName}`, { error: error.message, stack: error.stack });
         return null; // Don't break the job if logging fails
     } finally {
-        if (shouldRelease) {
+        if (shouldRelease && client) {
             client.release();
         }
     }
@@ -45,9 +51,14 @@ const startLog = async (jobName, dbClient = null) => {
 const completeLog = async (logId, status, details = {}, dbClient = null) => {
     if (!logId) return;
 
-    const client = dbClient || await getPool().connect();
-    const shouldRelease = !dbClient;
+    let client = dbClient;
+    let shouldRelease = false;
+
     try {
+        if (!client) {
+            client = await getPool().connect();
+            shouldRelease = true;
+        }
         const query = `
             UPDATE logs_cron
             SET 
@@ -59,9 +70,9 @@ const completeLog = async (logId, status, details = {}, dbClient = null) => {
         `;
         await client.query(query, [logId, status, details]);
     } catch (error) {
-        logger.error(`Failed to complete cron log ${logId}`, { error: error.message });
+        logger.error(`Failed to complete cron log ${logId}`, { error: error.message, stack: error.stack });
     } finally {
-        if (shouldRelease) {
+        if (shouldRelease && client) {
             client.release();
         }
     }

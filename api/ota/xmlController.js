@@ -926,7 +926,7 @@ const getOTAReservations = async (req, res) => {
                     const outputId = executeResponse?.return?.configurationSettings?.outputId;
                     if (outputId) {
                         try {
-                            await successOTAReservations(req, res, hotelId, outputId);
+                            await successOTAReservations(req, res, hotelId, outputId, dbClient);
                             logger.info('Successfully notified OTA of completed processing', {
                                 requestId,
                                 hotelId,
@@ -1045,8 +1045,10 @@ const getOTAReservations = async (req, res) => {
         }
     }
 };
-const successOTAReservations = async (req, res, hotel_id, outputId, dbClient = null) => {
+const successOTAReservations = async (req, res, hotel_id_arg, outputId_arg, dbClient = null) => {
     const name = 'OutputCompleteService';
+    const hotel_id = (hotel_id_arg && typeof hotel_id_arg !== 'function') ? hotel_id_arg : (req.params.hotel_id || req.query.hotel_id);
+    const outputId = (outputId_arg && typeof outputId_arg !== 'function') ? outputId_arg : (req.params.outputId || req.query.outputId);
 
     logger.info(`Calling OutputCompleteService for hotel_id: ${hotel_id}, outputId: ${outputId}`);
 
@@ -1066,7 +1068,9 @@ const successOTAReservations = async (req, res, hotel_id, outputId, dbClient = n
             requestId: req.requestId,
             stack: error.stack
         });
-        return res.status(500).send({ error: 'An error occurred while processing hotel response.' });
+        if (res && !res.headersSent) {
+            return res.status(500).send({ error: 'An error occurred while processing hotel response.' });
+        }
     }
 };
 const checkOTAStock = async (req, res, hotel_id, startDate, endDate, dbClient = null) => {
@@ -1310,7 +1314,13 @@ const updateInventoryMultipleDays = async (req, res) => {
             res.status(500).send({ success: false, message: error.message });
         }
     } finally {
-        if (dbClient) dbClient.release();
+        if (dbClient) {
+            try {
+                dbClient.release();
+            } catch (releaseErr) {
+                logger.error(`[${req.requestId}] Error releasing connection in updateInventoryMultipleDays:`, releaseErr);
+            }
+        }
     }
 };
 
@@ -1393,9 +1403,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
                 let salesStatus = parseInt(item.salesStatus);
                 if (salesStatus === 0) {
                     salesStatus = 3; // No change
-                } else if (salesStatus === 1) {
-                    salesStatus = 1; // Start sales
-                } else {
+                } else if (salesStatus !== 1) {
                     salesStatus = 2; // Stop sales
                 }
 
@@ -1453,7 +1461,13 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             res.status(500).send({ success: false, message: error.message });
         }
     } finally {
-        if (dbClient) dbClient.release();
+        if (dbClient) {
+            try {
+                dbClient.release();
+            } catch (releaseErr) {
+                logger.error(`[${req.requestId}] Error releasing connection in manualUpdateInventoryMultipleDays:`, releaseErr);
+            }
+        }
     }
 };
 
