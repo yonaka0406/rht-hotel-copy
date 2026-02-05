@@ -106,10 +106,10 @@ function generateInvoiceHTML(html, data, userName) {
       // 金額の表示（マイナス金額も適切に表示）
       let amountDisplay;
       if (item.total_price === null || item.total_price === undefined) {
-        amountDisplay = '¥ -';
+        amountDisplay = '¥-';
       } else {
         const value = Number(item.total_price);
-        amountDisplay = `¥ ${value.toLocaleString()}`;
+        amountDisplay = `¥${value.toLocaleString()}`;
       }
 
       dtlitems += `
@@ -130,7 +130,7 @@ function generateInvoiceHTML(html, data, userName) {
         <td class="cell-center">1</td>
         <td>宿泊料</td>                    
         <td class="cell-right">${safeInvoiceStays} 泊</td>
-        <td class="cell-right">¥ ${safeInvoiceTotal}</td>
+        <td class="cell-right">¥${safeInvoiceTotal}</td>
     </tr>
     `;
   }
@@ -196,27 +196,51 @@ function generateInvoiceHTML(html, data, userName) {
   modifiedHTML = modifiedHTML.replace(/{{ total_tax_value }}/g, safeTaxValue);
 
   // Generate breakdown HTML, sorted by rate descending, filtering out 0s
-  let taxitems = Object.values(taxSummary)
+  const filteredSummaries = Object.values(taxSummary)
     .filter(summary => summary.net !== 0 || summary.tax !== 0)
-    .sort((a, b) => b.rate - a.rate)
-    .map(summary => {
-      const safeRate = (summary.rate !== null && summary.rate !== undefined) ? Number(summary.rate * 100).toLocaleString() : '0';
-      const safeNet = (summary.net !== null && summary.net !== undefined) ? Number(summary.net).toLocaleString() : '0';
-      const safeTax = (summary.tax !== null && summary.tax !== undefined) ? Number(summary.tax).toLocaleString() : '0';
-      
-      return `
+    .sort((a, b) => b.rate - a.rate);
+
+  let taxitems = '';
+  filteredSummaries.forEach((summary, index) => {
+    const rate = summary.rate !== null && summary.rate !== undefined ? Number(summary.rate) : 0;
+    const safeRate = (rate * 100).toLocaleString();
+    const safeNet = (summary.net !== null && summary.net !== undefined) ? Number(summary.net).toLocaleString() : '0';
+    const safeTax = (summary.tax !== null && summary.tax !== undefined) ? Number(summary.tax).toLocaleString() : '0';
+    
+    // 最初の項目以外（10%対象と8%対象の間、非課税対象の上）にスペース行を追加
+    if (index > 0) {
+      taxitems += `
+    <tr>      
+      <td style="border:none;"></td>
+      <td style="border:none;"></td>
+      <td style="border:none;"></td>
+    </tr>`;
+    }
+    
+    // 税率が0%の場合は「非課税対象」と表示し、消費税行は表示しない
+    if (rate === 0) {
+      taxitems += `
+    <tr>      
+      <td style="border:none;"></td>
+      <td class="title-cell">非課税対象</td>
+      <td class="cell-right">¥${safeNet}</td>
+    </tr>
+`;
+    } else {
+      taxitems += `
     <tr>      
       <td style="border:none;"></td>
       <td class="title-cell">${safeRate}％対象</td>
-      <td class="cell-right">¥ ${safeNet}</td>
+      <td class="cell-right">¥${safeNet}</td>
     </tr>
     <tr>        
       <td style="border:none;"></td>
       <td class="title-cell">消費税</td>
-      <td class="cell-right">¥ ${safeTax}</td>
+      <td class="cell-right">¥${safeTax}</td>
     </tr>
 `;
-    }).join('');
+    }
+  });
 
   modifiedHTML = modifiedHTML.replace(/{{ taxable_details }}/g, taxitems);
 

@@ -155,7 +155,7 @@
                 　合計金額
             </div>
             <div style="width: 50%;">
-                <span style="font-weight: bold; text-align: right;">¥ {{ total_amount }}</span> (税込)
+                <span style="font-weight: bold; text-align: right;">¥{{ total_amount }}</span> (税込)
             </div>
         </div>
         <div style="width: 40%; font-size: 12pt;"></div>
@@ -179,13 +179,13 @@
                     <td colspan="2"
                         style="border-left: hidden; border-bottom: hidden; border-right: none; border-top: none;"></td>
                     <td class="title-cell">合計金額</td>
-                    <td class="cell-right">¥ {{ details_total_value }}</td>
+                    <td class="cell-right">¥{{ details_total_value }}</td>
                 </tr>
                 <tr>
                     <td colspan="2"
                         style="border-left: hidden; border-bottom: hidden; border-right: none; border-top: none;"></td>
                     <td class="title-cell">内消費税</td>
-                    <td class="cell-right">¥ {{ total_tax_value }}</td>
+                    <td class="cell-right">¥{{ total_tax_value }}</td>
                 </tr>
             </tbody>
         </table>
