@@ -1047,8 +1047,8 @@ const getOTAReservations = async (req, res) => {
 };
 const successOTAReservations = async (req, res, hotel_id_arg, outputId_arg, dbClient = null) => {
     const name = 'OutputCompleteService';
-    const hotel_id = (hotel_id_arg && typeof hotel_id_arg !== 'function') ? hotel_id_arg : (req.params.hotel_id || req.query.hotel_id);
-    const outputId = (outputId_arg && typeof outputId_arg !== 'function') ? outputId_arg : (req.params.outputId || req.query.outputId);
+    const hotel_id = (hotel_id_arg && typeof hotel_id_arg !== 'function' && typeof hotel_id_arg !== 'object') ? hotel_id_arg : (req.params?.hotel_id || req.query?.hotel_id);
+    const outputId = (outputId_arg && typeof outputId_arg !== 'function' && typeof outputId_arg !== 'object') ? outputId_arg : (req.params?.outputId || req.query?.outputId);
 
     logger.info(`Calling OutputCompleteService for hotel_id: ${hotel_id}, outputId: ${outputId}`);
 
@@ -1133,24 +1133,46 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate, dbClient = 
             .replace('{{searchDurationFrom}}', range.start)
             .replace('{{searchDurationTo}}', range.end);
 
-        try {
-            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody, dbClient);
-            const executeResponse = apiResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['netRmTypeGroupAndDailyStockStatusList'];
+        let retryCount = 0;
+        const maxRetries = 3;
+        let lastError = null;
 
-            const executeResponseArray = Array.isArray(executeResponse) ? executeResponse : (executeResponse ? [executeResponse] : []);
+        while (retryCount <= maxRetries) {
+            try {
+                const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody, dbClient);
+                const executeResponse = apiResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['netRmTypeGroupAndDailyStockStatusList'];
 
-            const transformedResponse = executeResponseArray.map(item => ({
-                netRmTypeGroupCode: item.netRmTypeGroupCode,
-                saleDate: item.saleDate,
-                salesCount: item.salesCount,
-                remainingCount: item.remainingCount
-            }));
+                const executeResponseArray = Array.isArray(executeResponse) ? executeResponse : (executeResponse ? [executeResponse] : []);
 
-            allResponses = allResponses.concat(transformedResponse);
-        } catch (error) {
-            logger.error(`Error submitting XML template for date range ${range.start} - ${range.end}:`, error);
-            throw error;
+                const transformedResponse = executeResponseArray.map(item => ({
+                    netRmTypeGroupCode: item.netRmTypeGroupCode,
+                    saleDate: item.saleDate,
+                    salesCount: item.salesCount,
+                    remainingCount: item.remainingCount
+                }));
+
+                allResponses = allResponses.concat(transformedResponse);
+                lastError = null;
+                break; // Success
+            } catch (error) {
+                lastError = error;
+                // If it's a rate limit error (E013), retry with delay
+                if (error.message && error.message.includes('E013')) {
+                    retryCount++;
+                    if (retryCount <= maxRetries) {
+                        const backoffDelay = Math.pow(2, retryCount) * 1000 + Math.random() * 1000;
+                        logger.warn(`Rate limit (E013) hit in checkOTAStock, retrying in ${Math.round(backoffDelay)}ms... (Attempt ${retryCount}/${maxRetries})`, {
+                            hotel_id,
+                            range
+                        });
+                        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+                        continue;
+                    }
+                }
+                throw error; // Not a rate limit error or max retries reached
+            }
         }
+        if (lastError) throw lastError;
     }
 
     return allResponses;

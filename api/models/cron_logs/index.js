@@ -36,7 +36,11 @@ const startLog = async (jobName, dbClient = null) => {
         return null; // Don't break the job if logging fails
     } finally {
         if (shouldRelease && client) {
-            client.release();
+            try {
+                client.release();
+            } catch (releaseErr) {
+                logger.error(`Error releasing client in startLog for ${jobName}:`, releaseErr);
+            }
         }
     }
 };
@@ -73,7 +77,11 @@ const completeLog = async (logId, status, details = {}, dbClient = null) => {
         logger.error(`Failed to complete cron log ${logId}`, { error: error.message, stack: error.stack });
     } finally {
         if (shouldRelease && client) {
-            client.release();
+            try {
+                client.release();
+            } catch (releaseErr) {
+                logger.error(`Error releasing client in completeLog for ${logId}:`, releaseErr);
+            }
         }
     }
 };
