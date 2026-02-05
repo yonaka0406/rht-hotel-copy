@@ -22,7 +22,7 @@
       <div class="field">
         <FloatLabel>
           <label for="subject">件名</label>
-          <InputText id="subject" v-model.trim="currentActionFormData.subject" class="w-full" />
+          <Select id="subject" v-model="currentActionFormData.subject" :options="subjectOptions" class="w-full" />
         </FloatLabel>
       </div>
 
@@ -133,7 +133,6 @@ const { fetchClient } = useClientStore();
 // Primevue
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 import DatePicker from 'primevue/datepicker';
 import Select from 'primevue/select';
@@ -141,6 +140,22 @@ import FloatLabel from 'primevue/floatlabel';
 import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
+
+const subjectOptions = [
+  '新規飛び込み',
+  '新規営業リスト',
+  '完成工事高上位',
+  '大型工事落札元請け',
+  '工事現場訪問',
+  '施工体系図下請け',
+  '展示会出展',
+  '店舗内覧会',
+  'イベント参加',
+  '紹介',
+  'リピート顧客フォロー',
+  '予約問合せ',
+  'その他'
+];
 
 // --- Form Data State ---
 const initialFormData = { // For resetting the form

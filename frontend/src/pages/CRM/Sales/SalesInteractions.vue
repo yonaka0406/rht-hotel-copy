@@ -332,7 +332,10 @@ const actionTypeTranslations = {
     'meeting': '会議',
     'task': 'タスク',
     'note': 'メモ',
-    'other': 'その他'
+    'other': 'その他',
+    'construction_site': '工事現場',
+    'office_visit': '来社',
+    'wh': 'WH'
 };
 const statusTranslations = {
     'pending': '保留中',
@@ -418,7 +421,10 @@ const getActionTypeSeverity = (actionType) => {
         meeting: 'primary',
         task: 'secondary',
         note: 'warn',
-        other: 'secondary'
+        other: 'secondary',
+        construction_site: 'success',
+        office_visit: 'primary',
+        wh: 'contrast'
     };
     return severities[actionType] || 'info';
 };
