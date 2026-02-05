@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.13] - 2026-02-06
+
+- New Feature: Added public start/stop controls for the OTA XML poller and an exposed poll interval setting.
+- Bug Fix: Improved database connection resilience with retry and recovery on DB failures.
+- Bug Fix: Standardized 8-character request IDs for more reliable tracking.
+- Bug Fix: Enhanced poller logging and error handling.
+- Refactor: Switched to sequential, DB-driven queue processing and enabled optional injected DB client support for more consistent resource handling.
+
+---
+
 ## [1.4.12] - 2026-02-04
 
 - Bug Fix: Standardized tax calculation methodology across the application for consistent, accurate tax-exclusive pricing in invoices and receipts.
