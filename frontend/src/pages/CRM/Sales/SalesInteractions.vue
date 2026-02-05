@@ -332,10 +332,10 @@ const actionTypeTranslations = {
     'meeting': '会議',
     'task': 'タスク',
     'note': 'メモ',
+    'other': 'その他',
     'construction_site': '工事現場',
     'office_visit': '来社',
-    'wh': 'WH',
-    'other': 'その他'
+    'wh': 'WH'
 };
 const statusTranslations = {
     'pending': '保留中',

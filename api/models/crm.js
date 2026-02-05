@@ -175,6 +175,7 @@ const updateAction = async (requestId, actionId, actionFields, userId) => {
     };
     
     // Fields from actionFields
+    if (actionFields.hasOwnProperty('action_type')) addFieldToUpdate('action_type', actionFields.action_type);
     if (actionFields.hasOwnProperty('action_datetime')) addFieldToUpdate('action_datetime', actionFields.action_datetime || null);
     if (actionFields.hasOwnProperty('subject')) addFieldToUpdate('subject', actionFields.subject); // Assuming subject is required if passed
     if (actionFields.hasOwnProperty('details')) addFieldToUpdate('details', actionFields.details || null);

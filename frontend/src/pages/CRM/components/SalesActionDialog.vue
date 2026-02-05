@@ -228,6 +228,7 @@ const populateForm = async (data) => {
     if (clientObj) {
       selectedClientObjectForForm.value = {
         ...clientObj,
+        id: clientObj.id,
         display_name: clientObj.name_kanji || clientObj.name_kana || clientObj.name || `クライアントID: ${clientObj.id}`
       };
     } else {
@@ -238,6 +239,7 @@ const populateForm = async (data) => {
         if (fetchedClient) {
           selectedClientObjectForForm.value = {
             ...fetchedClient,
+            id: fetchedClient.id,
             display_name: fetchedClient.name_kanji || fetchedClient.name_kana || fetchedClient.name || `クライアントID: ${fetchedClient.id}`
           };
         } else {
