@@ -161,12 +161,12 @@ const aggregatedData = computed(() => {
 });
 
 const fetchData = async () => {
-    if (!hotelStore.selectedHotelId) return;
+    if (!hotelStore.selectedHotelId.value) return;
 
     isLoading.value = true;
     try {
         const { start, end } = dateRange.value;
-        rawData.value = await reportStore.fetchAccountingProfitLoss(hotelStore.selectedHotelId, start, end);
+        rawData.value = await reportStore.fetchAccountingProfitLoss(hotelStore.selectedHotelId.value, start, end);
         await nextTick();
         initChart();
     } catch (error) {
@@ -279,7 +279,7 @@ onBeforeUnmount(() => {
     if (myChart) myChart.dispose();
 });
 
-watch([selectedMonth, viewMode, () => hotelStore.selectedHotelId], fetchData);
+watch([selectedMonth, viewMode, () => hotelStore.selectedHotelId.value], fetchData);
 </script>
 
 <style scoped>
