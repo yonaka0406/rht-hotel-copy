@@ -221,6 +221,24 @@ export function useAccountingStore() {
         return await get(`/accounting/analytics/cost-breakdown?${query}`);
     };
 
+    const fetchUtilityDetails = async (params) => {
+        const query = new URLSearchParams(params).toString();
+        return await get(`/accounting/utility-details?${query}`);
+    };
+
+    const upsertUtilityDetail = async (data) => {
+        return await post('/accounting/utility-details', data);
+    };
+
+    const deleteUtilityDetail = async (id) => {
+        return await del(`/accounting/utility-details/${id}`);
+    };
+
+    const fetchUtilitySuggestions = async (params) => {
+        const query = new URLSearchParams(params).toString();
+        return await get(`/accounting/utility-suggestions?${query}`);
+    };
+
     const clearPreviewData = () => {
         ledgerPreviewData.value = [];
         ledgerValidationData.value = null;
@@ -265,6 +283,10 @@ export function useAccountingStore() {
         fetchReconciliationHotelDetails,
         fetchReconciliationClientDetails,
         fetchBudgetActualComparison,
+        fetchUtilityDetails,
+        upsertUtilityDetail,
+        deleteUtilityDetail,
+        fetchUtilitySuggestions,
         comparePmsVsYayoi,
         getMonthlySalesComparison,
         getRawDataForIntegrityAnalysis,

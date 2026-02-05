@@ -146,7 +146,11 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <BudgetActualComparisonTable :data="budgetActualData" :is-loading="isLoading" />
+                    <BudgetActualComparisonTable
+                        :data="budgetActualData"
+                        :is-loading="isLoading"
+                        :filters="{ selectedMonth, selectedDepartmentGroup }"
+                    />
                 </div>
             </div>
 

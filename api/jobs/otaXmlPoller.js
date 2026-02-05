@@ -41,11 +41,11 @@ const MAX_RETRIES = 5; // Max retries for a queued item
 const POLL_INTERVAL = 2000; // Poll every 2 seconds
 const BATCH_SIZE = 3; // Process up to 3 items per poll cycle
 
-async function fetchPendingRequests(limit, dbClient = null) {
-    const connection = dbClient || getProdPool();
+async function fetchPendingRequests(limit) {
+    const pool = getProdPool();
     try {
         // Select pending requests, ordered by creation time, and mark them as processing
-        const result = await connection.query(
+        const result = await pool.query(
             `UPDATE ota_xml_queue
              SET status = 'processing', processed_at = CURRENT_TIMESTAMP
              WHERE id IN (
@@ -178,63 +178,32 @@ async function otaXmlPoller() {
     logger.debug('Starting OTA XML Poller cycle', { requestId });
 
     let logId = null;
-    let dbClient = null;
 
     try {
-        const pool = getProdPool();
-        dbClient = await pool.connect();
-
-        const pendingRequests = await fetchPendingRequests(BATCH_SIZE, dbClient);
+        const pendingRequests = await fetchPendingRequests(BATCH_SIZE);
         if (pendingRequests.length === 0) {
             logger.debug('No pending OTA XML requests found.', { requestId });
         } else {
             // Start logging only when there is work
-            logId = await startLog('OTA XML Poller', dbClient);
+            logId = await startLog('OTA XML Poller');
 
             logger.info(`Fetched ${pendingRequests.length} pending OTA XML requests.`, { requestId });
             // Process items in parallel, but submitXMLTemplate itself is rate-limited by semaphore
             await Promise.all(pendingRequests.map(processQueueItem));
 
-            try {
-                await completeLog(logId, 'success', { processedItems: pendingRequests.length }, dbClient);
-                logId = null; // Mark as completed so catch block doesn't try again
-            } catch (successLogErr) {
-                logger.error('Failed to complete success log for OTA XML Poller:', {
-                    logId,
-                    error: successLogErr.message
-                });
-                // Do not rethrow, the items were actually processed
-            }
+            await completeLog(logId, 'success', { processedItems: pendingRequests.length });
         }
     } catch (error) {
         logger.error('Error in OTA XML Poller cycle:', { requestId, error: error.message, stack: error.stack });
         if (logId) {
-            try {
-                await completeLog(logId, 'failed', { error: error.message }, dbClient);
-            } catch (completeErr) {
-                logger.error('Failed to complete failure log for OTA XML Poller:', {
-                    logId,
-                    error: completeErr.message,
-                    originalError: error.message
-                });
-            }
+            await completeLog(logId, 'failed', { error: error.message });
         } else {
             // If we failed before starting the log (e.g., fetchPendingRequests error), log it now
-            try {
-                const errLogId = await startLog('OTA XML Poller', dbClient);
-                await completeLog(errLogId, 'failed', { error: error.message, phase: 'initialization' }, dbClient);
-            } catch (initLogErr) {
-                logger.error('Failed to create initialization error log for OTA XML Poller:', {
-                    error: initLogErr.message,
-                    originalError: error.message
-                });
-            }
+            const errLogId = await startLog('OTA XML Poller');
+            await completeLog(errLogId, 'failed', { error: error.message, phase: 'initialization' });
         }
     } finally {
         isPolling = false;
-        if (dbClient) {
-            dbClient.release();
-        }
         logger.debug('Finished OTA XML Poller cycle', { requestId });
     }
 }

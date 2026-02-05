@@ -2,8 +2,8 @@ const { getPool } = require('../../config/database');
 const format = require('pg-format');
 const logger = require('../../config/logger');
 
-const getAllHotels = async (requestId, dbClient = null) => {
-  const connection = dbClient || getPool(requestId);
+const getAllHotels = async (requestId) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT
         h.*,
@@ -26,29 +26,29 @@ const getAllHotels = async (requestId, dbClient = null) => {
   `;
 
   try {
-    const result = await connection.query(query);
+    const result = await pool.query(query);
     return result.rows; // Return all
   } catch (err) {
     logger.error(`[${requestId}] Error retrieving all hotels:`, err);
     throw new Error('Database error');
   }
 };
-const getHotelByID = async (requestId, id, dbClient = null) => {
-  const connection = dbClient || getPool(requestId);
+const getHotelByID = async (requestId, id, dbPool = null) => {
+  const selectedPool = dbPool || getPool(requestId);
   const query = 'SELECT hotels.* FROM hotels WHERE hotels.id = $1';
   const values = [id];
 
   try {
-    const result = await connection.query(query, values);
+    const result = await selectedPool.query(query, values);
     return result.rows[0]; // Return the first user found (or null if none)
   } catch (err) {
     logger.error(`[${requestId}] Error finding hotel by id:`, err);
     throw new Error('Database error');
   }
 };
-const getAllHotelSiteController = async (requestId, dbClient = null) => {
+const getAllHotelSiteController = async (requestId) => {
   logger.debug(`[${requestId}] [getAllHotelSiteController] Starting`);
-
+  const pool = getPool(requestId);
   const query = `
     SELECT sc_user_info.* 
     FROM sc_user_info 
@@ -57,24 +57,28 @@ const getAllHotelSiteController = async (requestId, dbClient = null) => {
 
   logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query: ${query}`);
 
-  const pool = dbClient ? null : getPool(requestId);
-  const client = dbClient || await pool.connect();
-  const shouldRelease = !dbClient;
-
   try {
-    logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query`);
-    const startTime = Date.now();
-    const result = await client.query(query);
-    const duration = Date.now() - startTime;
+    logger.debug(`[${requestId}] [getAllHotelSiteController] Getting client from pool`);
+    const client = await pool.connect();
 
-    logger.debug(`[${requestId}] [getAllHotelSiteController] Query executed successfully in ${duration}ms`);
-    logger.debug(`[${requestId}] [getAllHotelSiteController] Found ${result.rows.length} hotels`);
+    try {
+      logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query`);
+      const startTime = Date.now();
+      const result = await client.query(query);
+      const duration = Date.now() - startTime;
 
-    if (result.rows.length > 0) {
-      logger.debug(`[${requestId}] [getAllHotelSiteController] First hotel ID: ${result.rows[0].hotel_id}`);
+      logger.debug(`[${requestId}] [getAllHotelSiteController] Query executed successfully in ${duration}ms`);
+      logger.debug(`[${requestId}] [getAllHotelSiteController] Found ${result.rows.length} hotels`);
+
+      if (result.rows.length > 0) {
+        logger.debug(`[${requestId}] [getAllHotelSiteController] First hotel ID: ${result.rows[0].hotel_id}`);
+      }
+
+      return result.rows;
+    } finally {
+      logger.debug(`[${requestId}] [getAllHotelSiteController] Releasing client back to pool`);
+      client.release();
     }
-
-    return result.rows;
   } catch (err) {
     logger.error(`[${requestId}] [getAllHotelSiteController] Error executing query:`, {
       error: err.message,
@@ -83,15 +87,10 @@ const getAllHotelSiteController = async (requestId, dbClient = null) => {
       query: query
     });
     throw new Error(`Database error: ${err.message}`);
-  } finally {
-    if (shouldRelease && client) {
-      logger.debug(`[${requestId}] [getAllHotelSiteController] Releasing client back to pool`);
-      client.release();
-    }
   }
 };
-const getHotelSiteController = async (requestId, id, dbClient = null) => {
-  const connection = dbClient || getPool(requestId);
+const getHotelSiteController = async (requestId, id) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT sc_user_info.* 
     FROM sc_user_info 
@@ -100,7 +99,7 @@ const getHotelSiteController = async (requestId, id, dbClient = null) => {
   const values = [id];
 
   try {
-    const result = await connection.query(query, values);
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     logger.error(`[${requestId}] Error finding hotel by id:`, err);
@@ -108,8 +107,8 @@ const getHotelSiteController = async (requestId, id, dbClient = null) => {
   }
 };
 
-const selectBlockedRooms = async (requestId, hotelId, dbClient = null) => {
-  const connection = dbClient || getPool(requestId);
+const selectBlockedRooms = async (requestId, hotelId) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT r.*, r.check_in as start_date, (r.check_out - INTERVAL '1 day') as end_date, d.room_id, d.room_type_name, d.room_number, h.name
     FROM 
@@ -135,7 +134,7 @@ const selectBlockedRooms = async (requestId, hotelId, dbClient = null) => {
   `;
 
   try {
-    const result = await connection.query(query, [hotelId]);
+    const result = await pool.query(query, [hotelId]);
     return result.rows;
   } catch (err) {
     logger.error(`[${requestId}] Error retrieving blocked rooms:`, err);
@@ -144,14 +143,14 @@ const selectBlockedRooms = async (requestId, hotelId, dbClient = null) => {
 };
 
 
-const getPlanExclusionSettings = async (requestId, hotel_id, dbClient = null) => {
-  const connection = dbClient || getPool(requestId);
+const getPlanExclusionSettings = async (requestId, hotel_id) => {
+  const pool = getPool(requestId);
   try {
     const allGlobalPlansQuery = 'SELECT id, name FROM plans_global ORDER BY id;';
-    const allGlobalPlansResult = await connection.query(allGlobalPlansQuery);
+    const allGlobalPlansResult = await pool.query(allGlobalPlansQuery);
 
     const excludedPlansQuery = 'SELECT global_plan_id FROM hotel_plan_exclusions WHERE hotel_id = $1;';
-    const excludedPlansResult = await connection.query(excludedPlansQuery, [hotel_id]);
+    const excludedPlansResult = await pool.query(excludedPlansQuery, [hotel_id]);
 
     const excludedPlanIds = excludedPlansResult.rows.map(row => row.global_plan_id);
 
@@ -166,14 +165,14 @@ const getPlanExclusionSettings = async (requestId, hotel_id, dbClient = null) =>
 };
 
 
-const getVehicleCategoryCapacity = async (requestId, vehicle_category_id, dbClient = null) => {
-  const connection = dbClient || getPool(requestId);
+const getVehicleCategoryCapacity = async (requestId, vehicle_category_id) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT capacity_units_required FROM vehicle_categories WHERE id = $1;
   `;
   const values = [vehicle_category_id];
   try {
-    const result = await connection.query(query, values);
+    const result = await pool.query(query, values);
     return result.rows[0]?.capacity_units_required || 0;
   } catch (err) {
     logger.error(`[${requestId}] Error fetching vehicle category capacity:`, err);
@@ -182,8 +181,8 @@ const getVehicleCategoryCapacity = async (requestId, vehicle_category_id, dbClie
 };
 
 
-const getAllHotelsWithEmail = async (requestId, dbClient = null) => {
-  const connection = dbClient || getPool(requestId);
+const getAllHotelsWithEmail = async (requestId, dbPool = null) => {
+  const pool = dbPool || getPool(requestId);
   const query = `
     SELECT
       id,
@@ -195,7 +194,7 @@ const getAllHotelsWithEmail = async (requestId, dbClient = null) => {
   `;
 
   try {
-    const result = await connection.query(query);
+    const result = await pool.query(query);
     return result.rows;
   } catch (err) {
     logger.error(`[${requestId}] Error retrieving hotels with email:`, err);

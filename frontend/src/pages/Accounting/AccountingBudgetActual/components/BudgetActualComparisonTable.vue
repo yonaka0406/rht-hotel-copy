@@ -1,15 +1,22 @@
 <script setup>
 import { ref, computed } from 'vue';
+import { useAccountingStore } from '@/composables/useAccountingStore';
+import { useRouter } from 'vue-router';
+import { getUtilityUnit } from '@/utils/accountingUtils';
 
 const props = defineProps({
     data: {
         type: Object,
         required: true,
-        // Expected format: { actual: Array, budget: Array }
+        // Expected format: { actual: Array, budget: Array, occupancy: Object }
     },
     isLoading: {
         type: Boolean,
         default: false
+    },
+    filters: {
+        type: Object,
+        default: () => ({})
     }
 });
 
@@ -34,7 +41,13 @@ const formatDiffPercent = (val) => {
     return val === 0 ? '-' : `${sign}${formatted} p.p.`;
 };
 
+const accountingStore = useAccountingStore();
+const router = useRouter();
+
 const expandedGroups = ref(new Set());
+const expandedAccounts = ref(new Set());
+const utilityDetails = ref({}); // { 'account_name': Array }
+const isUtilityLoading = ref(false);
 
 const toggleGroup = (label) => {
     if (expandedGroups.value.has(label)) {
@@ -43,6 +56,56 @@ const toggleGroup = (label) => {
         expandedGroups.value.add(label);
     }
 };
+
+const toggleAccount = async (accountName) => {
+    if (expandedAccounts.value.has(accountName)) {
+        expandedAccounts.value.delete(accountName);
+    } else {
+        expandedAccounts.value.add(accountName);
+        if (accountName === '水道光熱費' && !utilityDetails.value['水道光熱費']) {
+            await fetchUtilityDetails();
+        }
+    }
+};
+
+const fetchUtilityDetails = async () => {
+    if (!props.data.occupancy?.actual?.length || !props.filters.selectedMonth) return;
+
+    isUtilityLoading.value = true;
+    try {
+        const hotelIds = props.data.occupancy.actual.map(o => o.hotel_id);
+        const d = props.filters.selectedMonth;
+        const start = new Date(d.getFullYear(), d.getMonth(), 1);
+        const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+
+        const formatDate = (date) => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+
+        const params = {
+            startMonth: formatDate(start),
+            endMonth: formatDate(end)
+        };
+
+        const allDetails = await Promise.all(hotelIds.map(hid =>
+            accountingStore.fetchUtilityDetails({ ...params, hotelId: hid })
+        ));
+
+        utilityDetails.value['水道光熱費'] = allDetails.flat();
+    } catch (e) {
+        console.error('Failed to fetch utility details:', e);
+    } finally {
+        isUtilityLoading.value = false;
+    }
+};
+
+const totalOccupancy = computed(() => {
+    if (!props.data.occupancy?.actual) return 0;
+    return props.data.occupancy.actual.reduce((sum, o) => sum + parseInt(o.rooms_sold || 0), 0);
+});
 
 const rows = computed(() => {
     if (!props.data || !props.data.actual || !props.data.budget) return [];
@@ -182,8 +245,13 @@ const rows = computed(() => {
 
                     <!-- Account Details (Drill-down) -->
                     <template v-if="expandedGroups.has(row.label)">
-                        <tr v-for="acc in row.accounts" :key="acc.code" class="bg-slate-50/50 dark:bg-slate-900/20 text-[13px] border-b border-slate-100/50 dark:border-slate-800/30">
-                            <td class="py-2 px-10 text-slate-500 dark:text-slate-400 italic">
+                        <tr v-for="acc in row.accounts" :key="acc.code"
+                            class="bg-slate-50/50 dark:bg-slate-900/20 text-[13px] border-b border-slate-100/50 dark:border-slate-800/30"
+                            :class="{ 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50': acc.name === '水道光熱費' }"
+                            @click="acc.name === '水道光熱費' && toggleAccount(acc.name)">
+                            <td class="py-2 px-10 text-slate-500 dark:text-slate-400 italic flex items-center gap-2">
+                                <i v-if="acc.name === '水道光熱費'" class="pi text-[9px] text-slate-400 transition-transform duration-200"
+                                    :class="expandedAccounts.has(acc.name) ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
                                 {{ acc.name }}
                                 <span class="text-[10px] ml-1 opacity-50">{{ acc.code }}</span>
                             </td>
@@ -193,8 +261,33 @@ const rows = computed(() => {
                                 :class="acc.diff >= 0 ? 'text-emerald-500/70' : 'text-rose-500/70'">
                                 {{ acc.diff > 0 ? '+' : '' }}{{ formatNumber(acc.diff) }}
                             </td>
-                            <td colspan="3"></td>
+                            <td colspan="3">
+                                <div v-if="acc.name === '水道光熱費'" class="flex justify-end pr-4">
+                                    <Button icon="pi pi-bolt" label="詳細入力" size="small" text @click.stop="router.push({ name: 'AccountingUtilityBills' })" />
+                                </div>
+                            </td>
                         </tr>
+
+                        <!-- Utility Details (Nested under 水道光熱費) -->
+                        <template v-if="acc.name === '水道光熱費' && expandedAccounts.has(acc.name) && utilityDetails['水道光熱費']">
+                            <tr v-for="util in utilityDetails['水道光熱費']" :key="util.id" class="bg-amber-50/20 dark:bg-amber-900/5 text-[11px] border-b border-slate-100/30">
+                                <td class="py-1 px-16 text-slate-400">
+                                    • {{ util.sub_account_name }} ({{ util.provider_name || '不明' }})
+                                </td>
+                                <td class="py-1 px-4 text-right font-mono">{{ formatNumber(util.quantity) }} <span class="text-[9px] opacity-50">{{ getUtilityUnit(util.sub_account_name) }}</span></td>
+                                <td class="py-1 px-4 text-right font-mono">{{ formatNumber(util.total_value) }}</td>
+                                <td colspan="4" class="py-1 px-4">
+                                    <div class="flex items-center gap-4 text-[10px]">
+                                        <span class="text-slate-400">単価: <span class="font-bold text-slate-600 dark:text-slate-300">¥{{ formatNumber(util.average_price) }}</span></span>
+                                        <span v-if="totalOccupancy > 0" class="text-slate-400">
+                                            客室あたり: <span class="font-bold text-violet-600 dark:text-violet-400">
+                                                {{ (util.quantity / totalOccupancy).toFixed(2) }}{{ getUtilityUnit(util.sub_account_name) }}
+                                            </span>
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
                     </template>
                 </template>
             </tbody>

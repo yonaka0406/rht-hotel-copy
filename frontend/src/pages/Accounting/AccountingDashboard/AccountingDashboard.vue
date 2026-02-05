@@ -52,11 +52,6 @@ const lastImportPeriodFormatted = computed(() => {
     return `${formatDate(info.min_date)} 〜 ${formatDate(info.max_date)}`;
 });
 
-const lastMonthLabel = computed(() => {
-    const today = new Date();
-    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    return `${lastMonth.getFullYear()}年${lastMonth.getMonth() + 1}月`;
-});
 
 // Computed properties for user information
 const userName = computed(() => {
@@ -387,6 +382,24 @@ onMounted(async () => {
                                     <span
                                         class="text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:gap-2 transition-all mt-auto">
                                         分析画面を表示 <i class="pi pi-arrow-right"></i>
+                                    </span>
+                                </button>
+
+                                <!-- Utility Bills Entry Card -->
+                                <button @click="$router.push({ name: 'AccountingUtilityBills' })"
+                                    class="group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 border border-slate-100 dark:border-slate-700 rounded-xl transition-all duration-200 cursor-pointer text-center h-full">
+                                    <div
+                                        class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-4 border border-slate-100 dark:border-slate-700">
+                                        <i class="pi pi-bolt text-xl text-violet-600 dark:text-violet-400"></i>
+                                    </div>
+                                    <span class="font-semibold text-slate-900 dark:text-white text-lg mb-2">光熱費入力</span>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">使用量と単価の管理</p>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                                        水道・電気・ガスの使用量を入力し予実分析に活用
+                                    </p>
+                                    <span
+                                        class="text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:gap-2 transition-all mt-auto">
+                                        入力画面を表示 <i class="pi pi-arrow-right"></i>
                                     </span>
                                 </button>
 

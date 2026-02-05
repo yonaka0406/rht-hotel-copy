@@ -417,7 +417,7 @@ async function processQueuedReservations(requestId, reservations, client) {
  * @param {number} hotelId - The hotel ID
  * @returns {Promise<object>} - The processed reservation data
  */
-async function processAndQueueReservation(requestId, reservationData, hotelId, dbClient = null) {
+async function processAndQueueReservation(requestId, reservationData, hotelId) {
     try {
         const transactionId = reservationData.TransactionType?.DataID;
         const otaReservationId = reservationData.BasicInformation?.TravelAgencyBookingNumber || `temp_${Date.now()}`;
@@ -439,7 +439,7 @@ async function processAndQueueReservation(requestId, reservationData, hotelId, d
             reservationData,
             status: 'pending',
             conflictDetails: null
-        }, dbClient);
+        });
 
         const queueEntryId = queueResult?.id;
 
@@ -704,19 +704,14 @@ const getOTAReservations = async (req, res) => {
     const requestId = req.requestId || 'no-request-id';
     let hotels = [];
     let queuedReservations = [];
-    let sharedClient = null;
 
     logger.debug(`[${requestId}] Starting getOTAReservations`);
 
     try {
-        const pool = getPool(requestId);
-        sharedClient = await pool.connect();
-        logger.debug(`[${requestId}] Acquired shared connection for getOTAReservations`);
-
         // Get hotels with retry logic for database connection
         try {
             logger.debug(`[${requestId}] Attempting to fetch hotels using getAllHotelSiteController`);
-            hotels = await getAllHotelSiteController(requestId, sharedClient);
+            hotels = await getAllHotelSiteController(requestId);
             logger.debug(`[${requestId}] getAllHotelSiteController returned ${hotels?.length || 0} hotels`);
 
             if (!hotels || hotels.length === 0) {
@@ -745,11 +740,31 @@ const getOTAReservations = async (req, res) => {
 
         for (const [index, hotel] of hotels.entries()) {
             const hotelId = hotel.hotel_id;
+            let dbClient;
             let isTransactionActive = false;
 
             logger.debug(`[${requestId}] [${index + 1}/${hotels.length}] Processing hotel ID: ${hotelId}`);
 
             try {
+                // Get database pool and client with error handling
+                logger.debug(`[${requestId}] [Hotel ${hotelId}] Getting database pool`);
+                const pool = getPool(requestId);
+
+                try {
+                    logger.debug(`[${requestId}] [Hotel ${hotelId}] Attempting to connect to database`);
+                    dbClient = await pool.connect();
+                    logger.debug(`[${requestId}] [Hotel ${hotelId}] Successfully connected to database`);
+                } catch (connectError) {
+                    const errorMsg = `Database connection error for hotel ${hotelId}: ${connectError.message}`;
+                    logger.error(`[${requestId}] ${errorMsg}`, { stack: connectError.stack });
+                    logger.error('Database connection error:', {
+                        requestId,
+                        hotelId,
+                        error: connectError.message,
+                        stack: connectError.stack
+                    });
+                    continue; // Skip to next hotel if we can't connect
+                }
 
                 // Get the template with credentials already injected
                 const template = await selectXMLTemplate(requestId, hotelId, name);
@@ -807,8 +822,7 @@ const getOTAReservations = async (req, res) => {
                         const queuedReservation = await processAndQueueReservation(
                             requestId,
                             allotmentBookingReport,
-                            hotelId,
-                            sharedClient
+                            hotelId
                         );
 
                         if (queuedReservation._queueStatus === 'queued') {
@@ -849,7 +863,7 @@ const getOTAReservations = async (req, res) => {
 
                 // Start transaction for processing reservations
                 try {
-                    await sharedClient.query('BEGIN');
+                    await dbClient.query('BEGIN');
                     isTransactionActive = true;
                     logger.debug(`Started transaction for hotel_id: ${hotelId}`, { requestId });
 
@@ -857,11 +871,11 @@ const getOTAReservations = async (req, res) => {
                     const processResults = await processQueuedReservations(
                         requestId,
                         queuedReservations,
-                        sharedClient
+                        dbClient
                     );
 
                     // If we get here, all reservations were processed successfully
-                    await sharedClient.query('COMMIT');
+                    await dbClient.query('COMMIT');
                     isTransactionActive = false;
                     logger.info(`Successfully processed ${processResults.processed} reservations for hotel_id: ${hotelId}`, {
                         requestId,
@@ -903,7 +917,7 @@ const getOTAReservations = async (req, res) => {
 
                     if (isTransactionActive) {
                         try {
-                            await sharedClient.query('ROLLBACK');
+                            await dbClient.query('ROLLBACK');
                             isTransactionActive = false;
                             logger.info('Transaction rolled back due to error', { requestId, hotelId });
                         } catch (rollbackError) {
@@ -927,8 +941,7 @@ const getOTAReservations = async (req, res) => {
                                     {
                                         error: 'Batch processing failed',
                                         details: processError.message
-                                    },
-                                    sharedClient
+                                    }
                                 );
                             } catch (updateError) {
                                 logger.error('Error updating reservation status after failure:', {
@@ -941,7 +954,7 @@ const getOTAReservations = async (req, res) => {
                 } finally {
                     if (isTransactionActive) {
                         try {
-                            await sharedClient.query('ROLLBACK');
+                            await dbClient.query('ROLLBACK');
                             logger.warn('Transaction was still active in finally block - rolled back', {
                                 requestId,
                                 hotelId
@@ -963,7 +976,20 @@ const getOTAReservations = async (req, res) => {
                     stack: hotelError.stack
                 });
             } finally {
-                // Client release moved to outer finally
+                // Make sure client is released even if an error occurs
+                if (dbClient) {
+                    try {
+                        await dbClient.release();
+                    } catch (releaseError) {
+                        const errorMsg = `Error releasing database client for hotel ${hotelId}: ${releaseError.message}`;
+                        logger.error(`[${requestId}] ${errorMsg}`);
+                        logger.error('Error releasing database client:', {
+                            requestId,
+                            hotelId: hotel?.hotel_id || 'unknown',
+                            error: releaseError.message
+                        });
+                    }
+                }
             }
         }
 
@@ -982,15 +1008,6 @@ const getOTAReservations = async (req, res) => {
             error: 'An unexpected error occurred while processing hotels.',
             details: error.message
         });
-    } finally {
-        if (sharedClient) {
-            try {
-                sharedClient.release();
-                logger.debug(`[${requestId}] Released shared connection for getOTAReservations`);
-            } catch (err) {
-                logger.error(`[${requestId}] Error releasing shared connection: ${err.message}`);
-            }
-        }
     }
 };
 const successOTAReservations = async (req, res, hotel_id, outputId) => {

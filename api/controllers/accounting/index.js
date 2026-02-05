@@ -5,6 +5,7 @@ const settings = require('./settings');
 const importController = require('./import');
 const receivablesController = require('./receivables');
 const analytics = require('./analytics');
+const utility = require('./utility');
 
 module.exports = {
     ...exportController,
@@ -13,5 +14,6 @@ module.exports = {
     ...dashboard,
     ...settings,
     ...importController,
-    ...receivablesController
+    ...receivablesController,
+    ...utility
 };
