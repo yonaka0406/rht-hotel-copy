@@ -33,7 +33,7 @@ const logger = require('../config/logger'); // Winston logger
 
 
 
-async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, currentRequestId, options = {}) {
+async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, currentRequestId, options = {}, dbClient = null) {
     const { batch_no = 'N/A' } = options;
 
     logger.info(`Queuing batch ${batch_no} for hotel ${hotel_id} with service ${serviceName}.`, {
@@ -50,7 +50,7 @@ async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, curr
             service_name: serviceName,
             xml_body: xmlBody,
             current_request_id: currentRequestId
-        });
+        }, dbClient);
         return { success: true, message: 'Request successfully queued.' };
     } catch (error) {
         logger.error(`Failed to queue batch ${batch_no} for hotel ${hotel_id} with service ${serviceName}.`, {
@@ -575,12 +575,12 @@ const postXMLResponse = async (req, res) => {
 };
 
 // Lincoln
-const submitXMLTemplate = async (req, res, hotel_id, name, xml, dbPool = null) => {
+const submitXMLTemplate = async (req, res, hotel_id, name, xml, dbClient = null) => {
     // logger.debug('submitXMLTemplate', name, xml);    
 
     try {
         // Save the request in the database
-        await insertXMLRequest(req.requestId, hotel_id, name, xml, dbPool);
+        await insertXMLRequest(req.requestId, hotel_id, name, xml, dbClient);
 
         const url = `${process.env.XML_REQUEST_URL}${name}`;
         const response = await fetch(url, {
@@ -607,7 +607,7 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml, dbPool = null) =
         const responseXml = await response.text();
         // logger.debug('Response XML:', responseXml);
         // logger.debug('Inserting XML response into database...');
-        await insertXMLResponse(req.requestId, hotel_id, name, responseXml, dbPool);
+        await insertXMLResponse(req.requestId, hotel_id, name, responseXml, dbClient);
 
         // Parse the XML response using xml2js
         const parsedJson = new Promise((resolve, reject) => {
@@ -1317,11 +1317,8 @@ const updateInventoryMultipleDays = async (req, res) => {
             adjustmentTargetXml
         );
 
-        let currentRequestId = log_id + (batch_no / 100);
-        currentRequestId = currentRequestId.toString();
-        if (currentRequestId.length > 8) {
-            currentRequestId = currentRequestId.slice(-8); // keep the last 8 characters
-        }
+        // Generate a robust 8-character unique request ID based on timestamp and batch number
+        const currentRequestId = (Date.now() + batch_no).toString(36).slice(-8).toUpperCase();
 
         // Replace requestId placeholder in XML body
         xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
@@ -1513,11 +1510,9 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             adjustmentTargetXml
         );
 
-        let currentRequestId = log_id + (batch_no / 100);
-        currentRequestId = currentRequestId.toString();
-        if (currentRequestId.length > 8) {
-            currentRequestId = currentRequestId.slice(-8); // keep the last 8 characters
-        }
+        // Generate a robust 8-character unique request ID based on timestamp and batch number
+        const currentRequestId = (Date.now() + batch_no).toString(36).slice(-8).toUpperCase();
+
         xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
 
         // logger.debug('updateInventoryMultipleDays xmlBody:', xmlBody);
@@ -1656,10 +1651,8 @@ const setDatesNotForSale = async (req, res, hotel_id, inventory) => {
 
         // Replace request ID placeholder if it exists in the template
         if (xmlBody.includes('{{requestId}}')) {
-            let reqId = (requestId).toString();
-            if (reqId.length > 8) {
-                reqId = reqId.slice(-8);
-            }
+            // Use a unique ID based on timestamp for non-batch requests
+            const reqId = Date.now().toString(36).slice(-8).toUpperCase();
             xmlBody = xmlBody.replace('{{requestId}}', reqId);
         }
 

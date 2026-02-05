@@ -10,10 +10,10 @@ XML_USER_ID=P2823341
 XML_PASSWORD=g?Z+yy5U5!LR
 XML_REQUEST_URL=https://www.tl-lincoln.net/pmsservice/V1/
 */
-const insertXMLRequest = async (requestId, hotel_id, name, xml, dbPool = null) => {
+const insertXMLRequest = async (requestId, hotel_id, name, xml, dbClient = null) => {
     try {
-        const pool = dbPool || getPool(requestId);
-        const result = await pool.query(
+        const executor = dbClient || getPool(requestId);
+        const result = await executor.query(
             "INSERT INTO xml_requests(hotel_id, name, request) VALUES($1, $2, $3) RETURNING *",
             [hotel_id, name, xml]
         );
@@ -24,10 +24,10 @@ const insertXMLRequest = async (requestId, hotel_id, name, xml, dbPool = null) =
         throw error;
     }
 };
-const insertXMLResponse = async (requestId, hotel_id, name, xml, dbPool = null) => {
+const insertXMLResponse = async (requestId, hotel_id, name, xml, dbClient = null) => {
     try {
-        const pool = dbPool || getPool(requestId);
-        const result = await pool.query(
+        const executor = dbClient || getPool(requestId);
+        const result = await executor.query(
             "INSERT INTO xml_responses(hotel_id, name, response) VALUES($1, $2, $3) RETURNING *",
             [hotel_id, name, xml]
         );
@@ -310,17 +310,18 @@ const selectTLRoomMaster = async (requestId, hotel_id, client = null) => {
         throw new Error('Database error');
     }
 };
-const insertTLRoomMaster = async (requestId, data) => {
+const insertTLRoomMaster = async (requestId, data, dbClient = null) => {
     const pool = getPool(requestId);
-    const client = await pool.connect();
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
 
     // console.log('insertTLRoomMaster', data)
 
     try {
-        await client.query('BEGIN');
+        if (shouldRelease) await client.query('BEGIN');
 
         // Delete existing records for the hotel_id
-        await pool.query('DELETE FROM sc_tl_rooms WHERE hotel_id = $1', [data[0].hotel_id]);
+        await client.query('DELETE FROM sc_tl_rooms WHERE hotel_id = $1', [data[0].hotel_id]);
 
         // Insert the new records
         const results = [];
@@ -345,14 +346,14 @@ const insertTLRoomMaster = async (requestId, data) => {
             results.push(result.rows[0]);
         };
 
-        await client.query('COMMIT');
+        if (shouldRelease) await client.query('COMMIT');
         return results;
     } catch (error) {
-        await client.query('ROLLBACK');
+        if (shouldRelease) await client.query('ROLLBACK');
         console.error('Error adding room master:', error.message);
         throw error;
     } finally {
-        client.release();
+        if (shouldRelease) client.release();
     }
 };
 
@@ -374,9 +375,10 @@ const selectTLPlanMaster = async (requestId, hotel_id, client = null) => {
         throw new Error('Database error');
     }
 };
-const insertTLPlanMaster = async (requestId, data) => {
+const insertTLPlanMaster = async (requestId, data, dbClient = null) => {
     const pool = getPool(requestId);
-    const client = await pool.connect();
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
 
     // 受信したデータをログ出力
     console.log('[insertTLPlanMaster] 受信したデータ:', JSON.stringify(data, null, 2));
@@ -394,10 +396,10 @@ const insertTLPlanMaster = async (requestId, data) => {
     });
 
     try {
-        await client.query('BEGIN');
+        if (shouldRelease) await client.query('BEGIN');
 
         // Delete existing records for the hotel_id
-        await pool.query('DELETE FROM sc_tl_plans WHERE hotel_id = $1', [data[0].hotel_id]);
+        await client.query('DELETE FROM sc_tl_plans WHERE hotel_id = $1', [data[0].hotel_id]);
 
         // Insert the new records
         const results = [];
@@ -425,15 +427,15 @@ const insertTLPlanMaster = async (requestId, data) => {
             results.push(result.rows[0]);
         };
 
-        await client.query('COMMIT');
+        if (shouldRelease) await client.query('COMMIT');
         console.log(`[insertTLPlanMaster] 全${results.length}件の挿入完了`);
         return results;
     } catch (error) {
-        await client.query('ROLLBACK');
+        if (shouldRelease) await client.query('ROLLBACK');
         console.error('Error adding plan master:', error.message);
         throw error;
     } finally {
-        client.release();
+        if (shouldRelease) client.release();
     }
 };
 
@@ -568,10 +570,10 @@ const selectOTAReservationQueue = async (requestId, searchTerm = null) => {
     }
 };
 
-const insertOTAXmlQueue = async (requestId, { hotel_id, service_name, xml_body, current_request_id }) => {
-    const pool = getProdPool();
+const insertOTAXmlQueue = async (requestId, { hotel_id, service_name, xml_body, current_request_id }, dbClient = null) => {
+    const executor = dbClient || getProdPool();
     try {
-        const result = await pool.query(
+        const result = await executor.query(
             `INSERT INTO ota_xml_queue 
              (hotel_id, service_name, xml_body, current_request_id, status, retries)
              VALUES ($1, $2, $3, $4, 'pending', 0)
@@ -585,8 +587,8 @@ const insertOTAXmlQueue = async (requestId, { hotel_id, service_name, xml_body, 
     }
 };
 
-const updateOTAXmlQueue = async (requestId, id, status, error = null) => {
-    const pool = getProdPool();
+const updateOTAXmlQueue = async (requestId, id, status, error = null, dbClient = null) => {
+    const executor = dbClient || getProdPool();
     try {
         let setClauses = [`status = $1`, `last_error = $2`];
         let values = [status, error, id];
@@ -604,7 +606,7 @@ const updateOTAXmlQueue = async (requestId, id, status, error = null) => {
 
         const query = `UPDATE ota_xml_queue SET ${setClauses.join(', ')} WHERE id = $3 RETURNING *`;
 
-        const result = await pool.query(query, values);
+        const result = await executor.query(query, values);
         if (result.rows.length === 0) {
             throw new Error(`No OTA XML queue item found with ID: ${id}`);
         }
@@ -712,4 +714,4 @@ module.exports = {
     updateOTAXmlQueue,
     selectOTAXmlQueue,
     selectFailedOTAXmlQueue
-}; 
+};
