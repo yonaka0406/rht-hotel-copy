@@ -189,12 +189,17 @@ const updateAction = async (requestId, actionId, actionFields, userId) => {
         assignedTo: 'assigned_to',
         due_date: 'due_date',
         dueDate: 'due_date',
-        status: 'status'
+        status: 'status',
+        google_calendar_event_id: 'google_calendar_event_id',
+        googleCalendarEventId: 'google_calendar_event_id',
+        google_calendar_html_link: 'google_calendar_html_link',
+        googleCalendarHtmlLink: 'google_calendar_html_link',
+        synced_with_google_calendar: 'synced_with_google_calendar',
+        syncedWithGoogleCalendar: 'synced_with_google_calendar'
     };
 
-    const providedFields = Object.keys(actionFields);
     for (const [objField, dbField] of Object.entries(fieldMap)) {
-        if (providedFields.includes(objField)) {
+        if (objField in actionFields) {
             const val = actionFields[objField];
             if (val !== undefined) {
                 // Avoid duplicate additions if both snake_case and camelCase are present
@@ -204,20 +209,9 @@ const updateAction = async (requestId, actionId, actionFields, userId) => {
             }
         }
     }
-    
-    // Google Calendar specific fields
-    if (providedFields.includes('google_calendar_event_id') || providedFields.includes('googleCalendarEventId')) {
-        addFieldToUpdate('google_calendar_event_id', actionFields.google_calendar_event_id || actionFields.googleCalendarEventId || null);
-    }
-    if (providedFields.includes('google_calendar_html_link') || providedFields.includes('googleCalendarHtmlLink')) {
-        addFieldToUpdate('google_calendar_html_link', actionFields.google_calendar_html_link || actionFields.googleCalendarHtmlLink || null);
-    }
-    if (providedFields.includes('synced_with_google_calendar') || providedFields.includes('syncedWithGoogleCalendar')) {
-        addFieldToUpdate('synced_with_google_calendar', ('synced_with_google_calendar' in actionFields) ? actionFields.synced_with_google_calendar : actionFields.syncedWithGoogleCalendar);
-    }
 
-    // Always update updated_by and updated_at
-    if (setClauses.length > 0) { // Only add updated_by if other fields are being updated
+    // Always update updated_by if other fields are being updated
+    if (setClauses.length > 0) {
         addFieldToUpdate('updated_by', userId);        
     }
 
@@ -241,7 +235,9 @@ const updateAction = async (requestId, actionId, actionFields, userId) => {
     `;
     
     try {
-        logger.debug('Executing update crm_action query.', { query, values: anondbValues(values, [/* indices of sensitive values */]) });
+        // Anonymize values for logging if needed.
+        // Note: index-based anonymization is fragile with dynamic queries.
+        logger.debug('Executing update crm_action query.', { query, values: anondbValues(values) });
         const result = await pool.query(query, values);
         if (result.rows && result.rows.length > 0) {
             logger.info(`Successfully updated crm_action with ID: ${result.rows[0].id}.`);

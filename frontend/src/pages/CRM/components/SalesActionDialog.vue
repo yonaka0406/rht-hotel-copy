@@ -208,10 +208,13 @@ const resetForm = () => {
 };
 
 const populateForm = async (data) => {
+  // Capture targetId early to ensure it's available for fallback displays
+  const targetId = data?.client_id || data?.clientId;
+
   currentActionFormData.value = {
     ...initialFormData, // Start with defaults to ensure all fields are present
     id: data?.id || null,
-    client_id: data?.client_id || data?.clientId || null,
+    client_id: targetId || null,
     action_type: data?.action_type || data?.actionType || 'call',
     subject: data?.subject || '',
     details: data?.details || '',
@@ -222,8 +225,7 @@ const populateForm = async (data) => {
     due_date: data?.due_date || data?.dueDate ? new Date(data.due_date || data.dueDate) : null,
   };
 
-  if (currentActionFormData.value.client_id) {
-    const targetId = currentActionFormData.value.client_id;
+  if (targetId) {
     // Try to find in the provided list first
     const clientObj = props.allClients.find(c => (c.id === targetId || c.client_id === targetId));
     if (clientObj) {
@@ -235,12 +237,13 @@ const populateForm = async (data) => {
     } else {
       // Fetch individual client if not in current list
       try {
-        const result = await fetchClient(currentActionFormData.value.client_id);
-        const fetchedClient = result.client?.client || result.client;
-        if (fetchedClient) {
+        const result = await fetchClient(targetId);
+        // Handle potential nested client object from store
+        const fetchedClient = result?.client?.client || result?.client || result;
+        if (fetchedClient && (fetchedClient.id || fetchedClient.client_id)) {
           selectedClientObjectForForm.value = {
             ...fetchedClient,
-            id: fetchedClient.id || targetId,
+            id: fetchedClient.id || fetchedClient.client_id || targetId,
             display_name: fetchedClient.display_name || fetchedClient.name_kanji || fetchedClient.name_kana || fetchedClient.name || fetchedClient.client_name || `クライアントID: ${targetId}`
           };
         } else {
@@ -252,7 +255,10 @@ const populateForm = async (data) => {
         }
       } catch (e) {
         console.error('Failed to fetch client for action form:', e);
-        selectedClientObjectForForm.value = null;
+        selectedClientObjectForForm.value = {
+          id: targetId,
+          display_name: `クライアントID: ${targetId}`
+        };
       }
     }
   } else {
