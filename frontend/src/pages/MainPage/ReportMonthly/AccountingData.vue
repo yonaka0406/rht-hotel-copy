@@ -32,34 +32,34 @@
                     <Card>
                         <template #content>
                             <DataTable :value="aggregatedData" class="p-datatable-sm tabular-nums">
-                                <Column field="monthLabel" header="月" />
-                                <Column field="revenue" header="売上高">
+                                <Column field="monthLabel" header="月" header-class="text-center" />
+                                <Column field="revenue" header="売上高" header-class="text-center" body-class="text-right">
                                     <template #body="slotProps">
                                         {{ formatCurrency(slotProps.data.revenue) }}
                                     </template>
                                 </Column>
-                                <Column field="costs" header="売上原価・経費">
+                                <Column field="costs" header="売上原価・経費" header-class="text-center" body-class="text-right">
                                     <template #body="slotProps">
                                         <span class="text-orange-600">
                                             {{ formatCurrency(slotProps.data.costs) }}
                                         </span>
                                     </template>
                                 </Column>
-                                <Column field="operatingProfit" header="営業利益">
+                                <Column field="operatingProfit" header="営業利益" header-class="text-center" body-class="text-right">
                                     <template #body="slotProps">
                                         <span :class="slotProps.data.operatingProfit < 0 ? 'text-red-500 font-bold' : 'text-emerald-600 font-bold'">
                                             {{ formatCurrency(slotProps.data.operatingProfit) }}
                                         </span>
                                     </template>
                                 </Column>
-                                <Column field="costRatio" header="経費率">
+                                <Column field="costRatio" header="経費率" header-class="text-center" body-class="text-right">
                                     <template #body="slotProps">
                                         <span class="text-xs text-gray-500">
                                             {{ slotProps.data.costRatio.toFixed(1) }}%
                                         </span>
                                     </template>
                                 </Column>
-                                <Column field="margin" header="営業利益率">
+                                <Column field="margin" header="営業利益率" header-class="text-center" body-class="text-right">
                                     <template #body="slotProps">
                                         <span :class="['font-semibold', slotProps.data.margin < 0 ? 'text-red-400' : 'text-emerald-500']">
                                             {{ slotProps.data.margin.toFixed(1) }}%
@@ -167,12 +167,12 @@ const fetchData = async () => {
     try {
         const { start, end } = dateRange.value;
         rawData.value = await reportStore.fetchAccountingProfitLoss(hotelStore.selectedHotelId.value, start, end);
-        await nextTick();
-        initChart();
     } catch (error) {
         console.error('Error fetching accounting P&L:', error);
     } finally {
         isLoading.value = false;
+        await nextTick();
+        initChart();
     }
 };
 
