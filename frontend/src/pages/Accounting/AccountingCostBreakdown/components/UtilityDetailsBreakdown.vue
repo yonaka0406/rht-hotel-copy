@@ -12,6 +12,18 @@
             <div class="flex items-center gap-2">
                 <div class="flex items-center bg-slate-50 dark:bg-slate-900/50 rounded-xl p-1 border border-slate-100 dark:border-slate-800 mr-2">
                     <button 
+                        @click="aggregationMode = 'month'"
+                        class="px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all"
+                        :class="aggregationMode === 'month' ? 'bg-white dark:bg-slate-800 shadow-sm text-violet-600' : 'bg-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'"
+                    >単月</button>
+                    <button 
+                        @click="aggregationMode = 'ytd'"
+                        class="px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all"
+                        :class="aggregationMode === 'ytd' ? 'bg-white dark:bg-slate-800 shadow-sm text-violet-600' : 'bg-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'"
+                    >累計 (YTD)</button>
+                </div>
+                <div class="flex items-center bg-slate-50 dark:bg-slate-900/50 rounded-xl p-1 border border-slate-100 dark:border-slate-800 mr-2">
+                    <button 
                         @click="showPreviousYear = !showPreviousYear"
                         class="px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1.5"
                         :class="showPreviousYear ? 'bg-white dark:bg-slate-800 shadow-sm text-violet-600' : 'bg-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'"
@@ -87,7 +99,6 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import { useAccountingStore } from '@/composables/useAccountingStore';
-import { getUtilityUnit } from '@/utils/accountingUtils';
 import UtilityUsageChart from './charts/UtilityUsageChart.vue';
 import UtilityPriceChart from './charts/UtilityPriceChart.vue';
 
@@ -123,6 +134,7 @@ const selectedType = ref('電気');
 const selectedMetric = ref('quantity'); // 'quantity' or 'total_value'
 const isPerRoom = ref(true); // Default to per sold room
 const showPreviousYear = ref(false);
+const aggregationMode = ref('month'); // 'month' or 'ytd'
 
 const typeOptions = [
     { label: '電気', value: '電気' },
@@ -134,13 +146,36 @@ const typeOptions = [
 const chartData = computed(() => {
     if (!rawUtilityData.value.length) return [];
 
-    // Filter by selected utility type
-    const filterType = (data) => data.filter(d => d.sub_account_name.includes(selectedType.value));
-    const filtered = filterType(rawUtilityData.value);
-    const filteredPrev = showPreviousYear.value ? filterType(prevYearUtilityData.value) : [];
+    const referenceMonth = props.selectedMonth;
+
+    // Helper to filter by utility type
+    const filterByType = (data) => data.filter(d => d.sub_account_name.includes(selectedType.value));
+    
+    // Helper to filter by time (Month or YTD)
+    const filterByTime = (data, targetMonth) => {
+        if (aggregationMode.value === 'month') {
+            return data.filter(d => d.month === targetMonth);
+        } else {
+            const year = new Date(targetMonth).getFullYear();
+            return data.filter(d => {
+                const dDate = new Date(d.month);
+                return dDate.getFullYear() === year && d.month <= targetMonth;
+            });
+        }
+    };
+
+    const filtered = filterByType(rawUtilityData.value);
+    const filteredPrev = showPreviousYear.value ? filterByType(prevYearUtilityData.value) : [];
 
     if (props.selectedHotelId === 0) {
         // === ALL HOTELS MODE: RANKING ===
+        const targetMonths = filterByTime(filtered, referenceMonth);
+        
+        // Map previous year target month
+        const refDate = new Date(referenceMonth);
+        const prevReferenceMonth = `${refDate.getFullYear() - 1}-${String(refDate.getMonth() + 1).padStart(2, '0')}-01`;
+        const targetMonthsPrev = showPreviousYear.value ? filterByTime(filteredPrev, prevReferenceMonth) : [];
+
         const groupHotels = (data, occData) => data.reduce((acc, curr) => {
             const id = curr.hotel_id;
             if (!acc[id]) {
@@ -159,8 +194,8 @@ const chartData = computed(() => {
             return acc;
         }, {});
 
-        const currentByHotel = groupHotels(filtered, props.occupancyData);
-        const prevByHotel = groupHotels(filteredPrev, prevOccupancyData.value);
+        const currentByHotel = groupHotels(targetMonths, props.occupancyData);
+        const prevByHotel = groupHotels(targetMonthsPrev, prevOccupancyData.value);
 
         const hotels = Object.keys(currentByHotel).map(id => {
             const d = currentByHotel[id];
@@ -168,20 +203,22 @@ const chartData = computed(() => {
             
             return {
                 ...d,
-                avg_monthly_quantity: d.quantity / d.count,
-                avg_monthly_value: d.total_value / d.count,
+                // These represent the aggregate (Sum for YTD or Single Month value)
+                avg_monthly_quantity: d.quantity, 
+                avg_monthly_value: d.total_value,
                 quantity_per_room: d.sold_rooms > 0 ? d.quantity / d.sold_rooms : 0,
                 value_per_room: d.sold_rooms > 0 ? d.total_value / d.sold_rooms : 0,
+                // Weighted average unit price: Sum(Value) / Sum(Quantity)
                 average_price: d.quantity === 0 ? 0 : d.total_value / d.quantity,
-                avg_occupancy: d.occupancy / d.count,
+                avg_occupancy: d.count > 0 ? d.occupancy / d.count : 0,
                 
                 // Previous Year Data
                 prev_quantity_per_room: p && p.sold_rooms > 0 ? p.quantity / p.sold_rooms : 0,
                 prev_value_per_room: p && p.sold_rooms > 0 ? p.total_value / p.sold_rooms : 0,
-                prev_avg_monthly_quantity: p ? p.quantity / p.count : 0,
-                prev_avg_monthly_value: p ? p.total_value / p.count : 0,
+                prev_avg_monthly_quantity: p ? p.quantity : 0,
+                prev_avg_monthly_value: p ? p.total_value : 0,
                 prev_average_price: p && p.quantity > 0 ? p.total_value / p.quantity : 0,
-                prev_avg_occupancy: p ? p.occupancy / p.count : 0
+                prev_avg_occupancy: p && p.count > 0 ? p.occupancy / p.count : 0
             };
         });
 
@@ -192,15 +229,18 @@ const chartData = computed(() => {
             const vKey = isPrev ? 'prev_avg_monthly_value' : 'avg_monthly_value';
             const qprKey = isPrev ? 'prev_quantity_per_room' : 'quantity_per_room';
             const vprKey = isPrev ? 'prev_value_per_room' : 'value_per_room';
-            const prcKey = isPrev ? 'prev_average_price' : 'average_price';
             const occKey = isPrev ? 'prev_avg_occupancy' : 'avg_occupancy';
 
+            // For Price, we calculate weighted average: Sum of Values / Sum of Quantities
+            const totalV = hList.reduce((sum, h) => sum + (h[vKey] || 0), 0);
+            const totalQ = hList.reduce((sum, h) => sum + (h[qKey] || 0), 0);
+
             return {
-                avg_monthly_quantity: hList.reduce((sum, h) => sum + (h[qKey] || 0), 0) / valid,
-                avg_monthly_value: hList.reduce((sum, h) => sum + (h[vKey] || 0), 0) / valid,
+                avg_monthly_quantity: totalQ / valid,
+                avg_monthly_value: totalV / valid,
                 quantity_per_room: hList.reduce((sum, h) => sum + (h[qprKey] || 0), 0) / valid,
                 value_per_room: hList.reduce((sum, h) => sum + (h[vprKey] || 0), 0) / valid,
-                average_price: hList.reduce((sum, h) => sum + (h[prcKey] || 0), 0) / valid,
+                average_price: totalQ === 0 ? 0 : totalV / totalQ,
                 avg_occupancy: hList.reduce((sum, h) => sum + (h[occKey] || 0), 0) / valid
             };
         };
@@ -216,7 +256,7 @@ const chartData = computed(() => {
             prev_avg_monthly_quantity: gPrev.avg_monthly_quantity,
             prev_avg_monthly_value: gPrev.avg_monthly_value,
             prev_average_price: gPrev.average_price,
-            prev_avg_occupancy: gPrev.avg_occupancy,
+            prev_avg_occupancy: gPrev.prev_avg_occupancy,
             isAverage: true
         };
 
@@ -243,13 +283,69 @@ const chartData = computed(() => {
         const currentByMonth = groupMonths(filtered, props.occupancyData);
         const prevByMonth = groupMonths(filteredPrev, prevOccupancyData.value);
 
-        const data = Object.keys(currentByMonth).map(month => {
-            const d = currentByMonth[month];
+        const sortedMonths = Object.keys(currentByMonth).sort();
+
+        const data = sortedMonths.map(month => {
+            let d = currentByMonth[month];
             
-            // Map previous year month: e.g., if month is 2025-05, we look for 2024-05 in prevByMonth
+            // Map previous year month
             const date = new Date(month);
             const prevMonthKey = `${date.getFullYear() - 1}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
-            const p = prevByMonth[prevMonthKey];
+            let p = prevByMonth[prevMonthKey];
+
+            if (aggregationMode.value === 'ytd') {
+                const year = date.getFullYear();
+                const monthsInYearUntilNow = sortedMonths.filter(m => {
+                    const mDate = new Date(m);
+                    return mDate.getFullYear() === year && m <= month;
+                });
+
+                // Cumulative Current
+                const aggCurrent = monthsInYearUntilNow.reduce((acc, m) => {
+                    const mData = currentByMonth[m];
+                    acc.quantity += mData.quantity;
+                    acc.total_value += mData.total_value;
+                    acc.sold_rooms += mData.sold_rooms;
+                    acc.occupancySum += mData.occupancy;
+                    acc.count += 1;
+                    return acc;
+                }, { quantity: 0, total_value: 0, sold_rooms: 0, occupancySum: 0, count: 0 });
+
+                d = {
+                    ...d,
+                    quantity: aggCurrent.quantity,
+                    total_value: aggCurrent.total_value,
+                    sold_rooms: aggCurrent.sold_rooms,
+                    occupancy: aggCurrent.occupancySum / aggCurrent.count
+                };
+
+                // Cumulative Previous
+                const prevYear = year - 1;
+                const monthsInPrevYearUntilNow = Object.keys(prevByMonth).filter(m => {
+                    const mDate = new Date(m);
+                    const refMonthInPrevYear = `${prevYear}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+                    return mDate.getFullYear() === prevYear && m <= refMonthInPrevYear;
+                });
+
+                const aggPrev = monthsInPrevYearUntilNow.reduce((acc, m) => {
+                    const mData = prevByMonth[m];
+                    acc.quantity += mData.quantity;
+                    acc.total_value += mData.total_value;
+                    acc.sold_rooms += mData.sold_rooms;
+                    acc.occupancySum += mData.occupancy;
+                    acc.count += 1;
+                    return acc;
+                }, { quantity: 0, total_value: 0, sold_rooms: 0, occupancySum: 0, count: 0 });
+
+                if (monthsInPrevYearUntilNow.length > 0) {
+                    p = {
+                        quantity: aggPrev.quantity,
+                        total_value: aggPrev.total_value,
+                        sold_rooms: aggPrev.sold_rooms,
+                        occupancy: aggPrev.occupancySum / aggPrev.count
+                    };
+                }
+            }
 
             return {
                 ...d,
@@ -264,7 +360,7 @@ const chartData = computed(() => {
                 prev_average_price: p && p.quantity > 0 ? p.total_value / p.quantity : 0,
                 prev_occupancy: p ? p.occupancy : 0
             };
-        }).sort((a, b) => new Date(a.month) - new Date(b.month));
+        });
 
         return { mode: 'time_series', data };
     }
