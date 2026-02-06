@@ -5,7 +5,7 @@ const logger = require('../../config/logger');
  * Get utility details
  */
 exports.getUtilityDetails = async (req, res) => {
-    const { hotelId, startMonth, endMonth } = req.query;
+    const { hotelId, startMonth, endMonth, filterBy } = req.query;
     const requestId = req.requestId;
 
     if (!hotelId || !startMonth || !endMonth) {
@@ -13,7 +13,7 @@ exports.getUtilityDetails = async (req, res) => {
     }
 
     try {
-        const details = await utilityDetails.getUtilityDetails(requestId, hotelId, startMonth, endMonth);
+        const details = await utilityDetails.getUtilityDetails(requestId, hotelId, startMonth, endMonth, filterBy);
         res.json(details);
     } catch (err) {
         logger.error('Controller error in getUtilityDetails:', err);

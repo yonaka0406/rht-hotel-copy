@@ -174,7 +174,8 @@ const fetchData = async () => {
 
         const params = {
             startMonth: formatDate(twelveMonthsAgo),
-            endMonth: formatDate(referenceDate)
+            endMonth: formatDate(referenceDate),
+            filterBy: 'month'
         };
 
         if (props.selectedHotelId !== 0) {

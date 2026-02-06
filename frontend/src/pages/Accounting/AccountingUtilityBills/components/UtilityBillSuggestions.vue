@@ -4,6 +4,7 @@
             <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <i class="pi pi-lightbulb text-amber-500"></i>
                 弥生データからの提案
+                <i class="pi pi-question-circle text-slate-300 text-xs cursor-help" v-tooltip.right="'弥生会計（CSV）からインポートされた仕訳データの中から、水道光熱費に関連する項目を表示しています。'"></i>
             </h2>
             <p class="text-xs text-slate-500 mt-1">未入力の取引と思われる項目を表示しています</p>
         </div>

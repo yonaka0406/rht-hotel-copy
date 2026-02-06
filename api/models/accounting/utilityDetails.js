@@ -4,15 +4,21 @@ const pgFormat = require('pg-format');
 
 /**
  * Get utility details for a specific hotel and month range
+ * @param {string} requestId
+ * @param {number} hotelId
+ * @param {string} startMonth
+ * @param {string} endMonth
+ * @param {string} filterBy - 'month' or 'transaction_date'
  */
-const getUtilityDetails = async (requestId, hotelId, startMonth, endMonth, dbClient = null) => {
+const getUtilityDetails = async (requestId, hotelId, startMonth, endMonth, filterBy = 'month', dbClient = null) => {
     const pool = getPool(requestId);
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
 
+    const filterColumn = filterBy === 'transaction_date' ? 'transaction_date' : 'month';
     const query = `
         SELECT * FROM acc_utility_details
-        WHERE hotel_id = $1 AND (month BETWEEN $2 AND $3 OR transaction_date BETWEEN $2 AND $3)
+        WHERE hotel_id = $1 AND ${filterColumn} BETWEEN $2 AND $3
         ORDER BY transaction_date ASC, month ASC
     `;
 

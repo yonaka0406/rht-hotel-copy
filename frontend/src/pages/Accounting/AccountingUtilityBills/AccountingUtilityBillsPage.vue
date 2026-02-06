@@ -56,7 +56,8 @@ const fetchUtilityData = async () => {
         const params = {
             hotelId: selectedHotelId.value,
             startMonth: formatDate(start),
-            endMonth: formatDate(end)
+            endMonth: formatDate(end),
+            filterBy: 'transaction_date'
         };
 
         const [details, suggested] = await Promise.all([
@@ -151,6 +152,23 @@ const deleteItem = (id) => {
     });
 };
 
+const accountingTotal = computed(() => {
+    return rawSuggestions.value.reduce((sum, s) => sum + parseFloat(s.amount), 0);
+});
+
+const detailedTotal = computed(() => {
+    return utilityDetails.value.reduce((sum, d) => sum + parseFloat(d.total_value), 0);
+});
+
+const comparisonProgress = computed(() => {
+    if (accountingTotal.value === 0) return 0;
+    return Math.min(100, (detailedTotal.value / accountingTotal.value) * 100);
+});
+
+const isMatched = computed(() => {
+    return accountingTotal.value > 0 && Math.abs(accountingTotal.value - detailedTotal.value) < 1;
+});
+
 const processedSuggestions = computed(() => {
     return rawSuggestions.value.map(s => {
         const isRegistered = utilityDetails.value.some(d =>
@@ -211,6 +229,54 @@ onMounted(async () => {
                 :loading="isLoading"
                 @refresh="fetchUtilityData"
             />
+
+            <!-- Summary Bar -->
+            <div class="mb-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-xl overflow-hidden relative">
+                <div v-if="isMatched" class="absolute top-0 right-0 p-4">
+                    <div class="bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1 shadow-lg animate-bounce">
+                        <i class="pi pi-check-circle"></i> Matched
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider" v-tooltip.top="'弥生会計の合計金額に対して、詳細がどこまで入力されたかを示します'">入力状況</h3>
+                            <span v-if="accountingTotal > 0" class="text-xs font-bold" :class="isMatched ? 'text-emerald-500' : 'text-violet-500'">
+                                {{ Math.round(comparisonProgress) }}% 完了
+                            </span>
+                        </div>
+                        <div class="h-3 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                                class="h-full transition-all duration-1000 ease-out rounded-full"
+                                :class="isMatched ? 'bg-emerald-500' : 'bg-gradient-to-r from-violet-500 to-fuchsia-500'"
+                                :style="{ width: `${comparisonProgress}%` }"
+                            ></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-12">
+                        <div class="text-center">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">弥生会計合計</div>
+                            <div class="text-xl font-black text-slate-900 dark:text-white font-mono">
+                                ¥{{ new Intl.NumberFormat('ja-JP').format(accountingTotal) }}
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">詳細入力合計</div>
+                            <div class="text-xl font-black font-mono" :class="isMatched ? 'text-emerald-500' : 'text-slate-900 dark:text-white'">
+                                ¥{{ new Intl.NumberFormat('ja-JP').format(detailedTotal) }}
+                            </div>
+                        </div>
+                        <div class="text-center" v-tooltip.top="'弥生会計合計と詳細入力合計の差分です。0になると完了です。'">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">差分</div>
+                            <div class="text-xl font-black font-mono" :class="isMatched ? 'text-emerald-500' : 'text-rose-500'">
+                                ¥{{ new Intl.NumberFormat('ja-JP').format(accountingTotal - detailedTotal) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Main List -->

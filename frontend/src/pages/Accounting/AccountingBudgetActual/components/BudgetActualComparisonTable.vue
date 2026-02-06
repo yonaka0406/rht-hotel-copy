@@ -87,7 +87,8 @@ const fetchUtilityDetails = async () => {
 
         const params = {
             startMonth: formatDate(start),
-            endMonth: formatDate(end)
+            endMonth: formatDate(end),
+            filterBy: 'month'
         };
 
         const allDetails = await Promise.all(hotelIds.map(hid =>
