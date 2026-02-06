@@ -45,16 +45,16 @@ async function syncReservationInventory(requestId, logId) {
 
         // 2. Site Controller (OTA) sync
         try {
-            const scLogs = await selectReservationInventoryChange(requestId, logId, dbClient);
-            if (scLogs && scLogs.length > 0) {
-                const { hotel_id, check_in, check_out } = scLogs[0];
+            // SAFETY CHECK: Only perform real OTA updates in production environment.
+            if (process.env.NODE_ENV === 'production') {
+                const scLogs = await selectReservationInventoryChange(requestId, logId, dbClient);
+                if (scLogs && scLogs.length > 0) {
+                    const { hotel_id, check_in, check_out } = scLogs[0];
 
-                // Get inventory data
-                const inventory = await selectReservationsInventory(requestId, hotel_id, check_in, check_out, dbClient);
+                    // Get inventory data
+                    const inventory = await selectReservationsInventory(requestId, hotel_id, check_in, check_out, dbClient);
 
-                if (inventory && inventory.length > 0) {
-                    // SAFETY CHECK: Only perform real OTA updates in production environment.
-                    if (process.env.NODE_ENV === 'production') {
+                    if (inventory && inventory.length > 0) {
                         // Call the controller logic directly.
                         // We mimic req/res but pass the existing dbClient.
                         const dummyReq = {
@@ -71,10 +71,10 @@ async function syncReservationInventory(requestId, logId) {
 
                         await updateInventoryMultipleDays(dummyReq, dummyRes, dbClient, { skipStockCheck: true });
                         logger.info(`[otaSyncService] Successfully initiated OTA sync for hotel ${hotel_id}`, { requestId, logId });
-                    } else {
-                        logger.info(`[otaSyncService] Skipping real OTA sync for hotel ${hotel_id} (not in production environment)`, { requestId, logId });
                     }
                 }
+            } else {
+                logger.info(`[otaSyncService] Skipping real OTA sync for logId ${logId} (not in production environment)`, { requestId });
             }
         } catch (otaError) {
             logger.error(`[otaSyncService] Failed OTA sync process`, { error: otaError.message, logId, requestId });

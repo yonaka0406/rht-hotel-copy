@@ -70,7 +70,9 @@ class OTATriggerMonitorJob {
             baseUrl: this.options.baseUrl
         });
 
-        this.runLoop();
+        this.runLoop().catch(err => {
+            logger.error('Fatal error in OTA Trigger Monitor Job loop:', err);
+        });
     }
 
     /**
@@ -99,6 +101,13 @@ class OTATriggerMonitorJob {
 
                     dbClient.on('error', (err) => {
                         logger.error('Persistent dbClient error in OTA Trigger Monitor Job', { error: err.message });
+                        if (dbClient) {
+                            try {
+                                dbClient.release();
+                            } catch (releaseErr) {
+                                logger.error('Error releasing dbClient in OTA Trigger Monitor error handler:', releaseErr);
+                            }
+                        }
                         dbClient = null;
                     });
                 }

@@ -923,7 +923,7 @@ const selectReservationsInventory = async (requestId, hotelId, startDate, endDat
   `;
   const values = [hotelId, startDate, endDate];
   try {
-    const result = await executor.query(query, [hotelId, startDate, endDate]);
+    const result = await executor.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving logs:', err);
