@@ -37,3 +37,7 @@
 ## 2026-02-02 - Optimizing Accounting Views with LATERAL Unpivot
 **Learning:** Using `UNION ALL` to aggregate different columns (like debit/credit amounts) from the same large table in a view causes the database to perform multiple full scans. Replacing `UNION ALL` with `CROSS JOIN LATERAL` allows the database to read each row once and "unpivot" it in memory, significantly reducing I/O and improving view query performance.
 **Action:** Prefer `CROSS JOIN LATERAL` for unpivoting data from a single table over `UNION ALL` of multiple scans.
+
+## 2026-02-06 - Eliminating N+1 Query Patterns in Reservation Updates
+**Learning:** When moving reservations between rooms or changing stay durations, copying associated clients and addons day-by-day creates an N+1 query pattern. For a 14-night stay with 2 addons and 2 guests, this could result in over 50 individual database inserts. Batching these into single queries with PostgreSQL's multiple-row VALUES syntax significantly reduces transaction time and database load.
+**Action:** Implement and use batch insertion functions (e.g., `addReservationClientsBatch`) that include automatic slicing to stay within the 32,767 parameter limit of PostgreSQL.

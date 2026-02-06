@@ -156,4 +156,69 @@ describe('StaticCalendarModern.vue - UX Improvement', () => {
     expect(stickyHeader.exists()).toBe(true);
     expect(stickyHeader.text()).toBe('Test Guest');
   });
+
+  it('should apply red highlight color on conflict during drag over', async () => {
+    const otherReservation = [
+      {
+        reservation_id: 'res_other',
+        room_id: 'room1',
+        date: '2025-01-03',
+        client_name: 'Other Guest',
+        status: 'confirmed'
+      }
+    ];
+
+    const allReservedRooms = [...reservedRooms, ...otherReservation];
+
+    const wrapper = mount(StaticCalendarModern, {
+      props: {
+        dateRange: ['2025-01-01', '2025-01-02', '2025-01-03', '2025-01-04'],
+        headerRoomsData,
+        selectedHotelRooms,
+        reservedRooms: allReservedRooms,
+        availableRoomsByDate: {},
+        availableParkingSpotsByDate: {}
+      },
+      global: { plugins: [mockPrimeVue] }
+    });
+
+    const block = wrapper.find('.cursor-pointer.shadow-sm');
+    // Start dragging res1 (dates 01-01 and 01-02, duration 2 days)
+    await block.trigger('dragstart', {
+      dataTransfer: {
+        setDragImage: vi.fn(),
+        effectAllowed: null
+      }
+    });
+
+    // Drag over room1 at index 1 (dates 01-02 and 01-03)
+    // 01-03 is occupied by res_other -> CONFLICT!
+    const roomColumn = wrapper.find('.relative.border-r');
+
+    // Mock getBoundingClientRect for roomColumn
+    vi.spyOn(roomColumn.element, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      left: 0,
+      width: 50,
+      height: 100
+    });
+
+    // rowHeight is 22. Index 1 means relativeY should be between 22 and 43.
+    await roomColumn.trigger('dragover', {
+      clientY: 30
+    });
+
+    // Check if the red highlight class is applied
+    const redHighlight = wrapper.find('.bg-red-500\\/40');
+    expect(redHighlight.exists()).toBe(true);
+
+    // Now drag over an empty spot (index 0: dates 01-01 and 01-02)
+    // 01-01 and 01-02 are occupied by the dragging reservation itself, so no conflict
+    await roomColumn.trigger('dragover', {
+      clientY: 10
+    });
+
+    const greenHighlight = wrapper.find('.bg-green-500\\/20');
+    expect(greenHighlight.exists()).toBe(true);
+  });
 });
