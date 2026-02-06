@@ -6,14 +6,14 @@ const upsertAccountCode = async (requestId, data, user_id, dbClient = null) => {
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
 
-    const { id, code, name, category1, category2, category3, category4, management_group_code, management_group_id, is_active } = data;
+    const { id, code, name, category1, category2, category3, category4, management_group_code, management_group_id, is_active, account_type } = data;
 
     const query = `
         INSERT INTO acc_account_codes (
             id, code, name, category1, category2, category3, category4, 
-            management_group_code, management_group_id, is_active, created_by, updated_by
+            management_group_code, management_group_id, is_active, account_type, created_by, updated_by
         )
-        VALUES (COALESCE($1, nextval('acc_account_codes_id_seq')), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
+        VALUES (COALESCE($1, nextval('acc_account_codes_id_seq')), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12)
         ON CONFLICT (code) DO UPDATE SET
             name = EXCLUDED.name,
             category1 = EXCLUDED.category1,
@@ -23,11 +23,12 @@ const upsertAccountCode = async (requestId, data, user_id, dbClient = null) => {
             management_group_code = EXCLUDED.management_group_code,
             management_group_id = EXCLUDED.management_group_id,
             is_active = EXCLUDED.is_active,
+            account_type = EXCLUDED.account_type,
             updated_by = EXCLUDED.updated_by,
             updated_at = CURRENT_TIMESTAMP
         RETURNING *;
     `;
-    const values = [id, code, name, category1, category2, category3, category4, management_group_code, management_group_id, is_active, user_id];
+    const values = [id, code, name, category1, category2, category3, category4, management_group_code, management_group_id, is_active, account_type, user_id];
 
     try {
         const result = await client.query(query, values);
@@ -109,16 +110,17 @@ const upsertManagementGroup = async (requestId, data, user_id, dbClient = null) 
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
 
-    const { id, name, display_order } = data;
+    const { id, name, display_order, default_account_type } = data;
 
     const query = `
-        INSERT INTO acc_management_groups (id, name, display_order, created_by)
-        VALUES (COALESCE($1, nextval('acc_management_groups_id_seq')), $2, $3, $4)
+        INSERT INTO acc_management_groups (id, name, display_order, default_account_type, created_by)
+        VALUES (COALESCE($1, nextval('acc_management_groups_id_seq')), $2, $3, $4, $5)
         ON CONFLICT (name) DO UPDATE SET
-            display_order = EXCLUDED.display_order
+            display_order = EXCLUDED.display_order,
+            default_account_type = EXCLUDED.default_account_type
         RETURNING *;
     `;
-    const values = [id, name, display_order, user_id];
+    const values = [id, name, display_order, default_account_type, user_id];
 
     try {
         const result = await client.query(query, values);

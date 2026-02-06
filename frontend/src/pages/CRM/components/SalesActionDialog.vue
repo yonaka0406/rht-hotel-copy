@@ -22,7 +22,7 @@
       <div class="field">
         <FloatLabel>
           <label for="subject">件名</label>
-          <InputText id="subject" v-model.trim="currentActionFormData.subject" class="w-full" />
+          <Select id="subject" v-model="currentActionFormData.subject" :options="subjectOptions" class="w-full" />
         </FloatLabel>
       </div>
 
@@ -126,10 +126,13 @@ const props = defineProps({
 
 const emit = defineEmits(['save-action', 'close-dialog']);
 
+// Stores
+import { useClientStore } from '@/composables/useClientStore';
+const { fetchClient } = useClientStore();
+
 // Primevue
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 import DatePicker from 'primevue/datepicker';
 import Select from 'primevue/select';
@@ -137,6 +140,22 @@ import FloatLabel from 'primevue/floatlabel';
 import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
+
+const subjectOptions = [
+  '新規飛び込み',
+  '新規営業リスト',
+  '完成工事高上位',
+  '大型工事落札元請け',
+  '工事現場訪問',
+  '施工体系図下請け',
+  '展示会出展',
+  '店舗内覧会',
+  'イベント参加',
+  '紹介',
+  'リピート顧客フォロー',
+  '予約問合せ',
+  'その他'
+];
 
 // --- Form Data State ---
 const initialFormData = { // For resetting the form
@@ -188,31 +207,59 @@ const resetForm = () => {
   selectedClientObjectForForm.value = null;
 };
 
-const populateForm = (data) => {
+const populateForm = async (data) => {
+  // Capture targetId early to ensure it's available for fallback displays
+  const targetId = data?.client_id || data?.clientId;
+
   currentActionFormData.value = {
     ...initialFormData, // Start with defaults to ensure all fields are present
     id: data?.id || null,
-    client_id: data?.client_id || null,
-    action_type: data?.action_type || 'call',
+    client_id: targetId || null,
+    action_type: data?.action_type || data?.actionType || 'call',
     subject: data?.subject || '',
     details: data?.details || '',
     outcome: data?.outcome || '',
-    assigned_to: data?.assigned_to || null,
+    assigned_to: data?.assigned_to || data?.assignedTo || null,
     status: data?.status || 'pending',
-    action_datetime: data?.action_datetime ? new Date(data.action_datetime) : new Date(),
-    due_date: data?.due_date ? new Date(data.due_date) : null,
+    action_datetime: data?.action_datetime || data?.actionDateTime ? new Date(data.action_datetime || data.actionDateTime) : new Date(),
+    due_date: data?.due_date || data?.dueDate ? new Date(data.due_date || data.dueDate) : null,
   };
 
-  if (currentActionFormData.value.client_id) {
-    const clientObj = props.allClients.find(c => c.id === currentActionFormData.value.client_id);
+  if (targetId) {
+    // Try to find in the provided list first
+    const clientObj = props.allClients.find(c => (c.id === targetId || c.client_id === targetId));
     if (clientObj) {
       selectedClientObjectForForm.value = {
         ...clientObj,
-        display_name: clientObj.name_kanji || clientObj.name_kana || clientObj.name || `クライアントID: ${clientObj.id}`
+        id: clientObj.id || clientObj.client_id || targetId,
+        display_name: clientObj.display_name || clientObj.name_kanji || clientObj.name_kana || clientObj.name || clientObj.client_name || `クライアントID: ${targetId}`
       };
     } else {
-      selectedClientObjectForForm.value = null;
-      toast.add({ severity: "warn", summary: "注意", detail: "関連クライアントが見つかりませんでした。リストを更新してください。", life: 4000 });
+      // Fetch individual client if not in current list
+      try {
+        const result = await fetchClient(targetId);
+        // Handle potential nested client object from store
+        const fetchedClient = result?.client?.client || result?.client || result;
+        if (fetchedClient && (fetchedClient.id || fetchedClient.client_id)) {
+          selectedClientObjectForForm.value = {
+            ...fetchedClient,
+            id: fetchedClient.id || fetchedClient.client_id || targetId,
+            display_name: fetchedClient.display_name || fetchedClient.name_kanji || fetchedClient.name_kana || fetchedClient.name || fetchedClient.client_name || `クライアントID: ${targetId}`
+          };
+        } else {
+          // Final fallback: use what we have in currentActionFormData
+          selectedClientObjectForForm.value = {
+            id: targetId,
+            display_name: `クライアントID: ${targetId}`
+          };
+        }
+      } catch (e) {
+        console.error('Failed to fetch client for action form:', e);
+        selectedClientObjectForForm.value = {
+          id: targetId,
+          display_name: `クライアントID: ${targetId}`
+        };
+      }
     }
   } else {
     selectedClientObjectForForm.value = null;

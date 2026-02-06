@@ -141,8 +141,6 @@
     const { paymentsList, fetchPaymentsForReceipts, isLoadingPayments, handleGenerateReceipt, handleGenerateConsolidatedReceipt } = useBillingStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
-    import { useClientStore } from '@/composables/useClientStore';
-    const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 
     // Helper function (can be moved to a utils file)
     const formatDate = (date) => {
@@ -522,23 +520,6 @@
     onMounted(async () => {
         // await fetchHotels(); 
         // await fetchHotel();
-
-        // Client data for filtering client_name column
-        if (!clients.value || clients.value.length === 0) { // Check if clients is null or empty
-             setClientsIsLoading(true);
-             try {
-                const clientsTotalPages = await fetchClients(1);
-                if (typeof clientsTotalPages === 'number') { 
-                    for (let page = 2; page <= clientsTotalPages; page++) {
-                        await fetchClients(page);
-                    }
-                }
-             } catch (e) {
-                console.error("Failed to load all clients:", e);
-             } finally {
-                setClientsIsLoading(false);
-             }
-        }        
     });
 
     watch(() => selectedHotelId.value,

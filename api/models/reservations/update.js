@@ -1,4 +1,5 @@
 let getPool = require('../../config/database').getPool;
+const format = require('pg-format');
 const logger = require('../../config/logger');
 
 const updateReservationType = async (requestId, reservationData) => {
@@ -149,8 +150,65 @@ const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTim
   }
 };
 
+const moveReservationPayment = async (requestId, paymentId, targetReservationId, userId) => {
+    const pool = getPool(requestId);
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, userId);
+        await client.query(setSessionQuery);
+
+        const paymentResult = await client.query('SELECT * FROM reservation_payments WHERE id = $1', [paymentId]);
+        const payment = paymentResult.rows[0];
+        if (!payment) {
+            throw new Error('Payment not found');
+        }
+
+        const originalReservationId = payment.reservation_id;
+        const hotelId = payment.hotel_id;
+
+        const reservationsResult = await client.query(
+            'SELECT id, reservation_client_id FROM reservations WHERE id = ANY($1::uuid[]) AND hotel_id = $2',
+            [[originalReservationId, targetReservationId], hotelId]
+        );
+
+        if (originalReservationId !== targetReservationId) {
+            if (reservationsResult.rows.length !== 2) {
+                throw new Error('One or both reservations not found or in different hotels');
+            }
+
+            const res1 = reservationsResult.rows.find(r => r.id === originalReservationId);
+            const res2 = reservationsResult.rows.find(r => r.id === targetReservationId);
+
+            if (res1.reservation_client_id !== res2.reservation_client_id) {
+                throw new Error('Reservations must belong to the same client');
+            }
+        }
+
+        const updateQuery = `
+            UPDATE reservation_payments
+            SET reservation_id = $1, updated_by = $2
+            WHERE id = $3
+            RETURNING *;
+        `;
+        const updateResult = await client.query(updateQuery, [targetReservationId, userId, paymentId]);
+
+        await client.query('COMMIT');
+        return { success: true, payment: updateResult.rows[0] };
+    } catch (err) {
+        await client.query('ROLLBACK');
+        logger.error(`[${requestId}] moveReservationPayment - Error: ${err.message}`);
+        throw err;
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
     updateReservationType,
     updateReservationResponsible,
-    updatePaymentTiming
+    updatePaymentTiming,
+    moveReservationPayment
 }

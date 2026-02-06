@@ -58,7 +58,7 @@
             </Column>
             <Column field="type" header="種類">
                  <template #body="{data}">
-                    <Tag v-if="data.dataType === 'action'" style="background: transparent;" :value="translateActionType(data.type)" :severity="getActionTypeSeverity(data.type)" />
+                    <Tag v-if="data.dataType === 'action'" :value="translateActionType(data.type)" :severity="getActionTypeSeverity(data.type)" />
                     <span v-else>{{ translateReservationType(data.type) }}</span>
                 </template>
             </Column>
@@ -158,7 +158,10 @@
         'meeting': '会議',
         'task': 'タスク',
         'note': 'メモ',
-        'other': 'その他'
+        'other': 'その他',
+        'construction_site': '工事現場',
+        'office_visit': '来社',
+        'wh': 'WH'
     };
     const statusTranslations = {
         'pending': '保留中',
@@ -239,7 +242,10 @@
             meeting: 'primary',
             task: 'secondary',
             note: 'warn',
-            other: 'secondary'
+            other: 'secondary',
+            construction_site: 'success',
+            office_visit: 'primary',
+            wh: 'info'
         };
         return severities[actionType] || 'info';
     };
@@ -451,18 +457,6 @@
             return; // Exit if no logged-in user
         }
 
-        // Fetch all clients for AutoComplete in dialog
-        if (!clients.value || clients.value.length === 0) {
-            if (setClientsIsLoading) setClientsIsLoading(true);
-            try {
-                await fetchClients(1);
-            } catch (error) {
-                console.error("Failed to fetch clients:", error);
-                toast.add({ severity: "error", summary: "クライアント取得失敗", detail: "クライアントリストの取得に失敗しました。", life: 3000 });
-            } finally {
-                if (setClientsIsLoading) setClientsIsLoading(false);
-            }
-        }
         await fetchData(); // Initial data fetch
     });
 

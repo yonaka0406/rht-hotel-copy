@@ -8,6 +8,34 @@ class OtaApiError extends Error {
 
 require("dotenv").config();
 const xml2js = require('xml2js');
+const crypto = require('crypto');
+
+/**
+ * Generates a robust 8-character unique request ID to satisfy TL-Lincoln requirements.
+ *
+ * WHY THIS WORKS (Entropy Explanation):
+ * 1. Collision Resistance: Uses an MD5 hash to distribute even similar inputs uniformly
+ *    across the output space (16^8 or ~4.3B possibilities). This solves the issue where
+ *    simple decimal-based IDs (like log_id.batch_no) would collide after truncation.
+ * 2. Entropy Sources: Combines four distinct sources:
+ *    - Timestamp (millisecond precision)
+ *    - Process PID (uniqueness across instances)
+ *    - Cryptographic Randomness (4 bytes)
+ *    - Seed (log_id-batch_no combination)
+ * 3. Freshness on Retry: Including the current timestamp and randomness ensures that
+ *    retried or re-queued requests receive a fresh ID, avoiding "duplicated request id"
+ *    errors from the third-party API.
+ *
+ * @param {number|string} [seed=0] Optional seed (e.g. batch number) to further differentiate.
+ * @returns {string} 8-character uppercase hexadecimal string.
+ */
+const generateRequestId = (seed = 0) => {
+    const timestamp = Date.now();
+    const pid = process.pid;
+    const random = crypto.randomBytes(4).readUInt32BE(0);
+    const combined = `${timestamp}-${pid}-${random}-${seed}`;
+    return crypto.createHash('md5').update(combined).digest('hex').slice(0, 8).toUpperCase();
+};
 const {
     selectXMLTemplate,
     selectXMLRecentResponses,
@@ -33,7 +61,7 @@ const logger = require('../config/logger'); // Winston logger
 
 
 
-async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, currentRequestId, options = {}) {
+async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, currentRequestId, options = {}, dbClient = null) {
     const { batch_no = 'N/A' } = options;
 
     logger.info(`Queuing batch ${batch_no} for hotel ${hotel_id} with service ${serviceName}.`, {
@@ -41,7 +69,8 @@ async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, curr
         batch_no: batch_no,
         serviceName: serviceName,
         requestId: req.requestId,
-        currentRequestId: currentRequestId
+        currentRequestId: currentRequestId,
+        reusingConnection: !!dbClient
     });
 
     try {
@@ -50,7 +79,7 @@ async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, curr
             service_name: serviceName,
             xml_body: xmlBody,
             current_request_id: currentRequestId
-        });
+        }, dbClient);
         return { success: true, message: 'Request successfully queued.' };
     } catch (error) {
         logger.error(`Failed to queue batch ${batch_no} for hotel ${hotel_id} with service ${serviceName}.`, {
@@ -242,7 +271,8 @@ async function processQueuedReservations(requestId, reservations, client) {
                     requestId,
                     reservation._queueId,  // The queue entry ID
                     'processed',           // Status
-                    null                   // conflictDetails
+                    null,                  // conflictDetails
+                    client
                 );
                 results.processed++;
                 results.details.push({
@@ -285,7 +315,8 @@ async function processQueuedReservations(requestId, reservations, client) {
                         requestId,
                         entry.id,
                         'failed',
-                        { error: errorMessage }
+                        { error: errorMessage },
+                        client
                     );
                     logger.debug('[processQueuedReservations] Updated queue entry', {
                         requestId,
@@ -386,7 +417,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                         }
 
                         if (inventoryToUpdate.length > 0) {
-                            await setDatesNotForSale({ requestId }, null, hotelId, inventoryToUpdate);
+                            await setDatesNotForSale({ requestId }, null, hotelId, inventoryToUpdate, client);
                         }
                     }
                 }
@@ -415,9 +446,10 @@ async function processQueuedReservations(requestId, reservations, client) {
  * @param {string} requestId - The request ID for logging
  * @param {object} reservationData - The parsed reservation data
  * @param {number} hotelId - The hotel ID
+ * @param {object} [dbClient=null] - Optional database client
  * @returns {Promise<object>} - The processed reservation data
  */
-async function processAndQueueReservation(requestId, reservationData, hotelId) {
+async function processAndQueueReservation(requestId, reservationData, hotelId, dbClient = null) {
     try {
         const transactionId = reservationData.TransactionType?.DataID;
         const otaReservationId = reservationData.BasicInformation?.TravelAgencyBookingNumber || `temp_${Date.now()}`;
@@ -439,7 +471,7 @@ async function processAndQueueReservation(requestId, reservationData, hotelId) {
             reservationData,
             status: 'pending',
             conflictDetails: null
-        });
+        }, dbClient);
 
         const queueEntryId = queueResult?.id;
 
@@ -574,13 +606,28 @@ const postXMLResponse = async (req, res) => {
     }
 };
 
-// Lincoln
-const submitXMLTemplate = async (req, res, hotel_id, name, xml, dbPool = null) => {
+/**
+ * Submits an XML template to the third-party OTA API.
+ *
+ * @WARNING If a `dbClient` is provided (e.g. within a transaction), this function will
+ * keep that connection/transaction open while awaiting the external HTTP response.
+ * Callers should be aware of potential connection pool exhaustion or long-held locks
+ * during slow API responses.
+ *
+ * @param {object} req Express request object (must have requestId).
+ * @param {object} res Express response object.
+ * @param {number} hotel_id Hotel ID.
+ * @param {string} name API service name.
+ * @param {string} xml XML body to send.
+ * @param {object} [dbClient=null] Optional database client for persistent connection reuse or transactions.
+ * @returns {Promise<object>} Parsed JSON response.
+ */
+const submitXMLTemplate = async (req, res, hotel_id, name, xml, dbClient = null) => {
     // logger.debug('submitXMLTemplate', name, xml);    
 
     try {
         // Save the request in the database
-        await insertXMLRequest(req.requestId, hotel_id, name, xml, dbPool);
+        await insertXMLRequest(req.requestId, hotel_id, name, xml, dbClient);
 
         const url = `${process.env.XML_REQUEST_URL}${name}`;
         const response = await fetch(url, {
@@ -607,7 +654,7 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml, dbPool = null) =
         const responseXml = await response.text();
         // logger.debug('Response XML:', responseXml);
         // logger.debug('Inserting XML response into database...');
-        await insertXMLResponse(req.requestId, hotel_id, name, responseXml, dbPool);
+        await insertXMLResponse(req.requestId, hotel_id, name, responseXml, dbClient);
 
         // Parse the XML response using xml2js
         const parsedJson = new Promise((resolve, reject) => {
@@ -707,11 +754,23 @@ const getOTAReservations = async (req, res) => {
 
     logger.debug(`[${requestId}] Starting getOTAReservations`);
 
+    let sharedClient = null;
     try {
+        // Get database pool and client with error handling
+        const pool = getPool(requestId);
+
+        try {
+            sharedClient = await pool.connect();
+            logger.debug(`[${requestId}] Successfully acquired shared connection for getOTAReservations`);
+        } catch (connectError) {
+            logger.error(`[${requestId}] Failed to acquire shared connection: ${connectError.message}`);
+            return res.status(500).send({ error: 'Database connection error' });
+        }
+
         // Get hotels with retry logic for database connection
         try {
             logger.debug(`[${requestId}] Attempting to fetch hotels using getAllHotelSiteController`);
-            hotels = await getAllHotelSiteController(requestId);
+            hotels = await getAllHotelSiteController(requestId, sharedClient);
             logger.debug(`[${requestId}] getAllHotelSiteController returned ${hotels?.length || 0} hotels`);
 
             if (!hotels || hotels.length === 0) {
@@ -740,34 +799,14 @@ const getOTAReservations = async (req, res) => {
 
         for (const [index, hotel] of hotels.entries()) {
             const hotelId = hotel.hotel_id;
-            let dbClient;
+            let dbClient = sharedClient;
             let isTransactionActive = false;
 
             logger.debug(`[${requestId}] [${index + 1}/${hotels.length}] Processing hotel ID: ${hotelId}`);
 
             try {
-                // Get database pool and client with error handling
-                logger.debug(`[${requestId}] [Hotel ${hotelId}] Getting database pool`);
-                const pool = getPool(requestId);
-
-                try {
-                    logger.debug(`[${requestId}] [Hotel ${hotelId}] Attempting to connect to database`);
-                    dbClient = await pool.connect();
-                    logger.debug(`[${requestId}] [Hotel ${hotelId}] Successfully connected to database`);
-                } catch (connectError) {
-                    const errorMsg = `Database connection error for hotel ${hotelId}: ${connectError.message}`;
-                    logger.error(`[${requestId}] ${errorMsg}`, { stack: connectError.stack });
-                    logger.error('Database connection error:', {
-                        requestId,
-                        hotelId,
-                        error: connectError.message,
-                        stack: connectError.stack
-                    });
-                    continue; // Skip to next hotel if we can't connect
-                }
-
                 // Get the template with credentials already injected
-                const template = await selectXMLTemplate(requestId, hotelId, name);
+                const template = await selectXMLTemplate(requestId, hotelId, name, dbClient);
                 if (!template) {
                     logger.warn(`XML template not found for hotel_id: ${hotelId}`, { requestId });
                     continue;
@@ -775,7 +814,7 @@ const getOTAReservations = async (req, res) => {
                 logger.debug(`[${requestId}] [Hotel ${hotelId}] selectXMLTemplate response: ${template}`);
 
                 // Fetch the OTA reservations
-                const reservations = await submitXMLTemplate(req, res, hotelId, name, template);
+                const reservations = await submitXMLTemplate(req, res, hotelId, name, template, dbClient);
                 const executeResponse = reservations?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse'];
                 const bookingInfoListWrapper = executeResponse?.return?.bookingInfoList;
                 const bookingInfoList = Array.isArray(bookingInfoListWrapper) ?
@@ -822,7 +861,8 @@ const getOTAReservations = async (req, res) => {
                         const queuedReservation = await processAndQueueReservation(
                             requestId,
                             allotmentBookingReport,
-                            hotelId
+                            hotelId,
+                            dbClient
                         );
 
                         if (queuedReservation._queueStatus === 'queued') {
@@ -886,7 +926,7 @@ const getOTAReservations = async (req, res) => {
                     const outputId = executeResponse?.return?.configurationSettings?.outputId;
                     if (outputId) {
                         try {
-                            await successOTAReservations(req, res, hotelId, outputId);
+                            await successOTAReservations(req, res, hotelId, outputId, dbClient);
                             logger.info('Successfully notified OTA of completed processing', {
                                 requestId,
                                 hotelId,
@@ -941,7 +981,8 @@ const getOTAReservations = async (req, res) => {
                                     {
                                         error: 'Batch processing failed',
                                         details: processError.message
-                                    }
+                                    },
+                                    dbClient
                                 );
                             } catch (updateError) {
                                 logger.error('Error updating reservation status after failure:', {
@@ -975,21 +1016,6 @@ const getOTAReservations = async (req, res) => {
                     error: hotelError.message,
                     stack: hotelError.stack
                 });
-            } finally {
-                // Make sure client is released even if an error occurs
-                if (dbClient) {
-                    try {
-                        await dbClient.release();
-                    } catch (releaseError) {
-                        const errorMsg = `Error releasing database client for hotel ${hotelId}: ${releaseError.message}`;
-                        logger.error(`[${requestId}] ${errorMsg}`);
-                        logger.error('Error releasing database client:', {
-                            requestId,
-                            hotelId: hotel?.hotel_id || 'unknown',
-                            error: releaseError.message
-                        });
-                    }
-                }
             }
         }
 
@@ -1008,19 +1034,30 @@ const getOTAReservations = async (req, res) => {
             error: 'An unexpected error occurred while processing hotels.',
             details: error.message
         });
+    } finally {
+        if (sharedClient) {
+            try {
+                sharedClient.release();
+                logger.debug(`[${requestId}] Released shared connection for getOTAReservations`);
+            } catch (releaseError) {
+                logger.error(`[${requestId}] Error releasing shared connection: ${releaseError.message}`);
+            }
+        }
     }
 };
-const successOTAReservations = async (req, res, hotel_id, outputId) => {
+const successOTAReservations = async (req, res, hotel_id_arg, outputId_arg, dbClient = null) => {
     const name = 'OutputCompleteService';
+    const hotel_id = (hotel_id_arg && typeof hotel_id_arg !== 'function' && typeof hotel_id_arg !== 'object') ? hotel_id_arg : (req.params?.hotel_id || req.query?.hotel_id);
+    const outputId = (outputId_arg && typeof outputId_arg !== 'function' && typeof outputId_arg !== 'object') ? outputId_arg : (req.params?.outputId || req.query?.outputId);
 
     logger.info(`Calling OutputCompleteService for hotel_id: ${hotel_id}, outputId: ${outputId}`);
 
     try {
-        let template = await selectXMLTemplate(req.requestId, hotel_id, name);
+        let template = await selectXMLTemplate(req.requestId, hotel_id, name, dbClient);
 
         template = template.replace("{{outputId}}", outputId);
 
-        const response = await submitXMLTemplate(req, res, hotel_id, name, template);
+        const response = await submitXMLTemplate(req, res, hotel_id, name, template, dbClient);
         logger.info(`OutputCompleteService completed successfully for hotel_id: ${hotel_id}, outputId: ${outputId}`);
         return response;
     } catch (error) {
@@ -1031,10 +1068,12 @@ const successOTAReservations = async (req, res, hotel_id, outputId) => {
             requestId: req.requestId,
             stack: error.stack
         });
-        return res.status(500).send({ error: 'An error occurred while processing hotel response.' });
+        if (res && !res.headersSent) {
+            return res.status(500).send({ error: 'An error occurred while processing hotel response.' });
+        }
     }
 };
-const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
+const checkOTAStock = async (req, res, hotel_id, startDate, endDate, dbClient = null) => {
     const name = 'NetStockSearchService';
 
     const sDate = new Date(startDate);
@@ -1047,11 +1086,11 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
     }
 
     if (sDate > eDate) {
-        console.warn(`Start date ${startDate} is after end date ${endDate}. Returning empty result.`);
+        logger.warn(`Start date ${startDate} is after end date ${endDate}. Returning empty result.`);
         return [];
     }
 
-    const template = await selectXMLTemplate(req.requestId, hotel_id, name);
+    const template = await selectXMLTemplate(req.requestId, hotel_id, name, dbClient);
     if (!template) {
         throw new Error('XML template not found.');
     }
@@ -1094,24 +1133,46 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
             .replace('{{searchDurationFrom}}', range.start)
             .replace('{{searchDurationTo}}', range.end);
 
-        try {
-            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
-            const executeResponse = apiResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['netRmTypeGroupAndDailyStockStatusList'];
+        let retryCount = 0;
+        const maxRetries = 3;
+        let lastError = null;
 
-            const executeResponseArray = Array.isArray(executeResponse) ? executeResponse : (executeResponse ? [executeResponse] : []);
+        while (retryCount <= maxRetries) {
+            try {
+                const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody, dbClient);
+                const executeResponse = apiResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['netRmTypeGroupAndDailyStockStatusList'];
 
-            const transformedResponse = executeResponseArray.map(item => ({
-                netRmTypeGroupCode: item.netRmTypeGroupCode,
-                saleDate: item.saleDate,
-                salesCount: item.salesCount,
-                remainingCount: item.remainingCount
-            }));
+                const executeResponseArray = Array.isArray(executeResponse) ? executeResponse : (executeResponse ? [executeResponse] : []);
 
-            allResponses = allResponses.concat(transformedResponse);
-        } catch (error) {
-            logger.error(`Error submitting XML template for date range ${range.start} - ${range.end}:`, error);
-            throw error;
+                const transformedResponse = executeResponseArray.map(item => ({
+                    netRmTypeGroupCode: item.netRmTypeGroupCode,
+                    saleDate: item.saleDate,
+                    salesCount: item.salesCount,
+                    remainingCount: item.remainingCount
+                }));
+
+                allResponses = allResponses.concat(transformedResponse);
+                lastError = null;
+                break; // Success
+            } catch (error) {
+                lastError = error;
+                // If it's a rate limit error (E013), retry with delay
+                if (error.message && error.message.includes('E013')) {
+                    retryCount++;
+                    if (retryCount <= maxRetries) {
+                        const backoffDelay = Math.pow(2, retryCount) * 1000 + Math.random() * 1000;
+                        logger.warn(`Rate limit (E013) hit in checkOTAStock, retrying in ${Math.round(backoffDelay)}ms... (Attempt ${retryCount}/${maxRetries})`, {
+                            hotel_id,
+                            range
+                        });
+                        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+                        continue;
+                    }
+                }
+                throw error; // Not a rate limit error or max retries reached
+            }
         }
+        if (lastError) throw lastError;
     }
 
     return allResponses;
@@ -1123,225 +1184,128 @@ const updateInventoryMultipleDays = async (req, res) => {
     if (!Array.isArray(inventory)) {
         return res.status(400).send({ error: 'Inventory data must be an array.' });
     }
-    // logger.debug('updateInventoryMultipleDays triggered')
 
     const name = 'NetStockBulkAdjustmentService';
+    const pool = getPool(req.requestId);
+    let dbClient = null;
+    let minDate = null;
+    let maxDate = null;
 
     // Helper function to format date to YYYYMMDD
     const formatYYYYMMDD = (dateString) => {
         const date = new Date(dateString);
-        // Check if the date is valid
-        if (isNaN(date.getTime())) {
-            return null; // Return null for invalid dates
-        }
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-indexed
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}${month}${day}`;
-    };
-
-    // logger.debug('updateInventoryMultipleDays:', hotel_id, name);
-
-    const template = await selectXMLTemplate(req.requestId, hotel_id, name);
-    if (!template) {
-        return res.status(500).send({ error: 'XML template not found.' });
-    }
-
-    // Filter out entries older than the current date and format dates for comparison
-    const currentDateYYYYMMDD = formatYYYYMMDD(new Date());
-
-    if (!inventory) {
-        return res.status(500).send({ error: 'Inventory data not found.' });
-    }
-    let filteredInventory = inventory.filter((item) => {
-        const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
-        // Only include items with valid dates on or after the current date
-        return itemDateYYYYMMDD !== null && itemDateYYYYMMDD >= currentDateYYYYMMDD;
-    });
-
-    /*
-    const currentDate = (() => {
-        const date = new Date();
+        if (isNaN(date.getTime())) return null;
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}${month}${day}`;
-    })();    
-    
-    let filteredInventory = inventory.filter((item) => {
-        const itemDate = (() => {
-            const date = new Date(item.date);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}${month}${day}`;
-        })();
-
-        // logger.debug('itemDate:', itemDate, itemDate >= currentDate);
-
-        return itemDate >= currentDate;
-    });
-    */
-    if (filteredInventory.length === 0) {
-        return res.status(200).send({ message: 'No valid inventory entries found. All dates are in the past.' });
-    }
-
-    // Get the date range of the filtered inventory
-    const getInventoryDateRange = (inventory) => {
-        if (inventory.length === 0) return { minDate: null, maxDate: null };
-
-        const dates = inventory.map((item) => new Date(item.date)).filter(date => !isNaN(date.getTime()));
-        if (dates.length === 0) return { minDate: null, maxDate: null };
-
-        const minDate = new Date(Math.min(...dates));
-        const maxDate = new Date(Math.max(...dates));
-
-        return { minDate, maxDate };
     };
-    const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
-    // If minDate or maxDate is null after filtering, it means no valid dates were found.
-    if (!minDate || !maxDate) {
-        return res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
-    }
-    // logger.debug('getInventoryDateRange', minDate, maxDate);
 
-    // Check current stock using checkOTAStock for the relevant date range
-    let stockCheckResults;
     try {
-        stockCheckResults = await checkOTAStock(req, res, hotel_id, minDate, maxDate);
+        dbClient = await pool.connect();
+
+        const template = await selectXMLTemplate(req.requestId, hotel_id, name, dbClient);
+        if (!template) {
+            return res.status(500).send({ error: 'XML template not found.' });
+        }
+
+        const currentDateYYYYMMDD = formatYYYYMMDD(new Date());
+        let filteredInventory = inventory.filter((item) => {
+            const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
+            return itemDateYYYYMMDD !== null && itemDateYYYYMMDD >= currentDateYYYYMMDD;
+        });
+
+        if (filteredInventory.length === 0) {
+            return res.status(200).send({ message: 'No valid inventory entries found. All dates are in the past.' });
+        }
+
+        const getInventoryDateRange = (inventory) => {
+            if (inventory.length === 0) return { minDate: null, maxDate: null };
+            const dates = inventory.map((item) => new Date(item.date)).filter(date => !isNaN(date.getTime()));
+            if (dates.length === 0) return { minDate: null, maxDate: null };
+            const minDate = new Date(Math.min(...dates));
+            const maxDate = new Date(Math.max(...dates));
+            return { minDate, maxDate };
+        };
+
+        const range = getInventoryDateRange(filteredInventory);
+        minDate = range.minDate;
+        maxDate = range.maxDate;
+
+        if (!minDate || !maxDate) {
+            return res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
+        }
+
+        let stockCheckResults = await checkOTAStock(req, res, hotel_id, minDate, maxDate, dbClient);
         if (!Array.isArray(stockCheckResults)) {
             logger.error('checkOTAStock did not return an array:', stockCheckResults);
             stockCheckResults = [];
         }
-    } catch (error) {
-        logger.error('Error during checkOTAStock:', error);
-        return res.status(500).send({ error: 'Failed to retrieve current stock information.' });
-    }
-    // Create a map for quick lookup of stock check results by room type group and date
-    const stockCheckMap = new Map();
-    stockCheckResults.forEach(item => {
-        const key = `${item.netRmTypeGroupCode}-${item.saleDate}`;
-        stockCheckMap.set(key, parseInt(item.remainingCount));
-    });
 
-    // Compare filteredInventory with stockCheckResults
-    let needsUpdate = false;
-    for (const item of filteredInventory) {
-        const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
-        const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
-        const lookupKey = `${item.netrmtypegroupcode}-${itemDateYYYYMMDD}`;
+        const stockCheckMap = new Map();
+        stockCheckResults.forEach(item => {
+            const key = `${item.netRmTypeGroupCode}-${item.saleDate}`;
+            stockCheckMap.set(key, parseInt(item.remainingCount));
+        });
 
-        // logger.debug('needsUpdate check', lookupKey, 'count', expectedRemainingCount)
+        let needsUpdate = false;
+        for (const item of filteredInventory) {
+            const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
+            const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
+            const lookupKey = `${item.netrmtypegroupcode}-${itemDateYYYYMMDD}`;
+            const currentRemainingStock = stockCheckMap.get(lookupKey);
 
-        const currentRemainingStock = stockCheckMap.get(lookupKey);
-
-        // Compare only if stock data exists for this room type and date
-        if (currentRemainingStock !== undefined) {
-            // Check if calculated remaining count from inventory matches current stock
-            if (expectedRemainingCount < 0) { // Ensure expectedRemainingCount is not negative
-                if (currentRemainingStock !== 0) {
-                    needsUpdate = true;
-                    // logger.debug(`Mismatch found for ${lookupKey}: Inventory calculated ${0}, Stock is ${currentRemainingStock}`);
-                    break; // Found a mismatch, no need to check further
-                }
-            } else {
-                if (currentRemainingStock !== expectedRemainingCount) {
-                    needsUpdate = true;
-                    // logger.debug(`Mismatch found for ${lookupKey}: Inventory calculated ${expectedRemainingCount}, Stock is ${currentRemainingStock}`);
-                    break; // Found a mismatch, no need to check further
+            if (currentRemainingStock !== undefined) {
+                if (expectedRemainingCount < 0) {
+                    if (currentRemainingStock !== 0) { needsUpdate = true; break; }
+                } else {
+                    if (currentRemainingStock !== expectedRemainingCount) { needsUpdate = true; break; }
                 }
             }
-        } else {
-            console.warn(`No stock data found for ${lookupKey}. Cannot compare.`);
-        }
-    }
-
-    // If no mismatch was found, skip the update process
-    if (!needsUpdate) {
-        // logger.debug('Inventory matches current stock. No update needed.');
-        return res.status(200).send({ message: 'Inventory already matches current stock. No update needed.' });
-    }
-
-    // --- Proceed with batch processing if an update is needed ---
-
-    const processInventoryBatch = async (batch, batch_no) => {
-        logger.warn(`Processing batch ${batch_no} for hotel ${hotel_id}`, {
-            hotel_id: hotel_id,
-            batch_no: batch_no,
-            batch_size: batch.length
-        });
-        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        // Increase delay to avoid rate limiting - 3 to 6 seconds between batches
-        const randomDelay = Math.floor(Math.random() * (6000 - 3000 + 1)) + 3000;
-        await delay(randomDelay);
-
-        let adjustmentTargetXml = '';
-        batch.forEach((item) => {
-            const adjustmentDate = (() => {
-                const date = new Date(item.date);
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}${month}${day}`;
-            })();
-            let remainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
-            remainingCount = remainingCount < 0 ? 0 : remainingCount;
-
-            let target = `
-                <adjustmentTarget>
-                    <adjustmentProcedureCode>1</adjustmentProcedureCode>
-                    <netRmTypeGroupCode>${item.netrmtypegroupcode}</netRmTypeGroupCode>
-                    <adjustmentDate>${adjustmentDate}</adjustmentDate>
-                    <remainingCount>${remainingCount}</remainingCount>
-                    <salesStatus>3</salesStatus>
-                </adjustmentTarget>
-            `;
-            adjustmentTargetXml += target;
-        });
-
-        let xmlBody = template.replace(
-            `<adjustmentTarget>
-               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
-               <netRmTypeGroupCode>{{netRmTypeGroupCode}}</netRmTypeGroupCode>
-               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
-               <remainingCount>{{remainingCount}}</remainingCount>
-               <salesStatus>{{salesStatus}}</salesStatus>               
-            </adjustmentTarget>
-            <adjustmentTarget>
-               <adjustmentProcedureCode>{{adjustmentProcedureCode2}}</adjustmentProcedureCode>
-               <netRmTypeGroupCode>{{netRmTypeGroupCode2}}</netRmTypeGroupCode>
-               <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
-               <remainingCount>{{remainingCount2}}</remainingCount>
-               <salesStatus>{{salesStatus2}}</salesStatus>               
-            </adjustmentTarget>`,
-            adjustmentTargetXml
-        );
-
-        let currentRequestId = log_id + (batch_no / 100);
-        currentRequestId = currentRequestId.toString();
-        if (currentRequestId.length > 8) {
-            currentRequestId = currentRequestId.slice(-8); // keep the last 8 characters
         }
 
-        // Replace requestId placeholder in XML body
-        xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
+        if (!needsUpdate) {
+            return res.status(200).send({ message: 'Inventory already matches current stock. No update needed.' });
+        }
 
-        return await queueOtaXmlRequest(req, res, hotel_id, name, xmlBody, currentRequestId, {
-            batch_no: batch_no
-        });
-    };
+        const processInventoryBatch = async (batch, batch_no) => {
+            logger.warn(`Processing batch ${batch_no} for hotel ${hotel_id}`, {
+                hotel_id: hotel_id, log_id: log_id, batch_no: batch_no, batch_size: batch.length
+            });
+            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            const randomDelay = Math.floor(Math.random() * (6000 - 3000 + 1)) + 3000;
+            await delay(randomDelay);
 
-    // Check if the date range exceeds 30 days for batching decision
-    const dateRangeExceeds30Days = (minDate, maxDate) => {
-        if (!minDate || !maxDate) return false;
-        const timeDiff = Math.abs(maxDate.getTime() - minDate.getTime());
-        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-        return daysDiff > 30;
-    };
-    const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
+            let adjustmentTargetXml = '';
+            batch.forEach((item) => {
+                const adjustmentDate = formatYYYYMMDD(item.date);
+                let remainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
+                remainingCount = remainingCount < 0 ? 0 : remainingCount;
 
-    // Determine batch size and process inventory in batches or as a single request
-    try {
+                adjustmentTargetXml += `
+                    <adjustmentTarget>
+                        <adjustmentProcedureCode>1</adjustmentProcedureCode>
+                        <netRmTypeGroupCode>${item.netrmtypegroupcode}</netRmTypeGroupCode>
+                        <adjustmentDate>${adjustmentDate}</adjustmentDate>
+                        <remainingCount>${remainingCount}</remainingCount>
+                        <salesStatus>3</salesStatus>
+                    </adjustmentTarget>
+                `;
+            });
+
+            let xmlBody = template.replace(
+                /<adjustmentTarget>[\s\S]*?<\/adjustmentTarget>[\s\S]*?<adjustmentTarget>[\s\S]*?<\/adjustmentTarget>/,
+                adjustmentTargetXml
+            );
+
+            const currentRequestId = generateRequestId(`${log_id}-${batch_no}`);
+            xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
+
+            return await queueOtaXmlRequest(req, res, hotel_id, name, xmlBody, currentRequestId, { batch_no: batch_no }, dbClient);
+        };
+
+        const exceeds30Days = Math.ceil(Math.abs(maxDate.getTime() - minDate.getTime()) / (1000 * 3600 * 24)) > 30;
+
         if (filteredInventory.length > 1000 || exceeds30Days) {
             const batchSize = 30;
             let requestNumber = 0;
@@ -1351,21 +1315,16 @@ const updateInventoryMultipleDays = async (req, res) => {
                 const batch = filteredInventory.slice(i, i + batchSize);
                 await processInventoryBatch(batch, requestNumber);
                 requestNumber++;
-
-                // Add delay between batch submissions to avoid rate limiting
-                if (i + batchSize < filteredInventory.length) {
-                    await delay(2000); // 2 second delay between batch submissions
-                }
+                if (i + batchSize < filteredInventory.length) await delay(2000);
             }
         } else {
-            // Process all filtered inventory as a single batch
             await processInventoryBatch(filteredInventory, 0);
         }
         res.status(200).send({ success: true, message: 'Inventory update processed.' });
     } catch (error) {
         const dateRange = {
-            from: minDate ? minDate.toISOString().split('T')[0] : 'N/A',
-            to: maxDate ? maxDate.toISOString().split('T')[0] : 'N/A',
+            from: minDate ? (minDate instanceof Date ? minDate.toISOString().split('T')[0] : minDate) : 'N/A',
+            to: maxDate ? (maxDate instanceof Date ? maxDate.toISOString().split('T')[0] : maxDate) : 'N/A',
         };
         logger.error('Error in updateInventoryMultipleDays', {
             hotel_id: hotel_id,
@@ -1376,169 +1335,124 @@ const updateInventoryMultipleDays = async (req, res) => {
         if (!res.headersSent) {
             res.status(500).send({ success: false, message: error.message });
         }
+    } finally {
+        if (dbClient) {
+            try {
+                dbClient.release();
+            } catch (releaseErr) {
+                logger.error(`[${req.requestId}] Error releasing connection in updateInventoryMultipleDays:`, releaseErr);
+            }
+        }
     }
-
 };
 
 const manualUpdateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
     const log_id = req.params.log_id;
     const inventory = req.body;
-    // logger.debug('manualUpdateInventoryMultipleDays triggered')
 
     const name = 'NetStockBulkAdjustmentService';
+    const pool = getPool(req.requestId);
+    let dbClient = null;
+    let minDate = null;
+    let maxDate = null;
 
-    // Helper function to format date to YYYYMMDD
     const formatYYYYMMDD = (dateString) => {
         const date = new Date(dateString);
-        // Check if the date is valid
-        if (isNaN(date.getTime())) {
-            return null; // Return null for invalid dates
-        }
+        if (isNaN(date.getTime())) return null;
         const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-indexed
+        const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}${month}${day}`;
     };
 
-    const template = await selectXMLTemplate(req.requestId, hotel_id, name);
-    if (!template) {
-        return res.status(500).send({ error: 'XML template not found.' });
-    }
-
-    // Filter out entries older than the current date and format dates for comparison
-    const currentDateYYYYMMDD = formatYYYYMMDD(new Date());
-
-    if (!inventory) {
-        return res.status(500).send({ error: 'Inventory data not found.' });
-    }
-    let filteredInventory = inventory.filter((item) => {
-        const itemDateYYYYMMDD = item.saleDate;
-        // Only include items with valid dates on or after the current date
-        return itemDateYYYYMMDD !== null && itemDateYYYYMMDD >= currentDateYYYYMMDD;
-    });
-
-    if (filteredInventory.length === 0) {
-        return res.status(200).send({ message: 'No valid inventory entries found. All dates are in the past.' });
-    }
-
-    // Get the date range of the filtered inventory
-    const getInventoryDateRange = (inventory) => {
-        if (inventory.length === 0) return { minDate: null, maxDate: null };
-
-        const dates = inventory
-            .map((item) => {
-                const str = item.saleDate?.toString();
-                if (!/^\d{8}$/.test(str)) return null; // Ensure it's in YYYYMMDD format
-
-                const year = parseInt(str.slice(0, 4), 10);
-                const month = parseInt(str.slice(4, 6), 10) - 1; // month is 0-indexed
-                const day = parseInt(str.slice(6, 8), 10);
-
-                return new Date(year, month, day);
-            })
-            .filter(date => date instanceof Date && !isNaN(date.getTime()));
-
-        if (dates.length === 0) return { minDate: null, maxDate: null };
-
-        const minDate = new Date(Math.min(...dates));
-        const maxDate = new Date(Math.max(...dates));
-
-        return { minDate, maxDate };
-    };
-    const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
-    // If minDate or maxDate is null after filtering, it means no valid dates were found.
-    if (!minDate || !maxDate) {
-        return res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
-    }
-    // logger.debug('getInventoryDateRange', minDate, maxDate);
-
-    // --- Proceed with batch ---
-
-    const processInventoryBatch = async (batch, batch_no) => {
-        logger.warn(`Processing manual batch ${batch_no} for hotel ${hotel_id}`, {
-            hotel_id: hotel_id,
-            batch_no: batch_no,
-            batch_size: batch.length
-        });
-        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        // Increase delay to avoid rate limiting - 3 to 6 seconds between batches
-        const randomDelay = Math.floor(Math.random() * (6000 - 3000 + 1)) + 3000;
-        await delay(randomDelay);
-
-        let adjustmentTargetXml = '';
-        batch.forEach((item) => {
-            const adjustmentDate = item.saleDate;
-            const netRmTypeGroupCode = parseInt(item.netRmTypeGroupCode);
-            let remainingCount = parseInt(item.pmsRemainingCount);
-            if (remainingCount < 0) {
-                remainingCount = 0;
-            }
-            let salesStatus = parseInt(item.salesStatus);
-            if (salesStatus === 0) {
-                salesStatus = 3; // No change
-            } else if (salesStatus === 1) {
-                salesStatus = 1; // Start sales
-            } else {
-                salesStatus = 2; // Stop sales
-            }
-
-            let target = `
-                <adjustmentTarget>
-                    <adjustmentProcedureCode>1</adjustmentProcedureCode>
-                    <netRmTypeGroupCode>${netRmTypeGroupCode}</netRmTypeGroupCode>
-                    <adjustmentDate>${adjustmentDate}</adjustmentDate>
-                    <remainingCount>${remainingCount}</remainingCount>
-                    <salesStatus>${salesStatus}</salesStatus>
-                </adjustmentTarget>
-            `;
-            adjustmentTargetXml += target;
-        });
-
-        let xmlBody = template.replace(
-            `<adjustmentTarget>
-               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
-               <netRmTypeGroupCode>{{netRmTypeGroupCode}}</netRmTypeGroupCode>
-               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
-               <remainingCount>{{remainingCount}}</remainingCount>
-               <salesStatus>{{salesStatus}}</salesStatus>               
-            </adjustmentTarget>
-            <adjustmentTarget>
-               <adjustmentProcedureCode>{{adjustmentProcedureCode2}}</adjustmentProcedureCode>
-               <netRmTypeGroupCode>{{netRmTypeGroupCode2}}</netRmTypeGroupCode>
-               <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
-               <remainingCount>{{remainingCount2}}</remainingCount>
-               <salesStatus>{{salesStatus2}}</salesStatus>               
-            </adjustmentTarget>`,
-            adjustmentTargetXml
-        );
-
-        let currentRequestId = log_id + (batch_no / 100);
-        currentRequestId = currentRequestId.toString();
-        if (currentRequestId.length > 8) {
-            currentRequestId = currentRequestId.slice(-8); // keep the last 8 characters
-        }
-        xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
-
-        // logger.debug('updateInventoryMultipleDays xmlBody:', xmlBody);
-
-        return await queueOtaXmlRequest(req, res, hotel_id, name, xmlBody, currentRequestId, {
-            batch_no: batch_no
-        });
-    };
-
-    // Check if the date range exceeds 30 days for batching decision
-    const dateRangeExceeds30Days = (minDate, maxDate) => {
-        if (!minDate || !maxDate) return false;
-
-        const timeDiff = Math.abs(maxDate.getTime() - minDate.getTime());
-        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-        return daysDiff > 30;
-    };
-    const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
-
-    // Determine batch size and process inventory in batches or as a single request
     try {
+        dbClient = await pool.connect();
+
+        const template = await selectXMLTemplate(req.requestId, hotel_id, name, dbClient);
+        if (!template) {
+            return res.status(500).send({ error: 'XML template not found.' });
+        }
+
+        const currentDateYYYYMMDD = formatYYYYMMDD(new Date());
+
+        let filteredInventory = inventory.filter((item) => {
+            const itemDateYYYYMMDD = item.saleDate;
+            return itemDateYYYYMMDD !== null && itemDateYYYYMMDD >= currentDateYYYYMMDD;
+        });
+
+        if (filteredInventory.length === 0) {
+            return res.status(200).send({ message: 'No valid inventory entries found. All dates are in the past.' });
+        }
+
+        const getInventoryDateRange = (inventory) => {
+            if (inventory.length === 0) return { minDate: null, maxDate: null };
+            const dates = inventory.map((item) => {
+                const str = item.saleDate?.toString();
+                if (!/^\d{8}$/.test(str)) return null;
+                const year = parseInt(str.slice(0, 4), 10);
+                const month = parseInt(str.slice(4, 6), 10) - 1;
+                const day = parseInt(str.slice(6, 8), 10);
+                return new Date(year, month, day);
+            }).filter(date => date instanceof Date && !isNaN(date.getTime()));
+            if (dates.length === 0) return { minDate: null, maxDate: null };
+            const minDate = new Date(Math.min(...dates));
+            const maxDate = new Date(Math.max(...dates));
+            return { minDate, maxDate };
+        };
+
+        const range = getInventoryDateRange(filteredInventory);
+        minDate = range.minDate;
+        maxDate = range.maxDate;
+
+        if (!minDate || !maxDate) {
+            return res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
+        }
+
+        const processInventoryBatch = async (batch, batch_no) => {
+            logger.warn(`Processing manual batch ${batch_no} for hotel ${hotel_id}`, {
+                hotel_id: hotel_id, log_id: log_id, batch_no: batch_no, batch_size: batch.length
+            });
+            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            const randomDelay = Math.floor(Math.random() * (6000 - 3000 + 1)) + 3000;
+            await delay(randomDelay);
+
+            let adjustmentTargetXml = '';
+            batch.forEach((item) => {
+                const adjustmentDate = item.saleDate;
+                const netRmTypeGroupCode = parseInt(item.netRmTypeGroupCode);
+                let remainingCount = Math.max(0, parseInt(item.pmsRemainingCount));
+                let salesStatus = parseInt(item.salesStatus);
+                if (salesStatus === 0) {
+                    salesStatus = 3; // No change
+                } else if (salesStatus !== 1) {
+                    salesStatus = 2; // Stop sales
+                }
+
+                adjustmentTargetXml += `
+                    <adjustmentTarget>
+                        <adjustmentProcedureCode>1</adjustmentProcedureCode>
+                        <netRmTypeGroupCode>${netRmTypeGroupCode}</netRmTypeGroupCode>
+                        <adjustmentDate>${adjustmentDate}</adjustmentDate>
+                        <remainingCount>${remainingCount}</remainingCount>
+                        <salesStatus>${salesStatus}</salesStatus>
+                    </adjustmentTarget>
+                `;
+            });
+
+            let xmlBody = template.replace(
+                /<adjustmentTarget>[\s\S]*?<\/adjustmentTarget>[\s\S]*?<adjustmentTarget>[\s\S]*?<\/adjustmentTarget>/,
+                adjustmentTargetXml
+            );
+
+            const currentRequestId = generateRequestId(`${log_id}-${batch_no}`);
+            xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
+
+            return await queueOtaXmlRequest(req, res, hotel_id, name, xmlBody, currentRequestId, { batch_no: batch_no }, dbClient);
+        };
+
+        const exceeds30Days = Math.ceil(Math.abs(maxDate.getTime() - minDate.getTime()) / (1000 * 3600 * 24)) > 30;
+
         if (filteredInventory.length > 1000 || exceeds30Days) {
             const batchSize = 30;
             let requestNumber = 0;
@@ -1548,21 +1462,16 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
                 const batch = filteredInventory.slice(i, i + batchSize);
                 await processInventoryBatch(batch, requestNumber);
                 requestNumber++;
-
-                // Add delay between batch submissions to avoid rate limiting
-                if (i + batchSize < filteredInventory.length) {
-                    await delay(2000); // 2 second delay between batch submissions
-                }
+                if (i + batchSize < filteredInventory.length) await delay(2000);
             }
         } else {
-            // Process all filtered inventory as a single batch
             await processInventoryBatch(filteredInventory, 0);
         }
         res.status(200).send({ success: true, message: 'Inventory update processed.' });
     } catch (error) {
         const dateRange = {
-            from: minDate ? minDate.toISOString().split('T')[0] : 'N/A',
-            to: maxDate ? maxDate.toISOString().split('T')[0] : 'N/A',
+            from: minDate ? (minDate instanceof Date ? minDate.toISOString().split('T')[0] : minDate) : 'N/A',
+            to: maxDate ? (maxDate instanceof Date ? maxDate.toISOString().split('T')[0] : maxDate) : 'N/A',
         };
         logger.error('Error in manualUpdateInventoryMultipleDays', {
             hotel_id: hotel_id,
@@ -1573,18 +1482,26 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
         if (!res.headersSent) {
             res.status(500).send({ success: false, message: error.message });
         }
+    } finally {
+        if (dbClient) {
+            try {
+                dbClient.release();
+            } catch (releaseErr) {
+                logger.error(`[${req.requestId}] Error releasing connection in manualUpdateInventoryMultipleDays:`, releaseErr);
+            }
+        }
     }
-
 };
 
-const setDatesNotForSale = async (req, res, hotel_id, inventory) => {
+const setDatesNotForSale = async (req, res, hotel_id, inventory, dbClient = null) => {
     const name = 'NetStockBulkAdjustmentService';
     const requestId = req.requestId || `failed-res-${Date.now()}`;
 
     logger.info('[setDatesNotForSale] Attempting to set dates as not for sale', {
         requestId,
         hotel_id,
-        inventoryCount: inventory.length
+        inventoryCount: inventory.length,
+        reusingConnection: !!dbClient
     });
 
     if (!inventory || inventory.length === 0) {
@@ -1618,7 +1535,7 @@ const setDatesNotForSale = async (req, res, hotel_id, inventory) => {
     }
 
     try {
-        const template = await selectXMLTemplate(requestId, hotel_id, name);
+        const template = await selectXMLTemplate(requestId, hotel_id, name, dbClient);
         if (!template) {
             throw new Error(`XML template not found for ${name}.`);
         }
@@ -1656,14 +1573,11 @@ const setDatesNotForSale = async (req, res, hotel_id, inventory) => {
 
         // Replace request ID placeholder if it exists in the template
         if (xmlBody.includes('{{requestId}}')) {
-            let reqId = (requestId).toString();
-            if (reqId.length > 8) {
-                reqId = reqId.slice(-8);
-            }
+            const reqId = generateRequestId();
             xmlBody = xmlBody.replace('{{requestId}}', reqId);
         }
 
-        await submitXMLTemplate({ requestId }, null, hotel_id, name, xmlBody);
+        await submitXMLTemplate({ requestId }, null, hotel_id, name, xmlBody, dbClient);
 
         logger.info('[setDatesNotForSale] Successfully sent request to set dates as not for sale.', {
             requestId,

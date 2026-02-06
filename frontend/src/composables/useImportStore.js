@@ -198,10 +198,14 @@ export function useImportStore() {
         }
     };
 
-    const getFinancesData = async (hotelId, startMonth, endMonth) => {
+    const getFinancesData = async (hotelId, startMonth, endMonth, departmentName = null) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/import/finance/data?hotelId=${hotelId}&startMonth=${startMonth}&endMonth=${endMonth}`, {
+            let url = `/api/import/finance/data?startMonth=${startMonth}&endMonth=${endMonth}`;
+            if (hotelId) url += `&hotelId=${hotelId}`;
+            if (departmentName) url += `&departmentName=${encodeURIComponent(departmentName)}`;
+
+            const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
@@ -234,7 +238,7 @@ export function useImportStore() {
         }
     };
 
-    const syncFinanceData = async (endpoint, hotelId, month, errorLabel) => {
+    const syncFinanceData = async (endpoint, hotelId, month, errorLabel, departmentName = null) => {
         const authToken = localStorage.getItem('authToken');
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -242,15 +246,15 @@ export function useImportStore() {
                 'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ hotelId, month }),
+            body: JSON.stringify({ hotelId, month, departmentName }),
         });
         if (!response.ok) throw new Error(`Failed to sync ${errorLabel} data`);
         return await response.json();
     };
 
-    const syncYayoi = async (hotelId, month) => {
+    const syncYayoi = async (hotelId, month, departmentName = null) => {
         try {
-            return await syncFinanceData('/api/import/finance/sync-yayoi', hotelId, month, 'Yayoi');
+            return await syncFinanceData('/api/import/finance/sync-yayoi', hotelId, month, 'Yayoi', departmentName);
         } catch (error) {
             console.error('Error syncing Yayoi data:', error);
             throw error;

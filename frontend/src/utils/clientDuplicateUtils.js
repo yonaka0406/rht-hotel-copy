@@ -41,7 +41,7 @@ export const normalizeClientName = (name) => {
 export const findDuplicates = (allClients) => {
     if (!allClients || allClients.length === 0) return [];
 
-    // Bolt: De-duplicate input clients by ID to prevent duplicate key warnings in UI
+    // De-duplicate input clients by ID to prevent duplicate key warnings in UI
     const uniqueClientsMap = new Map();
     allClients.forEach(c => {
         if (c && c.id) uniqueClientsMap.set(c.id, c);
@@ -115,7 +115,7 @@ export const findDuplicates = (allClients) => {
     });
 
     // 2. Similarity (Prefix) matching between leaders
-    // Bolt Optimization: Sort and search forward for prefix matches - O(N log N)
+    // Sort and search forward for prefix matches - O(N log N)
     const sortedLeaders = leaders.map(l => ({
         client: l,
         searchName: normalizeClientName(l.name_kanji || l.name_kana || l.name)
@@ -152,7 +152,7 @@ export const findDuplicates = (allClients) => {
                     }
                 });
             } else {
-                // Bolt: Ensure unique candidates within the pair
+                // Ensure unique candidates within the pair
                 const uniqueCandidatesMap = new Map();
                 candidates.forEach(c => uniqueCandidatesMap.set(c.id, c));
                 finalPairs.push({
@@ -173,7 +173,7 @@ export const findDuplicates = (allClients) => {
 export const findCandidatesForClient = (targetClient, allClients) => {
     if (!targetClient || !allClients) return [];
 
-    // Bolt: De-duplicate input clients by ID
+    // De-duplicate input clients by ID
     const uniqueClientsMap = new Map();
     allClients.forEach(c => {
         if (c && c.id) uniqueClientsMap.set(c.id, c);

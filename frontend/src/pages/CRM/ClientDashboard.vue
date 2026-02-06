@@ -56,43 +56,36 @@
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
-    const { clients } = useClientStore();
+    const { clientStats, fetchClientStats } = useClientStore();
 
     // Counts    
     const clientsCount = computed(() => {
-        const total = clients.value.length;
-        const natural = clients.value.filter(client => client.legal_or_natural_person === "natural").length;
-        const legal = clients.value.filter(client => client.legal_or_natural_person === "legal").length;
+        const total = clientStats.value.total;
+        const natural = clientStats.value.natural;
+        const legal = clientStats.value.legal;
 
         return { 
             total, 
             natural, 
             legal,
-            naturalPercentage: ((natural / total) * 100).toFixed(1),
-            legalPercentage: ((legal / total) * 100).toFixed(1),
+            naturalPercentage: total > 0 ? ((natural / total) * 100).toFixed(1) : 0,
+            legalPercentage: total > 0 ? ((legal / total) * 100).toFixed(1) : 0,
         };
     });
 
     const loyaltyClientsCount = computed(() => {
-        return clients.value.filter(client => client.loyalty_tier && client.loyalty_tier !== 'N/A').length;
+        return clientStats.value.loyalty_total;
     });
 
     const loyaltyTierDistribution = computed(() => {
-        const distribution = clients.value.reduce((acc, client) => {
-            if (client.loyalty_tier && client.loyalty_tier !== 'N/A') {
-                const tier = client.loyalty_tier;
-                if (!acc[tier]) {
-                    acc[tier] = {
-                        name: getTierDisplayName(tier),
-                        value: 0,
-                        severity: getTierSeverity(tier),
-                    };
-                }
-                acc[tier].value++;
-            }
-            return acc;
-        }, {});
-        return Object.values(distribution);
+        const distribution = Object.entries(clientStats.value.tier_distribution).map(([tier, count]) => {
+            return {
+                name: getTierDisplayName(tier),
+                value: count,
+                severity: getTierSeverity(tier),
+            };
+        });
+        return distribution;
     });
   
     // eCharts
@@ -142,7 +135,7 @@
     const loyaltyTierChartRef = ref(null);
 
     const initHalfPie = () => {
-        if (!halfPie.value || clients.value.length === 0) {
+        if (!halfPie.value || clientStats.value.total === 0) {
             return;
         }
         let currentChartInstance = echarts.getInstanceByDom(halfPie.value);
@@ -276,6 +269,7 @@
     };
 
     onMounted(async () => {
+        await fetchClientStats();
         await nextTick(); // Wait for DOM updates
         initHalfPie(); 
         initLoyaltyTierChart();
@@ -288,10 +282,9 @@
             await nextTick(); // Wait for DOM updates
             initHalfPie();
         }
-        // If total is 0, initHalfPie will be guarded by clients.value.length === 0 anyway
     }, { deep: true });
 
-    watch(clients, async () => {
+    watch(clientStats, async () => {
         await nextTick();
         initLoyaltyTierChart();
     }, { deep: true });

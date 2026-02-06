@@ -84,7 +84,7 @@ app.use(cors((req, callback) => {
 app.use(db.setupRequestContext); // This middleware determines the environment and populates req.requestId
 
 // console.log('STAMP_COMPONENTS_DIR', process.env.STAMP_COMPONENTS_DIR)
-const stampDirEnvPath = process.env.STAMP_COMPONENTS_DIR;
+const stampDirEnvPath = process.env.STAMP_COMPONENTS_DIR || 'stamp_components';
 const projectRoot = path.resolve(__dirname, '..');
 const absoluteStampPath = path.resolve(projectRoot, stampDirEnvPath);
 

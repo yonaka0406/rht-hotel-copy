@@ -212,7 +212,7 @@ import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStor
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
 import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+const { clients } = useClientStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchMyHoldReservations } = useReservationStore();
 import { useCRMStore } from '@/composables/useCRMStore';
@@ -273,7 +273,7 @@ import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil,
 
 // HTML pattern attributes
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phonePattern = /^[\d\s()+\-]*$/;
+const phonePattern = /^[\d\s()+-]*$/;
 
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);
@@ -881,17 +881,6 @@ onMounted(async () => {
         left: scrollPosition,
         behavior: "smooth",
       });
-    }
-  });
-  nextTick(() => {
-    if (clients.value.length === 0) {
-      setClientsIsLoading(true);
-      const clientsTotalPages = fetchClients(1);
-      // Fetch clients for all pages
-      for (let page = 2; page <= clientsTotalPages; page++) {
-        fetchClients(page);
-      }
-      setClientsIsLoading(false);
     }
   });
 });

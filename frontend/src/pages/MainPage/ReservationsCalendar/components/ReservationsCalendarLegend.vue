@@ -1,5 +1,5 @@
 <template>
-  <Fieldset legend="アイコン凡例" class="mt-2 text-xs dark:text-gray-100">
+  <Fieldset v-once legend="アイコン凡例" class="mt-2 text-xs dark:text-gray-100">
     <div class="flex flex-wrap items-center gap-4">
       <span v-for="item in legendItems" :key="item.label" class="flex items-center gap-1">
         <i :class="['pi', item.icon, item.bgClass, 'p-1', 'rounded']" aria-hidden="true"></i>{{ item.label }}

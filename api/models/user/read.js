@@ -3,7 +3,24 @@ const { getPool } = require('../../config/database');
 // Return all users
 const selectAllUsers = async (requestId, dbClient = null) => {
     const client = dbClient || getPool(requestId);
-    const query = 'SELECT users.*, user_roles.role_name, user_roles.permissions FROM users, user_roles WHERE users.role_id = user_roles.id ORDER BY status_id, role_id, email, id ASC';
+    // Explicitly select columns to avoid leaking sensitive data like password_hash or OAuth tokens
+    const query = `
+        SELECT
+            users.id,
+            users.email,
+            users.name,
+            users.status_id,
+            users.role_id,
+            users.auth_provider,
+            users.created_at,
+            user_roles.role_name,
+            user_roles.permissions
+        FROM
+            users
+        INNER JOIN
+            user_roles ON users.role_id = user_roles.id
+        ORDER BY
+            status_id, role_id, email, id ASC`;
 
     try {
         const result = await client.query(query);

@@ -166,32 +166,60 @@
                 </template>
             </DataTable>            
         </div>
-        <div class="flex justify-end mt-4">
-            <Button
-                severity="info"                
-                @click="$emit('openBulkDrawer')"
-            >
-            <OverlayBadge 
-                :value="selectedReservations ? selectedReservations.length : 0" 
-                size="large" 
-                :position="'top-right'" 
-                severity="danger"
-                class="mt-1"
-            >
-                <i class="pi pi-shopping-cart" style="font-size: 2rem" />
-            </OverlayBadge>
-            </Button>
-        </div>
-
         <ReservationEditDrawer
             v-model:visible="drawerVisible"
             :reservationId="selectedReservation?.id"
         />
-    </Panel> 
+    </Panel>
+
+    <!-- Floating Bulk Action Bar -->
+    <Transition name="layout-sidebar">
+        <div v-if="selectedReservations && selectedReservations.length > 0"
+             class="fixed bottom-12 z-50 transition-all duration-500 ease-in-out cursor-pointer"
+             :style="isBarExpanded ? { left: '50%', transform: 'translateX(-50%)' } : { left: 'calc(100% - 6rem)', transform: 'translateX(0)' }"
+             @mouseenter="handleMouseEnter"
+             @mouseleave="handleMouseLeave"
+             @click="!isBarExpanded ? isBarExpanded = true : null"
+        >
+            <div class="bg-surface-0 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-full shadow-xl flex items-center backdrop-blur-md bg-opacity-90 transition-all duration-500"
+                 :class="isBarExpanded ? 'px-6 py-3 gap-6 max-w-xl' : 'px-3 py-3 gap-0 max-w-[4rem]'">
+
+                <div class="flex items-center gap-3 shrink-0">
+                    <OverlayBadge
+                        :value="selectedReservations.length"
+                        severity="danger"
+                        size="small"
+                    >
+                        <div class="bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full w-10 h-10 flex items-center justify-center">
+                            <i class="pi pi-shopping-cart text-xl"></i>
+                        </div>
+                    </OverlayBadge>
+                    <div class="flex flex-col transition-all duration-500 whitespace-nowrap"
+                         :class="isBarExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">
+                        <span class="text-sm font-bold leading-none">{{ selectedReservations.length }}件の予約を選択中</span>
+                        <span class="text-xs text-surface-500 mt-1 italic">まとめ請求書を作成できます</span>
+                    </div>
+                </div>
+
+                <div class="h-8 w-px bg-surface-200 dark:bg-surface-700 transition-all duration-500"
+                     :class="isBarExpanded ? 'opacity-100 mx-2' : 'opacity-0 w-0 mx-0 overflow-hidden'"></div>
+
+                <Button
+                    label="まとめ請求書を作成"
+                    icon="pi pi-paperclip"
+                    @click.stop="$emit('openBulkDrawer')"
+                    severity="help"
+                    rounded
+                    class="font-bold shadow-sm px-6 whitespace-nowrap transition-all duration-500"
+                    :class="isBarExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 p-0 border-0 overflow-hidden'"
+                />
+            </div>
+        </div>
+    </Transition>
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue';
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue';
 import ReservationEditDrawer from './drawers/ReservationEditDrawer.vue';
 
 // Primevue
@@ -203,8 +231,6 @@ import { useBillingStore } from '@/composables/useBillingStore';
 const { billableList, fetchBillableListView } = useBillingStore();
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
-import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 
 import { translateReservationPaymentTiming, reservationPaymentTimingOptions } from '@/utils/reservationUtils';
 
@@ -338,22 +364,45 @@ const openDrawer = (event) => {
     drawerVisible.value = true;
 };
 
+// Floating Bar Logic
+const isBarExpanded = ref(false);
+let collapseTimeout = null;
+
+const startCollapseTimer = () => {
+    clearTimeout(collapseTimeout);
+    collapseTimeout = setTimeout(() => {
+        isBarExpanded.value = false;
+    }, 4000);
+};
+
+const handleMouseEnter = () => {
+    clearTimeout(collapseTimeout);
+    isBarExpanded.value = true;
+};
+
+const handleMouseLeave = () => {
+    startCollapseTimer();
+};
+
+watch(() => props.selectedReservations.length, (newLength) => {
+    if (newLength > 0) {
+        isBarExpanded.value = true;
+        startCollapseTimer();
+    } else {
+        isBarExpanded.value = false;
+    }
+});
+
+onBeforeUnmount(() => {
+    clearTimeout(collapseTimeout);
+});
+
 // Expose reload function to parent if needed, or just rely on watch
 defineExpose({ loadTableData, applyDateFilters });
 
 onMounted(async () => {
     await fetchHotels();
     await fetchHotel();
-
-    if(clients.value.length === 0) {
-        setClientsIsLoading(true);
-        const clientsTotalPages = await fetchClients(1);
-        // Fetch clients for all pages
-        for (let page = 2; page <= clientsTotalPages; page++) {
-            await fetchClients(page);
-        }
-        setClientsIsLoading(false);            
-    }    
 });
 
 watch(() => [selectedHotelId.value], // Watch multiple values
@@ -365,3 +414,22 @@ watch(() => [selectedHotelId.value], // Watch multiple values
     { immediate: true }
 ); 
 </script>
+
+<style scoped>
+.layout-sidebar-enter-active,
+.layout-sidebar-leave-active {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.layout-sidebar-enter-from,
+.layout-sidebar-leave-to {
+    transform: translate(-50%, 2rem);
+    opacity: 0;
+}
+
+.layout-sidebar-enter-to,
+.layout-sidebar-leave-from {
+    transform: translate(-50%, 0);
+    opacity: 1;
+}
+</style>

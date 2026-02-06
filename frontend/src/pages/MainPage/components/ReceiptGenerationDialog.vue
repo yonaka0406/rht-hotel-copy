@@ -236,9 +236,11 @@ const formatCurrency = (value) => {
 
 const calculatePayableTax = (taxableAmount, percentage) => {
   if (taxableAmount == null || isNaN(Number(taxableAmount)) || percentage == null || isNaN(Number(percentage))) return 0;
-  // Formula: tax = amount - (amount / (1 + rate))
-  // Example: For ¥10,000 at 8%: tax = 10000 - (10000 / 1.08) = 740.74 ≈ 740
-  const taxValue = Math.floor(taxableAmount - (taxableAmount / (1 + parseFloat(percentage))));
+  let rate = parseFloat(percentage);
+  if (rate > 1) rate = rate / 100.0;
+  // Formula: tax = floor(amount * rate / (1 + rate))
+  // This matches the user requirement to calculate tax first and truncate.
+  const taxValue = Math.floor(taxableAmount * rate / (1 + rate));
   return taxValue;
 };
 
@@ -331,9 +333,8 @@ const generateReceipt = () => {
       if (tt.visible && allocatedAmounts.value[tt.id] != null) {
         const taxableAmount = allocatedAmounts.value[tt.id];
         // Calculate tax from tax-inclusive amount
-        // Formula: tax = amount - (amount / (1 + rate))
-        // Example: For ¥10,000 at 8%: tax = 10000 - (10000 / 1.08) = 740.74 ≈ 740
-        const taxValue = Math.floor(taxableAmount - (taxableAmount / (1 + parseFloat(tt.percentage))));
+        // Formula: tax = floor(amount * rate / (1 + rate))
+        const taxValue = calculatePayableTax(taxableAmount, tt.percentage);
         breakdown.push({
           id: tt.id,
           name: tt.name,

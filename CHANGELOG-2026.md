@@ -7,9 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.13] - 2026-02-06
+
+- New Feature: Added public start/stop controls for the OTA XML poller and an exposed poll interval setting.
+- Bug Fix: Improved database connection resilience with retry and recovery on DB failures.
+- Bug Fix: Standardized 8-character request IDs for more reliable tracking.
+- Bug Fix: Enhanced poller logging and error handling.
+- Refactor: Switched to sequential, DB-driven queue processing and enabled optional injected DB client support for more consistent resource handling.
+- New Feature: Converted the "Subject" (件名) field in the New Action dialog to a dropdown menu for standardized data entry. 
+- Improvement: Expanded the "Action Type" dropdown options to include "Construction Site" (工事現場), "Office Visit" (来社), and "WH".
+
+---
+
+## [1.4.12] - 2026-02-04
+
+- Bug Fix: Standardized tax calculation methodology across the application for consistent, accurate tax-exclusive pricing in invoices and receipts.
+- New Feature: Added account-type (debit/credit) classification with UI controls and auto-infer from group defaults; new type column and badges in settings.
+- Improvement: Budget/actual calculations now aggregate all matching items; reporting and summaries carry account-type for accurate P&L and monthly views.
+- Improvement: Query/view performance improved via an optimized unpivot approach and additional forecast indexes.
+
+---
+
+## [1.4.11] - 2026-02-03
+
+- New Feature: Added Budget vs Actual comparison dashboard with department-level financial analysis capabilities.
+- New Feature: Introduced occupancy and operating profit comparison reports.
+- New Feature: Enhanced finance data import and synchronization to support department-specific targeting alongside hotel-level tracking.
+- New Feature: Extended forecasting system to track financial data at department level for improved budget tracking.
+- New Feature: Floating bulk action bar appears when items are selected, showing count and quick access to bulk invoice creation with expand/collapse interactions.
+
+---
+
 ## [1.4.10] - 2026-02-02
 
 - Bug Fix: Fixed invoice PDF generation issue where the company stamp image failed to load in Playwright due to Helmet's Content Security Policy restrictions. The stamp image is now embedded as a base64 data URI, eliminating the need for HTTP requests and ensuring compatibility with CSP headers.
+- New Feature: Implemented move-payment flow with confirmation dialog and supporting backend endpoints for client statistics, next customer ID, candidates, and duplicates.
+- Performance: Optimized client management with server-driven search, paginated lazy loading, backend duplicate detection, dashboard aggregation, bulk database batching, and memoized row rendering.
+- New Feature: Added a "Merge" tab to the client edit page for streamlined CRM record consolidation.
+- New Feature: Static calendar with unified contiguous reservation days into single blocks while preserving per-day coloring and sticky headers.
 
 ---
 

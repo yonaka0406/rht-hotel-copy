@@ -2,6 +2,7 @@
     <div class="p-4">
         <ConfirmDialog group="delete"></ConfirmDialog>
         <ConfirmDialog group="payment"></ConfirmDialog>
+        <ConfirmDialog group="move"></ConfirmDialog>
         <Card>
             <template #title>
                 <span>
@@ -80,7 +81,8 @@
                                 </Select>
                                 <AutoComplete v-else v-model="client" :suggestions="filteredClients"
                                     optionLabel="display_name" field="id" @complete="filterClients"
-                                    @option-select="onClientSelect" @change="onClientChange" @clear="resetClient" fluid>
+                                    @option-select="onClientSelect" @change="onClientChange" @clear="resetClient" fluid
+                                    :delay="400">
                                     <template #option="slotProps">
                                         <div>
                                             <p>
@@ -151,12 +153,61 @@
                     <span class="text-xs">{{ data.comment }}</span>
                 </template>
             </Column>
-            <Column header="削除" style="width: 100px; text-align: center;">
+            <Column header="操作" style="width: 120px; text-align: center;">
                 <template #body="{ data }">
-                    <Button icon="pi pi-trash" class="p-button-danger p-button-text" @click="deletePayment(data)" />
+                    <div class="flex justify-center gap-2">
+                        <Button icon="pi pi-external-link" class="p-button-text p-button-secondary" v-tooltip.top="'移動'"
+                            @click="openMoveDialog(data)" />
+                        <Button icon="pi pi-trash" class="p-button-danger p-button-text" @click="deletePayment(data)" />
+                    </div>
                 </template>
             </Column>
         </DataTable>
+
+        <Dialog v-model:visible="showMoveDialog" header="清算の移動" modal :style="{ width: '70vw' }">
+            <div v-if="isLoadingCandidates" class="flex justify-center p-4">
+                <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+            </div>
+            <div v-else>
+                <p class="mb-4">移動先の予約を選択してください（同じクライアントの前後1ヶ月以内の予約のみ表示されます）</p>
+                <DataTable :value="candidateReservations" scrollable scrollHeight="400px">
+                    <Column field="id" header="予約ID">
+                        <template #body="{ data }">
+                            <router-link :to="{ name: 'ReservationEdit', params: { reservation_id: data.id } }"
+                                target="_blank" rel="noopener noreferrer"
+                                class="text-sky-600 hover:underline text-xs flex items-center gap-1">
+                                <i class="pi pi-external-link"></i>
+                                {{ data.id.substring(0, 8) }}...
+                            </router-link>
+                        </template>
+                    </Column>
+                    <Column header="期間">
+                        <template #body="{ data }">
+                            <span>{{ formatDate(new Date(data.details_min_date)) }} 〜 {{ formatDate(new
+                                Date(data.details_max_date)) }}</span>
+                        </template>
+                    </Column>
+                    <Column field="room_numbers" header="部屋"></Column>
+                    <Column field="status" header="ステータス">
+                        <template #body="{ data }">
+                            <Badge :value="translateReservationStatus(data.status)"
+                                :severity="getStatusSeverity(data.status)" />
+                        </template>
+                    </Column>
+                    <Column header="操作">
+                        <template #body="{ data }">
+                            <Button label="移動" icon="pi pi-arrow-right" class="p-button-sm"
+                                @click="confirmMove(data.id)" />
+                        </template>
+                    </Column>
+                    <template #empty>
+                        <div class="p-4 text-center text-gray-500">
+                            移動可能な予約が見つかりません。
+                        </div>
+                    </template>
+                </DataTable>
+            </div>
+        </Dialog>
     </div>
 </template>
 
@@ -180,17 +231,18 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import { useConfirm } from "primevue/useconfirm";
 const confirm = useConfirm();
-import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button, ConfirmDialog, DataTable, Column } from 'primevue';
+import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button, ConfirmDialog, DataTable, Column, Dialog, Badge } from 'primevue';
 
 // Stores
 import { useSettingsStore } from '@/composables/useSettingsStore';
 const { paymentTypes, fetchPaymentTypes } = useSettingsStore();
 import { useReservationStore } from '@/composables/useReservationStore';
-const { reservationIsUpdating, fetchReservationClientIds, addReservationPayment, deleteReservationPayment } = useReservationStore();
+const { reservationIsUpdating, fetchReservationClientIds, addReservationPayment, deleteReservationPayment, moveReservationPayment, getReservationsByClient } = useReservationStore();
+import { translateReservationStatus } from '@/utils/reservationUtils';
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
 import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+const { setClientsIsLoading, searchClients } = useClientStore();
 
 // Helper
 function formatDate(date) {
@@ -198,32 +250,6 @@ function formatDate(date) {
     const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-};
-const normalizeKana = (str) => {
-    if (!str) return '';
-    let normalizedStr = str.normalize('NFKC');
-
-    // Convert Hiragana to Katakana
-    normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
-    );
-    // Convert half-width Katakana to full-width Katakana
-    normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
-    );
-
-    return normalizedStr;
-};
-const normalizePhone = (phone) => {
-    if (!phone) return '';
-
-    // Remove all non-numeric characters
-    let normalized = phone.replace(/\D/g, '');
-
-    // Remove leading zeros
-    normalized = normalized.replace(/^0+/, '');
-
-    return normalized;
 };
 
 // Computed
@@ -400,6 +426,95 @@ const deletePayment = (payment) => {
     });
 };
 
+const showMoveDialog = ref(false);
+const paymentToMove = ref(null);
+const candidateReservations = ref([]);
+const isLoadingCandidates = ref(false);
+
+const openMoveDialog = async (payment) => {
+    paymentToMove.value = payment;
+    showMoveDialog.value = true;
+    isLoadingCandidates.value = true;
+    try {
+        const hotelId = props.reservation_details[0].hotel_id;
+        const clientId = props.reservation_details[0].client_id;
+        const allReservations = await getReservationsByClient(hotelId, clientId);
+
+        // Ensure allReservations is an array
+        let reservationsArray = [];
+        if (Array.isArray(allReservations)) {
+            reservationsArray = allReservations;
+        } else {
+            console.error(`[openMoveDialog] Unexpected response type for reservations. Expected array but got ${typeof allReservations}. Value:`, allReservations, `Context: Payment ID=${payment.id}, Date=${payment.date}`);
+        }
+
+        // Filter by +- 1 month and exclude current reservation
+        const paymentDate = new Date(payment.date);
+        const oneMonthInMs = 30 * 24 * 60 * 60 * 1000;
+
+        candidateReservations.value = reservationsArray.filter(res => {
+            if (res.id === payment.reservation_id) return false;
+
+            // Use details_min_date and details_max_date from eff join
+            const checkIn = new Date(res.details_min_date);
+            const checkOut = new Date(res.details_max_date);
+
+            // Requirement: same client (checked in getReservationsByClient) and within +- 1 month of target reservation in or out date
+            return (paymentDate >= new Date(checkIn.getTime() - oneMonthInMs)) &&
+                   (paymentDate <= new Date(checkOut.getTime() + oneMonthInMs));
+        });
+    } catch (error) {
+        console.error('Failed to fetch candidate reservations:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '移動先予約の取得に失敗しました。', life: 3000 });
+    } finally {
+        isLoadingCandidates.value = false;
+    }
+};
+
+const handleMovePayment = async (targetReservationId) => {
+    try {
+        await moveReservationPayment(paymentToMove.value.id, targetReservationId);
+        toast.add({ severity: 'success', summary: '成功', detail: '清算を移動しました。', life: 3000 });
+        showMoveDialog.value = false;
+    } catch (error) {
+        console.error('Error moving payment:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: error.message, life: 3000 });
+    }
+};
+
+const confirmMove = (targetReservationId) => {
+    confirm.require({
+        group: 'move',
+        header: '確認',
+        message: '本当にこの清算を別の予約に移動しますか？',
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'キャンセル',
+            severity: 'secondary',
+            outlined: true
+        },
+        acceptProps: {
+            label: '移動',
+            severity: 'primary'
+        },
+        accept: () => {
+            handleMovePayment(targetReservationId);
+        }
+    });
+};
+
+const getStatusSeverity = (status) => {
+    switch (status) {
+        case 'confirmed': return 'success';
+        case 'checked_in': return 'info';
+        case 'checked_out': return 'secondary';
+        case 'cancelled': return 'danger';
+        case 'hold': return 'warn';
+        case 'provisory': return 'contrast';
+        default: return null;
+    }
+};
+
 // Client select
 const isAutocomplete = ref(false);
 const toggleMode = () => {
@@ -414,33 +529,23 @@ const updateReservationClients = async () => {
 const isClientSelected = ref(false);
 const client = ref({});
 const filteredClients = ref([]);
-const filterClients = (event) => {
-    const query = event.query.toLowerCase();
-    const normalizedQuery = normalizePhone(query);
-    const isNumericQuery = /^\d+$/.test(normalizedQuery);
-
-    if (!query || !clients.value || !Array.isArray(clients.value)) {
+const filterClients = async (event) => {
+    const query = event.query;
+    if (!query) {
         filteredClients.value = [];
         return;
     }
 
-    filteredClients.value = clients.value.filter((client) => {
-        // Name filtering (case-insensitive)
-        const matchesName =
-            (client.name && client.name.toLowerCase().includes(query)) ||
-            (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
-            (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
-        // Phone/Fax filtering (only for numeric queries)
-        const matchesPhoneFax = isNumericQuery &&
-            ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) ||
-                (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
-        // Email filtering (case-insensitive)
-        const matchesEmail = client.email && client.email.toLowerCase().includes(query);
-
-        // console.log('Client:', client, 'Query:', query, 'matchesName:', matchesName, 'matchesPhoneFax:', matchesPhoneFax, 'isNumericQuery', isNumericQuery, 'matchesEmail:', matchesEmail);
-
-        return matchesName || matchesPhoneFax || matchesEmail;
-    });
+    try {
+        // Fetch matching clients from backend with a reasonable limit
+        setClientsIsLoading(true);
+        filteredClients.value = await searchClients(query);
+    } catch (error) {
+        console.error('Failed to search clients:', error);
+        filteredClients.value = [];
+    } finally {
+        setClientsIsLoading(false);
+    }
 };
 const onClientSelect = (event) => {
     if (event.value) {
@@ -478,15 +583,7 @@ onMounted(async () => {
     await fetchPaymentTypes();
     await updateReservationClients();
 
-    if (clients.value.length === 0) {
-        setClientsIsLoading(true);
-        const clientsTotalPages = await fetchClients(1);
-        // Fetch clients for all pages
-        for (let page = 2; page <= clientsTotalPages; page++) {
-            await fetchClients(page);
-        }
-        setClientsIsLoading(false);
-    }
+    // REMOVED: pre-loading of all clients which caused performance issues
 
     // Initialize newPayment        
     const uniqueRoomIds = [...new Set(props.reservation_details.map(room => room.room_id))];

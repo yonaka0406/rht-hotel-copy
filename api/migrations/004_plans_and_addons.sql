@@ -147,7 +147,7 @@ CREATE TABLE plans_rates (
     net_price NUMERIC(12,0) GENERATED ALWAYS AS (
          CASE
             WHEN adjustment_type IN ('base_rate', 'flat_fee')
-            THEN FLOOR(adjustment_value / (1 + tax_rate))
+            THEN adjustment_value - FLOOR(adjustment_value * (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE COALESCE(tax_rate, 0) END) / (1 + (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE COALESCE(tax_rate, 0) END)))
             ELSE NULL
          END
     ) STORED,
@@ -174,7 +174,7 @@ CREATE TABLE addons_global (
     price DECIMAL NOT NULL,
     tax_type_id INT REFERENCES tax_info(id),
     tax_rate DECIMAL(12,4),
-    net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,
+    net_price NUMERIC(12,0) GENERATED ALWAYS AS (price - FLOOR(price * (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE COALESCE(tax_rate, 0) END) / (1 + (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE COALESCE(tax_rate, 0) END)))) STORED,
     visible BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
@@ -199,7 +199,7 @@ CREATE TABLE addons_hotel (
     price DECIMAL NOT NULL, -- Price of the add-on service
     tax_type_id INT REFERENCES tax_info(id),
     tax_rate DECIMAL(12,4),
-    net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,
+    net_price NUMERIC(12,0) GENERATED ALWAYS AS (price - FLOOR(price * (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE COALESCE(tax_rate, 0) END) / (1 + (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE COALESCE(tax_rate, 0) END)))) STORED,
     visible BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
@@ -219,7 +219,7 @@ CREATE TABLE plan_addons (
     price DECIMAL(10, 2) NOT NULL,
     tax_type_id INT REFERENCES tax_info(id),
     tax_rate DECIMAL(12,4),
-    net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,
+    net_price NUMERIC(12,0) GENERATED ALWAYS AS (price - FLOOR(price * (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE COALESCE(tax_rate, 0) END) / (1 + (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE COALESCE(tax_rate, 0) END)))) STORED,
     sales_category TEXT CHECK (sales_category IN ('accommodation', 'other')) DEFAULT 'accommodation',
     date_start DATE NOT NULL,
     date_end DATE DEFAULT NULL,
@@ -255,4 +255,3 @@ ALTER TABLE addons_hotel DROP CONSTRAINT addons_hotel_addon_type_check;
 ALTER TABLE addons_hotel
 ADD CONSTRAINT addons_hotel_addon_type_check
 CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other', 'parking'));
-

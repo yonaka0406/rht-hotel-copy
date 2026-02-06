@@ -231,9 +231,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS get_available_plans_for_hotel(INT); 
-DROP FUNCTION IF EXISTS get_available_plans_for_hotel(INTEGER, DATE);
-
 CREATE OR REPLACE FUNCTION get_available_plans_for_hotel(
     p_hotel_id INTEGER,
     p_target_date DATE DEFAULT CURRENT_DATE,
@@ -312,55 +309,6 @@ BEGIN
         )
     
     ORDER BY display_order ASC, plan_type ASC, name ASC;
-END;
-$$ LANGUAGE plpgsql STABLE;
-
--- Create overloaded functions for backward compatibility
-CREATE OR REPLACE FUNCTION get_available_plans_for_hotel(p_hotel_id INT)
-RETURNS TABLE(
-    plans_global_id INT,
-    plans_hotel_id INT,
-    plan_key TEXT,
-    name TEXT,
-    description TEXT,
-    plan_type TEXT,
-    color VARCHAR(7),
-    plan_type_category_id INT,
-    plan_package_category_id INT,
-    display_order INT,
-    is_active BOOLEAN,
-    available_from DATE,
-    available_until DATE
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT * FROM get_available_plans_for_hotel(p_hotel_id, CURRENT_DATE, NULL, false);
-END;
-$$ LANGUAGE plpgsql STABLE;
-
--- Overloaded function with just target date (for single date checks)
-CREATE OR REPLACE FUNCTION get_available_plans_for_hotel(
-    p_hotel_id INT,
-    p_target_date DATE
-)
-RETURNS TABLE(
-    plans_global_id INT,
-    plans_hotel_id INT,
-    plan_key TEXT,
-    name TEXT,
-    description TEXT,
-    plan_type TEXT,
-    color VARCHAR(7),
-    plan_type_category_id INT,
-    plan_package_category_id INT,
-    display_order INT,
-    is_active BOOLEAN,
-    available_from DATE,
-    available_until DATE
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT * FROM get_available_plans_for_hotel(p_hotel_id, p_target_date, NULL, false);
 END;
 $$ LANGUAGE plpgsql STABLE;
 

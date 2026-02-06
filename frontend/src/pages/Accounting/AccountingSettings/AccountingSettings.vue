@@ -71,6 +71,7 @@
                                 :headers="[
                                     { label: 'コード' },
                                     { label: '科目名' },
+                                    { label: 'タイプ' },
                                     { label: '管理区分' },
                                     { label: '補助科目数', class: 'text-center' },
                                     { label: '状態' },
@@ -82,6 +83,11 @@
                                     class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                                     <td class="py-4 px-4 font-black tabular-nums">{{ item.code }}</td>
                                     <td class="py-4 px-4 font-bold">{{ item.name }}</td>
+                                    <td class="py-4 px-4">
+                                        <span :class="item.account_type === 'credit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'" class="text-[10px] font-black uppercase">
+                                            {{ item.account_type === 'credit' ? '貸方' : '借方' }}
+                                        </span>
+                                    </td>
                                     <td class="py-4 px-4 text-sm text-slate-500">{{
                                         getGroupName(item.management_group_id) }}</td>
                                     <td class="py-4 px-4 text-center">
@@ -139,6 +145,7 @@
                                 :headers="[
                                     { label: '順序', class: 'w-24' },
                                     { label: '区分名' },
+                                    { label: 'タイプ' },
                                     { label: '操作' }
                                 ]"
                                 :items="settings.groups"
@@ -147,6 +154,11 @@
                                     class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                                     <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
                                     <td class="py-4 px-4 font-bold">{{ item.name }}</td>
+                                    <td class="py-4 px-4">
+                                        <span :class="item.default_account_type === 'credit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'" class="text-[10px] font-black uppercase">
+                                            {{ item.default_account_type === 'credit' ? '貸方' : '借方' }}
+                                        </span>
+                                    </td>
                                     <td class="py-4 px-4">
                                         <div class="flex gap-2">
                                             <button @click="editItem('group', item)"
@@ -598,7 +610,9 @@ const openModal = (type, initialValues = {}) => {
         is_current: false,
         target_type: null,
         target_id: null,
-        account_code_id: null
+        account_code_id: null,
+        account_type: 'debit',
+        default_account_type: 'debit'
     });
 
     // Merge initial values
@@ -620,8 +634,10 @@ const editItem = (type, item) => {
         form.code = item.code;
         form.management_group_id = item.management_group_id;
         form.is_active = item.is_active;
+        form.account_type = item.account_type;
     } else if (type === 'group') {
         form.display_order = item.display_order;
+        form.default_account_type = item.default_account_type;
     } else if (type === 'dept_group') {
         form.display_order = item.display_order;
     } else if (type === 'tax') {

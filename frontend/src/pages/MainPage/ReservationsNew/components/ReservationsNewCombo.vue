@@ -278,7 +278,7 @@
             :initialHotelName="selectedHotel ? selectedHotel.name : ''" :initialRoomTypeId="waitlistInitialRoomTypeId"
             :initialCheckInDate="waitlistInitialCheckInDate" :initialCheckOutDate="waitlistInitialCheckOutDate"
             :initialNumberOfGuests="waitlistInitialNumberOfGuests" :initialNotes="waitlistInitialNotes"
-            :allClients="clients" :allRoomTypes="roomTypes" @submitted="handleWaitlistSubmitted" />
+            :allRoomTypes="roomTypes" @submitted="handleWaitlistSubmitted" />
     </div>
 </template>
 <script setup>
@@ -302,8 +302,6 @@ import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStor
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
-import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchAllClientsForFiltering } = useClientStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { availableRooms, fetchAvailableRooms, setReservationId, fetchMyHoldReservations, createHoldReservationCombo, blockMultipleRooms } = useReservationStore();
 import { useParkingStore } from '@/composables/useParkingStore';
@@ -1237,7 +1235,7 @@ const updateParkingSpots = async () => {
     }
 };
 
-watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboRow.value.check_out], async (newValues, oldValues) => {
+watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboRow.value.check_out], async (_newValues, _oldValues) => {
     //console.log('[ReservationsNewCombo] Watch triggered:', {
     //    newValues,
     //    oldValues,
@@ -1408,9 +1406,6 @@ onMounted(async () => {
     comboRow.value.room_type_id = roomTypes.value[0].room_type_id;
     reservationDetails.value.hotel_id = selectedHotelId.value;
 
-    if (clients.value.length === 0) {
-        fetchAllClientsForFiltering();
-    }
 });
 
 watch(() => comboRow.value.number_of_rooms,

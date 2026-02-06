@@ -20,6 +20,11 @@
                     <p class="ml-2">重複を計算中...</p>
                 </div>
 
+                <!-- Error message display -->
+                <div v-else-if="errorMessage" class="p-8">
+                    <Message severity="error" :closable="false">{{ errorMessage }}</Message>
+                </div>
+
                 <!-- Content displayed after all loading and calculations are finished -->
                 <div v-else>
                     <!-- Filter Input -->
@@ -40,7 +45,7 @@
 
                         <Column header="元顧客情報" style="width: 50%;">
                             <template #body="{ data }">
-                                <ClientCard :client-id="data.earliest.id" />
+                                <ClientCard :client="data.earliest" />
                                 <div class="mt-2">
                                     <Button @click="goToEditClientPage(data.earliest.id)" label="顧客編集"
                                         icon="pi pi-pencil" severity="info" class="p-button-sm w-full" />
@@ -61,12 +66,13 @@
                                             </div>
                                         </AccordionHeader>
                                         <AccordionContent>
-                                            <ClientCard :client-id="duplicate.id" />
+                                            <ClientCard :client="duplicate" />
                                             <div class="mt-2 grid grid-cols-2 gap-2">
                                                 <Button @click="goToEditClientPage(duplicate.id)" label="編集"
                                                     icon="pi pi-pencil" severity="secondary" class="p-button-sm" />
-                                                <Button @click="mergeClients(duplicate.id, data.earliest.id)" label="この顧客に合流"
-                                                    icon="pi pi-sync" severity="warning" class="p-button-sm" />
+                                                <Button @click="mergeClients(duplicate.id, data.earliest.id)"
+                                                    label="この顧客に合流" icon="pi pi-sync" severity="warning"
+                                                    class="p-button-sm" />
                                             </div>
                                         </AccordionContent>
                                     </AccordionPanel>
@@ -90,21 +96,20 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from 'vue-router';
 import { useClientStore } from '@/composables/useClientStore';
-import { findDuplicates } from '@/utils/clientDuplicateUtils';
-
 import ClientCard from './components/ClientCard.vue';
 import ClientMerge from './components/ClientMerge.vue';
 
+// Primevue
 import Card from 'primevue/card';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-
 import Button from 'primevue/button';
 import Drawer from 'primevue/drawer';
 import InputText from 'primevue/inputtext';
+import Message from 'primevue/message'; // Import Message component
 // Import Accordion components for v4
 import Accordion from 'primevue/accordion';
 import AccordionPanel from 'primevue/accordionpanel';
@@ -113,12 +118,7 @@ import AccordionContent from 'primevue/accordioncontent';
 
 
 const router = useRouter();
-const { clients, clientsIsLoading, fetchAllClientsForFiltering } = useClientStore();
-
-onMounted(async () => {
-    // Ensure we have all clients for a thorough duplication check
-    await fetchAllClientsForFiltering();
-});
+const { clientsIsLoading, fetchDuplicates } = useClientStore();
 
 // --- State Refs ---
 const duplicatePairs = ref([]);
@@ -126,6 +126,19 @@ const isCalculating = ref(false);
 const showDrawer = ref(false);
 const drawerProps = ref({});
 const filterText = ref('');
+const errorMessage = ref(null); // Add errorMessage ref
+
+onMounted(async () => {
+    // Move duplication detection to backend to avoid loading all clients (5000+) into memory.
+    try {
+        const results = await fetchDuplicates();
+        duplicatePairs.value = results;
+    } catch (error) {
+        console.error('Failed to fetch duplicates:', error);
+        errorMessage.value = error.message || '重複データの取得に失敗しました。再度お試しください。';
+        duplicatePairs.value = []; // Ensure it'N set on error
+    }
+});
 
 // --- Filter Logic ---
 const filteredDuplicatePairs = computed(() => {
@@ -147,39 +160,6 @@ const filteredDuplicatePairs = computed(() => {
 });
 
 
-// --- Optimized Duplicate Calculation ---
-
-const calculateDuplicates = async () => {
-    if (!clients.value || clients.value.length === 0) {
-        duplicatePairs.value = [];
-        return;
-    }
-
-    isCalculating.value = true;
-
-    // Yield to main thread to allow UI to update
-    await new Promise(resolve => setTimeout(resolve, 0));
-
-    try {
-        // Use the optimized utility to find duplicates
-        duplicatePairs.value = findDuplicates(clients.value);
-    } catch (error) {
-        console.error('[ClientDuplicates] Calculation error:', error);
-        duplicatePairs.value = [];
-    } finally {
-        isCalculating.value = false;
-    }
-};
-
-// --- Watcher ---
-// Only trigger calculation when loading is finished and clients data is available
-watch(clientsIsLoading, (isLoading) => {
-    if (!isLoading && clients.value.length > 0) {
-        calculateDuplicates();
-    }
-}, { immediate: true });
-
-
 // --- Component Actions ---
 const goToEditClientPage = (clientId) => {
     const routeData = router.resolve({ name: 'ClientEdit', params: { clientId: clientId } });
@@ -191,8 +171,19 @@ const mergeClients = (oldId, newClientId) => {
     drawerProps.value = { oldClientId: oldId, newClientId };
 };
 
-const handleMergeClose = () => {
+const handleMergeClose = async () => {
     showDrawer.value = false;
+    // Re-fetch duplicates after a merge operation to update the list
+    try {
+        errorMessage.value = null; // Clear any previous error message
+        const results = await fetchDuplicates();
+        duplicatePairs.value = results;
+    } catch (error) {
+        console.error('Failed to re-fetch duplicates after merge:', error);
+        errorMessage.value = error.message || '合流後の重複データの更新に失敗しました。';
+        duplicatePairs.value = [];
+    }
 };
 
 </script>
+<style scoped></style>

@@ -7,7 +7,7 @@ const getAccountCodes = async (requestId, dbClient = null) => {
     const shouldRelease = !dbClient;
 
     const query = `
-        SELECT ac.*, mg.name as management_group_name, mg.display_order as group_display_order
+        SELECT ac.*, mg.name as management_group_name, mg.display_order as group_display_order, mg.default_account_type
         FROM acc_account_codes ac
         LEFT JOIN acc_management_groups mg ON ac.management_group_id = mg.id
         ORDER BY mg.display_order ASC, ac.code::BIGINT ASC
@@ -264,7 +264,7 @@ const getManagementGroups = async (requestId, dbClient = null) => {
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
 
-    const query = `SELECT * FROM acc_management_groups ORDER BY display_order ASC, name ASC`;
+    const query = `SELECT id, name, display_order, default_account_type FROM acc_management_groups ORDER BY display_order ASC, name ASC`;
 
     try {
         const result = await client.query(query);
@@ -1189,7 +1189,7 @@ const getCostBreakdownData = async (requestId, topN = 5, dbClient = null) => {
                 SELECT 
                     hd.hotel_id,
                     date_trunc('month', dua.accounting_month)::date as month,
-                    SUM(dua.available_room_nights) as total_available_rooms,
+                    MAX(dua.available_room_nights) as total_available_rooms,
                     SUM(dua.rooms_sold_nights) as total_sold_rooms
                 FROM du_accounting dua
                 JOIN hotel_depts hd ON dua.hotel_id = hd.hotel_id

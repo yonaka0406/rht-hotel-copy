@@ -3,66 +3,39 @@ import { ref } from 'vue';
 const groups = ref([]);
 const selectedGroup = ref(null);
 const clients = ref([]);
+const totalClients = ref(0);
 const clientsIsLoading = ref(false);
 const selectedClient = ref(null);
 const selectedClientAddress = ref(null);
 const selectedClientGroup = ref(null);
 const nextAvailableCustomerId = ref('11833');
+const isLoadingNextCustomerId = ref(false);
 
 const relatedCompanies = ref([]);
 const isLoadingRelatedCompanies = ref(false);
 const commonRelationshipPairs = ref([]);
 const isLoadingCommonRelationshipPairs = ref(false);
+const clientStats = ref({
+    total: 0,
+    natural: 0,
+    legal: 0,
+    loyalty_total: 0,
+    tier_distribution: {}
+});
 
 export function useClientStore() {
-
-    // Function to calculate next available customer ID
-    const calculateNextCustomerId = () => {
-        if (!clients.value || clients.value.length === 0) {
-            nextAvailableCustomerId.value = '11833';
-            return;
-        }
-
-        // Extract all customer IDs and convert to numbers
-        const existingIds = clients.value
-            .map(client => {
-                const id = client.customer_id;
-                if (!id) return null;
-
-                // Handle string format like "C001" - extract number
-                if (typeof id === 'string' && id.match(/^C\d+$/)) {
-                    return parseInt(id.substring(1), 10);
-                }
-
-                // Handle direct numeric values (string or number)
-                const numericId = parseInt(id, 10);
-                return isNaN(numericId) ? null : numericId;
-            })
-            .filter(id => id !== null && id > 0);
-
-        if (existingIds.length === 0) {
-            nextAvailableCustomerId.value = '11833';
-            return;
-        }
-
-        const maxId = Math.max(...existingIds);
-        const nextId = maxId + 1;
-        nextAvailableCustomerId.value = nextId.toString();
-    };
 
     const setClients = (newClients) => {
         clients.value = newClients.map(client => ({
             ...client,
             display_name: client.name_kanji || client.name_kana || client.name || ''
         }));
-        calculateNextCustomerId(); // Update next available customer ID
     };
     const appendClients = (newClients) => {
         clients.value = [...clients.value, ...newClients.map(client => ({
             ...client,
             display_name: client.name_kanji || client.name_kana || client.name || ''
         }))]; // Append new clients
-        calculateNextCustomerId(); // Update next available customer ID
     };
     const setClientsIsLoading = (bool) => {
         clientsIsLoading.value = bool;
@@ -84,16 +57,30 @@ export function useClientStore() {
             // Add if not in list (though normally it should be)
             clients.value.push(clientWithDisplayName);
         }
-        calculateNextCustomerId();
     };
 
     // Fetch the list of clients
-    const fetchClients = async (pageInput) => {
+    const fetchClients = async (pageInput, filters = {}, limit = 100, sortField = null, sortOrder = null, append = false) => {
         const page = Math.max(1, parseInt(pageInput) || 1);
         clientsIsLoading.value = true;
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/client-list/${page}`, {
+            let url = `/api/client-list/${page}?limit=${limit}`;
+            
+            if (filters.searchTerm) url += `&search=${encodeURIComponent(filters.searchTerm)}`;
+            if (filters.personType) url += `&personType=${encodeURIComponent(filters.personType)}`;
+            if (filters.phone) url += `&phone=${encodeURIComponent(filters.phone)}`;
+            if (filters.email) url += `&email=${encodeURIComponent(filters.email)}`;
+            if (filters.loyaltyTier) url += `&loyaltyTier=${encodeURIComponent(filters.loyaltyTier)}`;
+            if (filters.customerCode) url += `&customerCode=${encodeURIComponent(filters.customerCode)}`;
+
+            if (sortField) {
+                url += `&sortField=${encodeURIComponent(sortField)}`;
+            }
+            if (sortOrder) {
+                url += `&sortOrder=${sortOrder}`;
+            }
+            const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
@@ -109,13 +96,13 @@ export function useClientStore() {
             // console.log('From Client Store => fetchClients data:', data);
 
             if (data && data.clients) {
-                if (page === 1 || page === undefined) {
+                totalClients.value = data.total || 0;
+                if (!append || page === 1) {
                     setClients(data.clients);
-                    return data.totalPages;
                 } else {
                     appendClients(data.clients);
-                    return data.totalPages;
                 }
+                return data.totalPages;
             } else {
                 console.warn('No clients data received');
             }
@@ -232,7 +219,51 @@ export function useClientStore() {
             console.error('Failed to fetch client groups.', error);
         }
     };
+
+    const fetchNextCustomerId = async () => {
+        isLoadingNextCustomerId.value = true;
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/clients/next-customer-id', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) throw new Error('Failed to fetch next customer ID');
+            const data = await response.json();
+            nextAvailableCustomerId.value = data.nextId;
+            return data.nextId;
+        } catch (error) {
+            console.error('Failed to fetch next customer ID:', error);
+            return '11833'; // Fallback
+        } finally {
+            isLoadingNextCustomerId.value = false;
+        }
+    };
     // Fetch data for the selected client
+    const fetchClientStats = async () => {
+        clientsIsLoading.value = true;
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/clients/stats', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) throw new Error('Failed to fetch client stats');
+            const data = await response.json();
+            clientStats.value = data;
+        } catch (error) {
+            console.error('Failed to fetch client stats:', error);
+        } finally {
+            clientsIsLoading.value = false;
+        }
+    };
+
     const fetchGroup = async (group_id) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -552,17 +583,16 @@ export function useClientStore() {
     const fetchAllClientsForFiltering = async () => {
         clientsIsLoading.value = true;
         try {
-            // Fetch the first page to get totalPages and initial client set
-            const totalPages = await fetchClients(1); // fetchClients already sets clients.value for page 1
+            // Use a larger limit for bulk fetching to minimize network round-trips
+            const limit = 5000;
+            const totalPages = await fetchClients(1, {}, limit, null, null, true);
 
             if (totalPages && totalPages > 1) {
                 const pagePromises = [];
                 for (let page = 2; page <= totalPages; page++) {
-                    // N.B.: fetchClients appends for page > 1
-                    pagePromises.push(fetchClients(page));
+                    pagePromises.push(fetchClients(page, {}, limit, null, null, true));
                 }
                 await Promise.all(pagePromises);
-                // All clients are now appended to clients.value
             }
             // clients.value now contains all clients
         } catch (error) {
@@ -574,6 +604,69 @@ export function useClientStore() {
             throw error; // Re-throw to allow caller to handle
         } finally {
             clientsIsLoading.value = false;
+        }
+    };
+
+    const fetchDuplicates = async () => {
+        clientsIsLoading.value = true;
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/clients/duplicates', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) throw new Error('Failed to fetch duplicates');
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to fetch duplicates:', error);
+            return [];
+        } finally {
+            clientsIsLoading.value = false;
+        }
+    };
+
+    const fetchClientCandidates = async (clientId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/clients/${clientId}/candidates`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) throw new Error('Failed to fetch candidates');
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to fetch candidates:', error);
+            throw error;
+        }
+    };
+
+    const searchClients = async (query) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client-list/1?limit=20&search=${encodeURIComponent(query)}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+             if (!response.ok) {
+                throw new Error(`HTTPエラーが発生しました。ステータス: ${response.status}`);
+            }
+            const data = await response.json();
+            return (data.clients || []).map(client => ({
+                ...client,
+                display_name: client.name_kanji || client.name_kana || client.name || ''
+            }));
+        } catch (error) {
+            console.error('Failed to search clients:', error);
+            return [];
         }
     };
 
@@ -764,6 +857,7 @@ export function useClientStore() {
         groups,
         selectedGroup,
         clients,
+        totalClients,
         clientsIsLoading,
         selectedClient,
         selectedClientAddress,
@@ -773,6 +867,8 @@ export function useClientStore() {
         isLoadingRelatedCompanies,
         commonRelationshipPairs,
         isLoadingCommonRelationshipPairs,
+        clientStats,
+        fetchClientStats,
         fetchAllClientsForFiltering, // add new function
         setClientsIsLoading,
         fetchClients,
@@ -800,5 +896,9 @@ export function useClientStore() {
         fetchCommonRelationshipPairs,
         fetchExportClientsCount,
         downloadClients,
+        fetchNextCustomerId,
+        fetchDuplicates,
+        fetchClientCandidates,
+        searchClients,
     };
 }

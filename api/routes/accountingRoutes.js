@@ -29,6 +29,7 @@ router.post('/accounting/import/execute', authMiddleware_accounting, upload.sing
 
 // Dashboard
 router.get('/accounting/dashboard/metrics', authMiddleware_accounting, accountingController.getDashboardMetrics);
+router.get('/accounting/dashboard/budget-actual', authMiddleware_accounting, accountingController.getBudgetActualComparison);
 router.get('/accounting/dashboard/reconciliation', authMiddleware_accounting, accountingController.getReconciliationOverview);
 router.get('/accounting/dashboard/reconciliation/hotel/:hotelId', authMiddleware_accounting, accountingController.getReconciliationHotelDetails);
 router.get('/accounting/dashboard/reconciliation/hotel/:hotelId/client/:clientId', authMiddleware_accounting, accountingController.getReconciliationClientDetails);
