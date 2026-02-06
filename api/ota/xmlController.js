@@ -1050,10 +1050,11 @@ const successOTAReservations = async (req, res, hotel_id_arg, outputId_arg, dbCl
     const hotel_id = (hotel_id_arg && typeof hotel_id_arg !== 'function' && typeof hotel_id_arg !== 'object') ? hotel_id_arg : (req.params?.hotel_id || req.query?.hotel_id);
     const outputId = (outputId_arg && typeof outputId_arg !== 'function' && typeof outputId_arg !== 'object') ? outputId_arg : (req.params?.outputId || req.query?.outputId);
 
+    const requestId = req?.requestId || 'no-request-id';
     logger.info(`Calling OutputCompleteService for hotel_id: ${hotel_id}, outputId: ${outputId}`);
 
     try {
-        let template = await selectXMLTemplate(req.requestId, hotel_id, name, dbClient);
+        let template = await selectXMLTemplate(requestId, hotel_id, name, dbClient);
 
         template = template.replace("{{outputId}}", outputId);
 
@@ -1065,7 +1066,7 @@ const successOTAReservations = async (req, res, hotel_id_arg, outputId_arg, dbCl
             error: error.message,
             hotel_id,
             outputId,
-            requestId: req.requestId,
+            requestId: requestId,
             stack: error.stack
         });
         if (res && !res.headersSent) {
@@ -1134,7 +1135,7 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate, dbClient = 
             .replace('{{searchDurationTo}}', range.end);
 
         let retryCount = 0;
-        const maxRetries = 3;
+        const maxRetries = 5;
         let lastError = null;
 
         while (retryCount <= maxRetries) {
@@ -1163,7 +1164,8 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate, dbClient = 
                         const backoffDelay = Math.pow(2, retryCount) * 1000 + Math.random() * 1000;
                         logger.warn(`Rate limit (E013) hit in checkOTAStock, retrying in ${Math.round(backoffDelay)}ms... (Attempt ${retryCount}/${maxRetries})`, {
                             hotel_id,
-                            range
+                            range,
+                            requestId: req.requestId
                         });
                         await new Promise(resolve => setTimeout(resolve, backoffDelay));
                         continue;
@@ -1186,6 +1188,12 @@ const updateInventoryMultipleDays = async (req, res) => {
     }
 
     const name = 'NetStockBulkAdjustmentService';
+
+    // Add an initial random jitter (0-3000ms) to prevent mass concurrent triggers from hitting the
+    // third-party search API at the exact same millisecond.
+    const initialJitter = Math.floor(Math.random() * 3000);
+    await new Promise(resolve => setTimeout(resolve, initialJitter));
+
     const pool = getPool(req.requestId);
     let dbClient = null;
     let minDate = null;

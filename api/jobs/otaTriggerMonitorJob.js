@@ -8,6 +8,7 @@ const { checkMissingOTATriggers } = require('../ota_trigger_monitor');
 const { sendGenericEmail } = require('../utils/emailUtils');
 const logger = require('../config/logger');
 const { startLog, completeLog } = require('../models/cron_logs');
+const { getProdPool } = require('../config/database');
 
 // Helper to prevent HTML injection
 function escapeHtml(str) {
@@ -59,6 +60,7 @@ class OTATriggerMonitorJob {
         }
 
         this.isRunning = true;
+        this.stopRequested = false;
         logger.info('Starting OTA Trigger Monitor Job', {
             checkIntervalHours: this.options.checkIntervalHours,
             monitoringWindowHours: this.options.monitoringWindowHours,
@@ -68,14 +70,7 @@ class OTATriggerMonitorJob {
             baseUrl: this.options.baseUrl
         });
 
-        // Run initial check
-        this.runCheck();
-
-        // Schedule periodic checks
-        const intervalMs = this.options.checkIntervalHours * 60 * 60 * 1000;
-        this.intervalId = setInterval(() => {
-            this.runCheck();
-        }, intervalMs);
+        this.runLoop();
     }
 
     /**
@@ -87,30 +82,69 @@ class OTATriggerMonitorJob {
             return;
         }
 
-        this.isRunning = false;
-        if (this.intervalId) {
-            clearInterval(this.intervalId);
-            this.intervalId = null;
+        this.stopRequested = true;
+        logger.info('Stopping OTA Trigger Monitor Job...');
+    }
+
+    async runLoop() {
+        let dbClient = null;
+        const intervalMs = this.options.checkIntervalHours * 60 * 60 * 1000;
+
+        while (!this.stopRequested) {
+            try {
+                // 1. Ensure DB connection
+                if (!dbClient) {
+                    dbClient = await getProdPool().connect();
+                    logger.info('OTA Trigger Monitor Job acquired database connection');
+
+                    dbClient.on('error', (err) => {
+                        logger.error('Persistent dbClient error in OTA Trigger Monitor Job', { error: err.message });
+                        dbClient = null;
+                    });
+                }
+
+                // 2. Run check
+                await this.runCheck(dbClient);
+
+                // 3. Wait for next interval
+                if (!this.stopRequested) {
+                    await new Promise(resolve => setTimeout(resolve, intervalMs));
+                }
+
+            } catch (error) {
+                logger.error('Error in OTA Trigger Monitor Job loop', { error: error.message, stack: error.stack });
+
+                if (dbClient) {
+                    try { dbClient.release(); } catch (e) {}
+                    dbClient = null;
+                }
+
+                // Backoff on connection error
+                if (!this.stopRequested) {
+                    logger.warn('Waiting 10 seconds before retrying OTA Trigger Monitor Job due to error');
+                    await new Promise(resolve => setTimeout(resolve, 10000));
+                }
+            }
         }
 
+        if (dbClient) {
+            try { dbClient.release(); } catch (e) {}
+            dbClient = null;
+        }
+        this.isRunning = false;
         logger.info('Stopped OTA Trigger Monitor Job');
     }
 
     /**
      * Run a single monitoring check
      */
-    async runCheck() {
-        // Concurrency guard
-        if (this.isChecking) {
-            logger.warn('OTA trigger monitoring check skipped - previous check still running');
-            return;
-        }
-
-        const logId = await startLog('OTA Trigger Monitor');
-        this.isChecking = true;
+    async runCheck(dbClient = null) {
+        let logId = null;
         const checkStartTime = new Date();
 
         try {
+            logId = await startLog('OTA Trigger Monitor', dbClient);
+
             if (this.options.enableLogging) {
                 logger.info('Running OTA trigger monitoring check', { baseUrl: this.options.baseUrl });
             }
@@ -118,7 +152,7 @@ class OTATriggerMonitorJob {
             const result = await checkMissingOTATriggers(this.options.monitoringWindowHours, {
                 autoRemediate: this.options.autoRemediate,
                 baseUrl: this.options.baseUrl
-            });
+            }, dbClient);
 
             this.lastCheck = {
                 timestamp: checkStartTime,
@@ -126,7 +160,12 @@ class OTATriggerMonitorJob {
                 duration: new Date() - checkStartTime
             };
 
-            await completeLog(logId, result.success ? 'success' : 'failed', result);
+            try {
+                await completeLog(logId, result.success ? 'success' : 'failed', result, dbClient);
+                logId = null;
+            } catch (logErr) {
+                logger.error('Failed to complete success log in OTA Trigger Monitor', { error: logErr.message });
+            }
 
             // Log results
             if (this.options.enableLogging) {
@@ -147,13 +186,21 @@ class OTATriggerMonitorJob {
                 await this.handleAlerts(result);
             }
 
-            // Store monitoring data (optional - implement if needed)
-            if (this.options.storeResults) {
-                await this.storeMonitoringResult(result);
-            }
-
         } catch (error) {
-            await completeLog(logId, 'failed', { error: error.message, stack: error.stack });
+            if (logId) {
+                try {
+                    await completeLog(logId, 'failed', {
+                        error: error.message,
+                        originalError: error.message,
+                        originalErrorStack: error.stack
+                    }, dbClient);
+                } catch (logErr) {
+                    logger.error('Failed to complete failure log in OTA Trigger Monitor', {
+                        error: logErr.message,
+                        originalError: error.message
+                    });
+                }
+            }
 
             logger.error('OTA trigger monitoring check failed', {
                 error: error.message,
@@ -167,15 +214,22 @@ class OTATriggerMonitorJob {
                 duration: new Date() - checkStartTime
             };
 
-            // Send error alert
-            if (this.options.enableAlerts) {
+            // Identify database connection errors
+            const pgConnectionErrors = ['57P01', '57P02', '08006', '08003', '08000', '08001', '08004', '08007', '08P01'];
+            const isDbConnError = pgConnectionErrors.includes(error.code) || (error.code && error.code.startsWith('ECONN'));
+
+            // Send error alert only if it's NOT a DB connection error (likely transient during reboots)
+            if (this.options.enableAlerts && !isDbConnError) {
                 await this.sendAlert('ERROR', 'OTA trigger monitoring failed', {
                     error: error.message,
                     timestamp: checkStartTime
                 });
             }
-        } finally {
-            this.isChecking = false;
+
+            // If it's a DB error, rethrow to the loop for connection recovery
+            if (isDbConnError) {
+                throw error;
+            }
         }
     }
 
