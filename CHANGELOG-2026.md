@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bug Fix: Standardized 8-character request IDs for more reliable tracking.
 - Bug Fix: Enhanced poller logging and error handling.
 - Refactor: Switched to sequential, DB-driven queue processing and enabled optional injected DB client support for more consistent resource handling.
+- New Feature: Converted the "Subject" (件名) field in the New Action dialog to a dropdown menu for standardized data entry. 
+- Improvement: Expanded the "Action Type" dropdown options to include "Construction Site" (工事現場), "Office Visit" (来社), and "WH".
 
 ---
 
