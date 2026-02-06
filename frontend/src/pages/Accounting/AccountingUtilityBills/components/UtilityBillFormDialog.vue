@@ -35,8 +35,18 @@
             </div>
         </div>
         <template #footer>
-            <Button label="キャンセル" icon="pi pi-times" severity="secondary" text @click="$emit('update:visible', false)" />
-            <Button label="保存" icon="pi pi-check" :loading="loading" @click="$emit('save', localItem)" />
+            <div class="flex items-center justify-end gap-3 w-full">
+                <button @click="$emit('update:visible', false)"
+                    class="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer">
+                    キャンセル
+                </button>
+                <button @click="$emit('save', localItem)" :disabled="loading"
+                    class="px-8 py-2.5 bg-violet-600 text-white rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i v-if="loading" class="pi pi-spin pi-spinner"></i>
+                    <i v-else class="pi pi-check"></i>
+                    <span>保存</span>
+                </button>
+            </div>
         </template>
     </Dialog>
 </template>

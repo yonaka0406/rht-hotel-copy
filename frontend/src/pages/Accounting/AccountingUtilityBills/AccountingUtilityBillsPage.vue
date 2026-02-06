@@ -201,23 +201,24 @@ onMounted(async () => {
     <div class="bg-slate-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300 min-h-screen">
         <div class="max-w-7xl mx-auto">
             <!-- Header -->
-            <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
-                    <div class="flex-shrink-0 inline-flex items-center justify-center p-3 bg-violet-100 dark:bg-violet-900/30 rounded-2xl">
-                        <i class="pi pi-bolt text-2xl text-violet-600 dark:text-violet-400"></i>
-                    </div>
+                    <button @click="$router.back()"
+                        class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer shadow-sm h-[46px]">
+                        <i class="pi pi-arrow-left text-sm"></i>
+                        <span>戻る</span>
+                    </button>
                     <div>
-                        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                            光熱費詳細入力
-                        </h1>
-                        <p class="text-sm text-slate-600 dark:text-slate-400">
-                            水道・電気・ガスの使用量と料金を記録します
-                        </p>
+                        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">光熱費詳細入力</h1>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">水道・電気・ガスの使用量と料金を記録します</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <Button label="戻る" icon="pi pi-arrow-left" severity="secondary" text @click="$router.back()" />
-                    <Button label="新規追加" icon="pi pi-plus" @click="openAddDialog()" />
+                <div class="flex items-center">
+                    <button @click="openAddDialog()"
+                        class="h-[46px] bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none">
+                        <i class="pi pi-plus"></i>
+                        <span>新規追加</span>
+                    </button>
                 </div>
             </div>
 
