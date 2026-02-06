@@ -214,11 +214,17 @@
                 </div>
             </div>
 
-            <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
-                <Button label="キャンセル" @click="close" severity="secondary" text
-                    class="px-6 py-2 rounded-xl font-bold !bg-transparent" />
-                <Button label="保存する" @click="handleSave" :loading="saving" :disabled="!isFormValid"
-                    class="px-8 py-2 rounded-xl font-bold bg-violet-600 border-violet-600 hover:bg-violet-700 hover:border-violet-700" />
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+                <button @click="close"
+                    class="px-6 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer">
+                    キャンセル
+                </button>
+                <button @click="handleSave" :disabled="saving || !isFormValid"
+                    class="px-8 py-2 bg-violet-600 text-white rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i v-if="saving" class="pi pi-spin pi-spinner"></i>
+                    <i v-else class="pi pi-check"></i>
+                    <span>{{ isEdit ? '更新する' : '保存する' }}</span>
+                </button>
             </div>
         </div>
     </Dialog>

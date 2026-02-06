@@ -205,6 +205,8 @@
                 </div>
             </div>
         </div>
+
+        <ConfirmDialog group="yayoi-import" />
     </div>
 </template>
 
@@ -214,6 +216,7 @@ import { useRouter } from 'vue-router';
 import { useAccountingStore } from '@/composables/useAccountingStore';
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
+import ConfirmDialog from 'primevue/confirmdialog';
 
 const router = useRouter();
 const accountingStore = useAccountingStore();
@@ -256,17 +259,20 @@ const handlePreview = async () => {
 
 const confirmImport = () => {
     confirm.require({
+        group: 'yayoi-import',
         message: `${importSummary.value.minDate} から ${importSummary.value.maxDate} の期間の既存データを削除し、新しくデータをインポートします。よろしいですか？`,
         header: 'インポートの確認',
         icon: 'pi pi-exclamation-triangle',
         acceptProps: {
             label: 'はい、インポートします',
-            severity: 'danger'
+            severity: 'danger',
+            class: 'px-6 py-2 rounded-xl font-bold'
         },
         rejectProps: {
             label: 'キャンセル',
             severity: 'secondary',
-            outlined: true
+            variant: 'text',
+            class: 'px-6 py-2 rounded-xl font-bold'
         },
         accept: () => {
             handleImport();
