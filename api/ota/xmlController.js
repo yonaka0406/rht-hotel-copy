@@ -1195,7 +1195,8 @@ const updateInventoryMultipleDays = async (req, res, dbClientArg = null, options
     const initialJitter = Math.floor(Math.random() * 3000);
     await new Promise(resolve => setTimeout(resolve, initialJitter));
 
-    let dbClient = dbClientArg;
+    let dbClient = (dbClientArg && typeof dbClientArg !== 'function') ? dbClientArg : null;
+    let actualOptions = (typeof dbClientArg === 'function') ? {} : (options || {});
     let shouldRelease = false;
     let minDate = null;
     let maxDate = null;
@@ -1250,7 +1251,7 @@ const updateInventoryMultipleDays = async (req, res, dbClientArg = null, options
             return;
         }
 
-        const skipStockCheck = options.skipStockCheck || false;
+        const skipStockCheck = actualOptions.skipStockCheck || false;
         let needsUpdate = true;
 
         if (!skipStockCheck) {
@@ -1262,9 +1263,9 @@ const updateInventoryMultipleDays = async (req, res, dbClientArg = null, options
 
             const stockCheckMap = new Map();
             stockCheckResults.forEach(item => {
-            const normalizedCode = String(item.netRmTypeGroupCode || '').toLowerCase().trim();
-            const normalizedDate = String(item.saleDate || '').trim();
-            const key = `${normalizedCode}-${normalizedDate}`;
+                const normalizedCode = String(item.netRmTypeGroupCode || '').toLowerCase().trim();
+                const normalizedDate = String(item.saleDate || '').trim();
+                const key = `${normalizedCode}-${normalizedDate}`;
                 stockCheckMap.set(key, parseInt(item.remainingCount));
             });
 
@@ -1273,9 +1274,9 @@ const updateInventoryMultipleDays = async (req, res, dbClientArg = null, options
                 const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
                 const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
 
-            const normalizedCode = String(item.netrmtypegroupcode || '').toLowerCase().trim();
-            const normalizedDate = String(itemDateYYYYMMDD || '').trim();
-            const lookupKey = `${normalizedCode}-${normalizedDate}`;
+                const normalizedCode = String(item.netrmtypegroupcode || '').toLowerCase().trim();
+                const normalizedDate = String(itemDateYYYYMMDD || '').trim();
+                const lookupKey = `${normalizedCode}-${normalizedDate}`;
 
                 const currentRemainingStock = stockCheckMap.get(lookupKey);
 
@@ -1382,7 +1383,7 @@ const manualUpdateInventoryMultipleDays = async (req, res, dbClientArg = null) =
     const inventory = req.body;
 
     const name = 'NetStockBulkAdjustmentService';
-    let dbClient = dbClientArg;
+    let dbClient = (dbClientArg && typeof dbClientArg !== 'function') ? dbClientArg : null;
     let shouldRelease = false;
     let minDate = null;
     let maxDate = null;

@@ -11,9 +11,9 @@ const pool = new Pool({
   database: process.env.PG_DATABASE,
   password: process.env.PG_PASSWORD,
   port: process.env.PG_PORT,
-  max: 50,
-  idleTimeoutMillis: 2000,
-  connectionTimeoutMillis: 2000,
+  max: 100,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
 
 const prodPool = new Pool({
@@ -22,9 +22,9 @@ const prodPool = new Pool({
   database: process.env.PROD_PG_DATABASE,
   password: process.env.PG_PASSWORD,
   port: process.env.PG_PORT,
-  max: 50,
-  idleTimeoutMillis: 2000,
-  connectionTimeoutMillis: 2000,
+  max: 100,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
 
 // Create request-specific environment detection namespace
