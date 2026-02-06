@@ -9,7 +9,6 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
     worksheet.views = [{ showGridLines: false }];
 
     // 1. Merged Header (A1:T1)
-    // worksheet.mergeCells('A1:T1');
     const titleCell = worksheet.getCell('A1');
     const hotelName = data[0]?.hotel_name || 'ホテル';
     const timestamp = new Date().toLocaleString("ja-JP", {
@@ -19,7 +18,6 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
     titleCell.value = `${hotelName} - 宿泊税レポート - 作成日: ${timestamp}`;
     titleCell.font = { bold: true, size: 14 };
     titleCell.alignment = { vertical: 'middle' };
-    // titleCell.alignment = { horizontal: 'center', vertical: 'middle', shrinkToFit: true };
 
     // 2. Room Only Rate Field (A3, B3)
     const row3 = worksheet.getRow(3);
@@ -152,53 +150,64 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
 
     // 7. Add Data Rows (Starting from Row 7)
     let lastDataRowIndex = 6;
-    data.forEach((row, index) => {
-        const rowIndex = 7 + index;
-        lastDataRowIndex = rowIndex;
-
-        const dateStr = formatDate(new Date(row.date));
-        
-        // Standard values
-        const stdAccomCount = parseInt(row.standard_accommodation_count || 0);
-        const stdPeopleCount = parseInt(row.standard_number_of_people || 0);
-        const stdNonAccomCount = parseInt(row.standard_non_accommodation_count || 0);
-        
-        // Monthly values
-        const monAccomCount = parseInt(row.monthly_accommodation_count || 0);
-        const monPeopleCount = parseInt(row.monthly_number_of_people || 0);
-        const monNonAccomCount = parseInt(row.monthly_non_accommodation_count || 0);
-
-        // Tax formulas
-        const stdTaxFormula = `IF(AND(B3<>"", D3<>""), ROUNDDOWN(B3*D3*C${rowIndex}, 0), IF(F3<>"", ROUNDDOWN(F3*C${rowIndex}, 0), 0))`;
-        const monTaxFormula = `IF(AND(B3<>"", D3<>""), ROUNDDOWN(B3*D3*J${rowIndex}, 0), IF(F3<>"", ROUNDDOWN(F3*J${rowIndex}, 0), 0))`;
-        const totTaxFormula = `IF(AND(B3<>"", D3<>""), ROUNDDOWN(B3*D3*Q${rowIndex}, 0), IF(F3<>"", ROUNDDOWN(F3*Q${rowIndex}, 0), 0))`;
-
+    
+    if (data.length === 0) {
+        // No data: write a single empty row to maintain structure
         worksheet.addRow({
-            // Standard (A-F)
-            std_date: dateStr,
-            std_accommodation_count: stdAccomCount,
-            std_number_of_people: stdPeopleCount,
-            std_non_accommodation_count: stdNonAccomCount,
-            std_empty: '',
-            std_tax_amount: { formula: stdTaxFormula },
-            separator1: '',
-            // Monthly (H-M)
-            mon_date: dateStr,
-            mon_accommodation_count: monAccomCount,
-            mon_number_of_people: monPeopleCount,
-            mon_non_accommodation_count: monNonAccomCount,
-            mon_empty: '',
-            mon_tax_amount: { formula: monTaxFormula },
-            separator2: '',
-            // Total (O-T)
-            tot_date: dateStr,
-            tot_accommodation_count: { formula: `B${rowIndex}+I${rowIndex}` },
-            tot_number_of_people: { formula: `C${rowIndex}+J${rowIndex}` },
-            tot_non_accommodation_count: { formula: `D${rowIndex}+K${rowIndex}` },
-            tot_empty: '',
-            tot_tax_amount: { formula: totTaxFormula },
+            std_date: '', std_accommodation_count: 0, std_number_of_people: 0, std_non_accommodation_count: 0, std_empty: '', std_tax_amount: 0, separator1: '',
+            mon_date: '', mon_accommodation_count: 0, mon_number_of_people: 0, mon_non_accommodation_count: 0, mon_empty: '', mon_tax_amount: 0, separator2: '',
+            tot_date: '', tot_accommodation_count: 0, tot_number_of_people: 0, tot_non_accommodation_count: 0, tot_empty: '', tot_tax_amount: 0,
         });
-    });
+        lastDataRowIndex = 7;
+    } else {
+        data.forEach((row, index) => {
+            const rowIndex = 7 + index;
+            lastDataRowIndex = rowIndex;
+
+            const dateStr = formatDate(new Date(row.date));
+            
+            // Standard values
+            const stdAccomCount = parseInt(row.standard_accommodation_count || 0);
+            const stdPeopleCount = parseInt(row.standard_number_of_people || 0);
+            const stdNonAccomCount = parseInt(row.standard_non_accommodation_count || 0);
+            
+            // Monthly values
+            const monAccomCount = parseInt(row.monthly_accommodation_count || 0);
+            const monPeopleCount = parseInt(row.monthly_number_of_people || 0);
+            const monNonAccomCount = parseInt(row.monthly_non_accommodation_count || 0);
+
+            // Tax formulas
+            const stdTaxFormula = `IF(AND(B3<>"", D3<>""), ROUNDDOWN(B3*D3*C${rowIndex}, 0), IF(F3<>"", ROUNDDOWN(F3*C${rowIndex}, 0), 0))`;
+            const monTaxFormula = `IF(AND(B3<>"", D3<>""), ROUNDDOWN(B3*D3*J${rowIndex}, 0), IF(F3<>"", ROUNDDOWN(F3*J${rowIndex}, 0), 0))`;
+            const totTaxFormula = `IF(AND(B3<>"", D3<>""), ROUNDDOWN(B3*D3*Q${rowIndex}, 0), IF(F3<>"", ROUNDDOWN(F3*Q${rowIndex}, 0), 0))`;
+
+            worksheet.addRow({
+                // Standard (A-F)
+                std_date: dateStr,
+                std_accommodation_count: stdAccomCount,
+                std_number_of_people: stdPeopleCount,
+                std_non_accommodation_count: stdNonAccomCount,
+                std_empty: '',
+                std_tax_amount: { formula: stdTaxFormula },
+                separator1: '',
+                // Monthly (H-M)
+                mon_date: dateStr,
+                mon_accommodation_count: monAccomCount,
+                mon_number_of_people: monPeopleCount,
+                mon_non_accommodation_count: monNonAccomCount,
+                mon_empty: '',
+                mon_tax_amount: { formula: monTaxFormula },
+                separator2: '',
+                // Total (O-T)
+                tot_date: dateStr,
+                tot_accommodation_count: { formula: `B${rowIndex}+I${rowIndex}` },
+                tot_number_of_people: { formula: `C${rowIndex}+J${rowIndex}` },
+                tot_non_accommodation_count: { formula: `D${rowIndex}+K${rowIndex}` },
+                tot_empty: '',
+                tot_tax_amount: { formula: totTaxFormula },
+            });
+        });
+    }
 
     // 8. Add Total Row
     const totalRowIndex = lastDataRowIndex + 1;
