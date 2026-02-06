@@ -162,6 +162,15 @@
                 />
             </div>
 
+            <!-- Utility Details Breakdown -->
+            <UtilityDetailsBreakdown
+                v-if="!loading"
+                :selectedHotelId="selectedHotelId"
+                :selectedMonth="selectedMonth"
+                :latestMonth="latestMonth"
+                :mappedHotels="mappedHotels"
+            />
+
             <!-- Scatter Charts -->
             <ScatterChartsGrid 
                 v-if="!loading && topAccounts.length > 0"
@@ -226,6 +235,7 @@ import {
 // Import components
 import RevenueImpactRadarChart from './components/RevenueImpactRadarChart.vue';
 import ScatterChartsGrid from './components/ScatterChartsGrid.vue';
+import UtilityDetailsBreakdown from './components/UtilityDetailsBreakdown.vue';
 
 // Register ECharts modules
 use([
@@ -300,18 +310,20 @@ const analyticsSummary = computed(() => {
     // console.log('DEBUG: new Date(latestMonth.value) =', latestMonth.value ? new Date(latestMonth.value) : 'null');
     
     const latestDataYear = latestMonth.value ? new Date(latestMonth.value).getFullYear() : new Date().getFullYear();
-    const currentYearStart = new Date(latestDataYear, 0, 1); // January 1st of the data year
-    const currentYearEnd = latestMonth.value ? new Date(latestMonth.value) : new Date();
+    // const currentYearStart = new Date(latestDataYear, 0, 1); // January 1st of the data year
+    // const currentYearEnd = latestMonth.value ? new Date(latestMonth.value) : new Date();
     
     // console.log('DEBUG: latestDataYear =', latestDataYear);
     // console.log('DEBUG: currentYearStart =', currentYearStart);
 
     // Helper function to format dates without timezone issues
+    /*
     const formatDateLocal = (date) => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         return `${year}-${month}`;
     };
+    */
 
     // === COST BREAKDOWN CALCULATIONS (COMMENTED OUT FOR PERFORMANCE) ===
     // console.log('=== COST BREAKDOWN CALCULATIONS ===');
