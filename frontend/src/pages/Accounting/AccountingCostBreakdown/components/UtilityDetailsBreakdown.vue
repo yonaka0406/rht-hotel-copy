@@ -5,6 +5,9 @@
                 <h2 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
                     <i class="pi pi-bolt text-amber-500"></i>
                     光熱費詳細分析
+                    <span v-if="selectedMonth" class="ml-2 px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-sm font-bold text-slate-500">
+                        {{ formatMonth(selectedMonth) }}
+                    </span>
                 </h2>
                 <p class="text-xs text-slate-400 mt-1">使用量・単価・コストの推移分析</p>
             </div>
@@ -99,6 +102,8 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import { useAccountingStore } from '@/composables/useAccountingStore';
+import { formatDateToYMD } from '@/utils/dateUtils';
+import { formatMonth } from '@/utils/formatUtils';
 import UtilityUsageChart from './charts/UtilityUsageChart.vue';
 import UtilityPriceChart from './charts/UtilityPriceChart.vue';
 
@@ -144,37 +149,85 @@ const typeOptions = [
 ];
 
 const chartData = computed(() => {
+
     if (!rawUtilityData.value.length) return [];
+
+
 
     const referenceMonth = props.selectedMonth;
 
-    // Helper to filter by utility type
-    const filterByType = (data) => data.filter(d => d.sub_account_name.includes(selectedType.value));
-    
-    // Helper to filter by time (Month or YTD)
-    const filterByTime = (data, targetMonth) => {
-        if (aggregationMode.value === 'month') {
-            return data.filter(d => d.month === targetMonth);
-        } else {
-            const year = new Date(targetMonth).getFullYear();
-            return data.filter(d => {
-                const dDate = new Date(d.month);
-                return dDate.getFullYear() === year && d.month <= targetMonth;
-            });
-        }
+    // Normalize target month to YYYY-MM using JST-aware utility
+
+    const normalizeMonth = (m) => {
+
+        if (!m) return '';
+
+        const ymd = formatDateToYMD(m);
+
+        return ymd ? ymd.substring(0, 7) : '';
+
     };
 
-    const filtered = filterByType(rawUtilityData.value);
+    
+
+    const targetMonthNormalized = normalizeMonth(referenceMonth);
+
+
+
+    // Helper to filter by utility type
+
+    const filterByType = (data) => data.filter(d => d.sub_account_name.includes(selectedType.value));
+
+    
+
+    // Helper to filter by time (Month or YTD)
+
+    const filterByTime = (data, targetMonthNorm) => {
+
+        if (aggregationMode.value === 'month') {
+
+            return data.filter(d => normalizeMonth(d.month) === targetMonthNorm);
+
+        } else {
+
+            const [year] = targetMonthNorm.split('-').map(Number);
+
+            return data.filter(d => {
+
+                const dNorm = normalizeMonth(d.month);
+
+                const [dYear] = dNorm.split('-').map(Number);
+
+                return dYear === year && dNorm <= targetMonthNorm;
+
+            });
+
+        }
+
+    };
+
+
+
+    const filteredByType = filterByType(rawUtilityData.value);
+
     const filteredPrev = showPreviousYear.value ? filterByType(prevYearUtilityData.value) : [];
 
+
+
     if (props.selectedHotelId === 0) {
+
         // === ALL HOTELS MODE: RANKING ===
-        const targetMonths = filterByTime(filtered, referenceMonth);
+
+        const targetMonths = filterByTime(filteredByType, targetMonthNormalized);
+
+
+
+
         
         // Map previous year target month
-        const refDate = new Date(referenceMonth);
-        const prevReferenceMonth = `${refDate.getFullYear() - 1}-${String(refDate.getMonth() + 1).padStart(2, '0')}-01`;
-        const targetMonthsPrev = showPreviousYear.value ? filterByTime(filteredPrev, prevReferenceMonth) : [];
+        const [refYear, refMonth] = targetMonthNormalized.split('-').map(Number);
+        const prevTargetMonthNorm = `${refYear - 1}-${String(refMonth).padStart(2, '0')}`;
+        const targetMonthsPrev = showPreviousYear.value ? filterByTime(filteredPrev, prevTargetMonthNorm) : [];
 
         const groupHotels = (data, occData) => data.reduce((acc, curr) => {
             const id = curr.hotel_id;
@@ -186,7 +239,9 @@ const chartData = computed(() => {
             acc[id].total_value += parseFloat(curr.total_value);
             acc[id].count += 1;
 
-            const occ = occData.find(o => o.month === curr.month && o.hotel_id === id);
+            // Normalize for matching
+            const currMonthNorm = normalizeMonth(curr.month);
+            const occ = occData.find(o => normalizeMonth(o.month) === currMonthNorm && o.hotel_id === id);
             if (occ) {
                 acc[id].sold_rooms += parseInt(occ.total_sold_rooms || 0);
                 acc[id].occupancy += parseFloat(occ.occupancy_percentage || 0);
@@ -256,7 +311,7 @@ const chartData = computed(() => {
             prev_avg_monthly_quantity: gPrev.avg_monthly_quantity,
             prev_avg_monthly_value: gPrev.avg_monthly_value,
             prev_average_price: gPrev.average_price,
-            prev_avg_occupancy: gPrev.prev_avg_occupancy,
+            prev_avg_occupancy: gPrev.avg_occupancy,
             isAverage: true
         };
 
@@ -264,43 +319,42 @@ const chartData = computed(() => {
     } else {
         // === SINGLE HOTEL MODE: TIME SERIES ===
         const groupMonths = (data, occData) => data.reduce((acc, curr) => {
-            const month = curr.month;
-            if (!acc[month]) {
-                acc[month] = { month, quantity: 0, total_value: 0, count: 0, sold_rooms: 0, occupancy: 0 };
+            const monthNorm = normalizeMonth(curr.month);
+            if (!acc[monthNorm]) {
+                acc[monthNorm] = { month: curr.month, monthNorm, quantity: 0, total_value: 0, count: 0, sold_rooms: 0, occupancy: 0 };
             }
-            acc[month].quantity += parseFloat(curr.quantity);
-            acc[month].total_value += parseFloat(curr.total_value);
-            acc[month].count += 1;
+            acc[monthNorm].quantity += parseFloat(curr.quantity);
+            acc[monthNorm].total_value += parseFloat(curr.total_value);
+            acc[monthNorm].count += 1;
 
-            const occ = occData.find(o => o.month === curr.month && o.hotel_id === props.selectedHotelId);
+            const occ = occData.find(o => normalizeMonth(o.month) === monthNorm && o.hotel_id === props.selectedHotelId);
             if (occ) {
-                acc[month].sold_rooms = parseInt(occ.total_sold_rooms || 0);
-                acc[month].occupancy = parseFloat(occ.occupancy_percentage || 0);
+                acc[monthNorm].sold_rooms = parseInt(occ.total_sold_rooms || 0);
+                acc[monthNorm].occupancy = parseFloat(occ.occupancy_percentage || 0);
             }
             return acc;
         }, {});
 
-        const currentByMonth = groupMonths(filtered, props.occupancyData);
+        const currentByMonth = groupMonths(filteredByType, props.occupancyData);
         const prevByMonth = groupMonths(filteredPrev, prevOccupancyData.value);
 
-        const sortedMonths = Object.keys(currentByMonth).sort();
+        const sortedMonthKeys = Object.keys(currentByMonth).sort();
 
-        const data = sortedMonths.map(month => {
-            let d = currentByMonth[month];
+        const data = sortedMonthKeys.map(monthNorm => {
+            let d = currentByMonth[monthNorm];
             
             // Map previous year month
-            const date = new Date(month);
-            const prevMonthKey = `${date.getFullYear() - 1}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
-            let p = prevByMonth[prevMonthKey];
+            const [year, month] = monthNorm.split('-').map(Number);
+            const prevMonthNorm = `${year - 1}-${String(month).padStart(2, '0')}`;
+            let p = prevByMonth[prevMonthNorm];
 
             if (aggregationMode.value === 'ytd') {
-                const year = date.getFullYear();
-                const monthsInYearUntilNow = sortedMonths.filter(m => {
-                    const mDate = new Date(m);
-                    return mDate.getFullYear() === year && m <= month;
+                // Cumulative Current
+                const monthsInYearUntilNow = sortedMonthKeys.filter(m => {
+                    const [mYear] = m.split('-').map(Number);
+                    return mYear === year && m <= monthNorm;
                 });
 
-                // Cumulative Current
                 const aggCurrent = monthsInYearUntilNow.reduce((acc, m) => {
                     const mData = currentByMonth[m];
                     acc.quantity += mData.quantity;
@@ -322,9 +376,8 @@ const chartData = computed(() => {
                 // Cumulative Previous
                 const prevYear = year - 1;
                 const monthsInPrevYearUntilNow = Object.keys(prevByMonth).filter(m => {
-                    const mDate = new Date(m);
-                    const refMonthInPrevYear = `${prevYear}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
-                    return mDate.getFullYear() === prevYear && m <= refMonthInPrevYear;
+                    const [mYear] = m.split('-').map(Number);
+                    return mYear === prevYear && m <= prevMonthNorm;
                 });
 
                 const aggPrev = monthsInPrevYearUntilNow.reduce((acc, m) => {
@@ -407,7 +460,6 @@ const fetchData = async () => {
 
         const currentResult = await fetchForParams(params);
         rawUtilityData.value = currentResult.details;
-        // occupancyData is passed as prop, but if we need more context we use the result
 
         if (showPreviousYear.value) {
             const prevParams = {
