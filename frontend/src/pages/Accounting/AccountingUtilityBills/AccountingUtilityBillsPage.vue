@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useAccountingStore } from '@/composables/useAccountingStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useToast } from 'primevue/usetoast';
@@ -23,7 +23,7 @@ const confirm = useConfirm();
 const selectedMonth = ref(new Date());
 const selectedHotelId = ref(hotelStore.selectedHotelId.value);
 const utilityDetails = ref([]);
-const suggestions = ref([]);
+const rawSuggestions = ref([]);
 const isLoading = ref(false);
 const isSaving = ref(false);
 
@@ -72,7 +72,7 @@ const fetchUtilityData = async () => {
         ]);
 
         utilityDetails.value = details;
-        suggestions.value = suggested.map(s => ({
+        rawSuggestions.value = suggested.map(s => ({
             ...s,
             transaction_date: new Date(s.transaction_date)
         }));
@@ -164,6 +164,21 @@ const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('ja-JP');
 };
+
+const processedSuggestions = computed(() => {
+    return rawSuggestions.value.map(s => {
+        const isRegistered = utilityDetails.value.some(d =>
+            d.sub_account_name === s.sub_account_name &&
+            Math.round(d.total_value) === Math.round(Math.abs(s.amount)) &&
+            new Date(d.transaction_date).toDateString() === new Date(s.transaction_date).toDateString()
+        );
+        return { ...s, isRegistered };
+    }).sort((a, b) => {
+        if (a.isRegistered && !b.isRegistered) return 1;
+        if (!a.isRegistered && b.isRegistered) return -1;
+        return 0;
+    });
+});
 
 watch([selectedHotelId, selectedMonth], () => {
     fetchUtilityData();
@@ -282,11 +297,15 @@ onMounted(async () => {
                                 <p>提案はありません</p>
                             </div>
                             <div v-else class="divide-y divide-slate-50 dark:divide-slate-700/50">
-                                <div v-for="(s, idx) in suggestions" :key="idx"
+                                <div v-for="(s, idx) in processedSuggestions" :key="idx"
                                     class="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer group"
+                                    :class="{ 'opacity-60 bg-slate-50/50': s.isRegistered }"
                                     @click="openAddDialog(s)">
                                     <div class="flex justify-between items-start mb-1">
-                                        <Tag :value="formatDate(s.transaction_date)" severity="secondary" class="text-[10px]" />
+                                        <div class="flex gap-1">
+                                            <Tag :value="formatDate(s.transaction_date)" severity="secondary" class="text-[10px]" />
+                                            <Tag v-if="s.isRegistered" value="登録済み" severity="success" class="text-[10px]" />
+                                        </div>
                                         <span class="font-mono font-bold text-slate-900 dark:text-white">{{ formatCurrency(Math.abs(s.amount)) }}</span>
                                     </div>
                                     <div class="font-bold text-sm text-slate-700 dark:text-slate-300">{{ s.sub_account_name }}</div>
@@ -305,6 +324,10 @@ onMounted(async () => {
         <!-- Edit Dialog -->
         <Dialog v-model:visible="showEditDialog" :header="editingItem.id ? 'データを編集' : '新規データ入力'" modal class="w-full max-w-md">
             <div class="flex flex-col gap-4 py-4">
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-slate-400 uppercase">対象月</label>
+                    <DatePicker v-model="editingItem.month" view="month" dateFormat="yy/mm" fluid />
+                </div>
                 <div class="flex flex-col gap-1">
                     <label class="text-xs font-bold text-slate-400 uppercase">取引日</label>
                     <DatePicker v-model="editingItem.transaction_date" dateFormat="yy/mm/dd" fluid />
