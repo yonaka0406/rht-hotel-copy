@@ -4,28 +4,28 @@
       <template #content>
         <div class="grid grid-cols-2 gap-4">
           <div class="flex flex-col">
-            <label for="email" class="font-medium mb-2 block">正式名称</label>
-            <InputText id="formal_name" v-model="localSelectedHotel.formal_name" required />
+            <label for="formal_name" class="font-medium mb-2 block">正式名称</label>
+            <InputText id="formal_name" v-model="localSelectedHotel.formal_name" required fluid />
           </div>
           <div class="flex flex-col">
-            <label for="email" class="font-medium mb-2 block">名称</label>
-            <InputText id="name" v-model="localSelectedHotel.name" required />
+            <label for="name" class="font-medium mb-2 block">名称</label>
+            <InputText id="name" v-model="localSelectedHotel.name" required fluid />
           </div>
           <div class="flex flex-col">
             <label for="email" class="font-medium mb-2 block">メールアドレス</label>
-            <InputText id="email" v-model="localSelectedHotel.email" required />
+            <InputText id="email" v-model="localSelectedHotel.email" required fluid />
           </div>
           <div class="flex flex-col">
             <label for="phone_number" class="font-medium mb-2 block">電話番号</label>
-            <InputMask id="phone_number" v-model="localSelectedHotel.phone_number" mask="(999) 999-9999" required />
+            <InputMask id="phone_number" v-model="localSelectedHotel.phone_number" mask="(999) 999-9999" required fluid />
           </div>
           <div class="flex flex-col">
             <label for="postal_code" class="font-medium mb-2 block">郵便番号</label>
-            <InputText id="postal_code" v-model="localSelectedHotel.postal_code" />
+            <InputText id="postal_code" v-model="localSelectedHotel.postal_code" fluid />
           </div>
           <div class="flex flex-col">
             <label for="address" class="font-medium mb-2 block">住所</label>
-            <InputText id="address" v-model="localSelectedHotel.address" />
+            <InputText id="address" v-model="localSelectedHotel.address" fluid />
           </div>
           <div class="flex flex-col">
             <div class="flex justify-between items-center mb-2">
@@ -36,6 +36,7 @@
                 グーグルドライブURL
               </label>
               <Button icon="pi pi-external-link" @click="openGoogleDriveUrl"
+                aria-label="外部リンクを開く" v-tooltip="'外部リンクを開く'"
                 :disabled="!localSelectedHotel.google_drive_url" />
             </div>
             <div class="p-inputgroup">
@@ -44,23 +45,23 @@
           </div>
           <div class="flex flex-col">
             <label for="latitude" class="font-medium mb-2 block">緯度</label>
-            <InputNumber id="latitude" v-model="localSelectedHotel.latitude" :minFractionDigits="6" />
+            <InputNumber id="latitude" v-model="localSelectedHotel.latitude" :minFractionDigits="6" fluid />
           </div>
           <div class="flex flex-col">
             <label for="longitude" class="font-medium mb-2 block">経度</label>
-            <InputNumber id="longitude" v-model="localSelectedHotel.longitude" :minFractionDigits="6" />
+            <InputNumber id="longitude" v-model="localSelectedHotel.longitude" :minFractionDigits="6" fluid />
           </div>
           <div class="flex flex-col">
             <label for="facility_type" class="font-medium mb-2 block">施設区分</label>
-            <InputText id="facility_type" v-model="localSelectedHotel.facility_type" disabled />
+            <InputText id="facility_type" v-model="localSelectedHotel.facility_type" disabled fluid />
           </div>
           <div class="flex flex-col">
             <label for="open_date" class="font-medium mb-2 block">オープン日</label>
-            <DatePicker id="open_date" v-model="localSelectedHotel.open_date" dateFormat="yy-mm-dd" disabled />
+            <DatePicker id="open_date" v-model="localSelectedHotel.open_date" dateFormat="yy-mm-dd" disabled fluid />
           </div>
           <div class="flex flex-col">
             <label for="sort_order" class="font-medium mb-2 block">表示順</label>
-            <InputNumber id="sort_order" v-model="localSelectedHotel.sort_order" />
+            <InputNumber id="sort_order" v-model="localSelectedHotel.sort_order" fluid />
           </div>
         </div>
       </template>
@@ -145,7 +146,7 @@
           <Column header="操作">
             <template #body="slotProps">
               <Button @click="siteControllerDeleteEntry(slotProps.index)" severity="danger" size="sm" icon="pi pi-trash"
-                outlined />
+                aria-label="削除" v-tooltip="'削除'" outlined />
             </template>
           </Column>
         </DataTable>

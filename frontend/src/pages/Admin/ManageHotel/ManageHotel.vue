@@ -18,11 +18,11 @@
         <Column header="操作">
           <template #body="slotProps">
             <Button icon="pi pi-pencil" class="p-button-text p-button-sm" @click="selectHotelData(slotProps.data)"
-              v-tooltip="'ホテル編集'" />
+              aria-label="ホテル編集" v-tooltip="'ホテル編集'" />
             <Button icon="pi pi-tag" class="p-button-text p-button-sm" @click="editRoomTypes(slotProps.data)"
-              v-tooltip="'部屋タイプ編集'" />
+              aria-label="部屋タイプ編集" v-tooltip="'部屋タイプ編集'" />
             <Button icon="pi pi-eye" class="p-button-text p-button-sm" @click="editRooms(slotProps.data)"
-              v-tooltip="'部屋表示'" />
+              aria-label="部屋表示" v-tooltip="'部屋表示'" />
           </template>
         </Column>
       </DataTable>
