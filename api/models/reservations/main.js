@@ -2110,13 +2110,13 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
     return 'other';
   };
-  const roomMaster = await selectTLRoomMaster(requestId, hotel_id);
+  const roomMaster = await selectTLRoomMaster(requestId, hotel_id, internalClient);
   // logger.debug('selectTLRoomMaster:', roomMaster);
   const selectRoomTypeId = (code) => {
     const match = roomMaster.find(item => item.netagtrmtypecode === code);
     return match ? match.room_type_id : null;
   };
-  const planMaster = await selectTLPlanMaster(requestId, hotel_id);
+  const planMaster = await selectTLPlanMaster(requestId, hotel_id, internalClient);
 
   const selectPlanId = async (code) => {
     // logger.debug('selectTLPlanMaster:', planMaster);  
@@ -3083,13 +3083,13 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
     return 'other';
   };
-  const roomMaster = await selectTLRoomMaster(requestId, hotel_id);
+  const roomMaster = await selectTLRoomMaster(requestId, hotel_id, internalClient);
   // logger.debug('selectTLRoomMaster:', roomMaster);
   const selectRoomTypeId = (code) => {
     const match = roomMaster.find(item => item.netagtrmtypecode === code);
     return match ? match.room_type_id : null;
   };
-  const planMaster = await selectTLPlanMaster(requestId, hotel_id);
+  const planMaster = await selectTLPlanMaster(requestId, hotel_id, internalClient);
 
   const selectPlanId = async (code) => {
     const match = planMaster.find(item => item.plangroupcode == code);

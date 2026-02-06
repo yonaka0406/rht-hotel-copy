@@ -58,7 +58,7 @@
             </Column>
             <Column field="type" header="種類">
                  <template #body="{data}">
-                    <Tag v-if="data.dataType === 'action'" style="background: transparent;" :value="translateActionType(data.type)" :severity="getActionTypeSeverity(data.type)" />
+                    <Tag v-if="data.dataType === 'action'" :value="translateActionType(data.type)" :severity="getActionTypeSeverity(data.type)" />
                     <span v-else>{{ translateReservationType(data.type) }}</span>
                 </template>
             </Column>
@@ -158,7 +158,10 @@
         'meeting': '会議',
         'task': 'タスク',
         'note': 'メモ',
-        'other': 'その他'
+        'other': 'その他',
+        'construction_site': '工事現場',
+        'office_visit': '来社',
+        'wh': 'WH'
     };
     const statusTranslations = {
         'pending': '保留中',
@@ -239,7 +242,10 @@
             meeting: 'primary',
             task: 'secondary',
             note: 'warn',
-            other: 'secondary'
+            other: 'secondary',
+            construction_site: 'success',
+            office_visit: 'primary',
+            wh: 'info'
         };
         return severities[actionType] || 'info';
     };

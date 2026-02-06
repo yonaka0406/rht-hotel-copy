@@ -107,7 +107,7 @@
                     class="p-datatable-sm">
                     <Column field="action_type" header="タイプ" :sortable="true" style="min-width:100px">
                         <template #body="{data}">
-                            <Tag style="background: transparent;" :value="translateActionType(data.action_type)" :severity="getActionTypeSeverity(data.action_type)" />
+                            {{ translateActionType(data.action_type) }}
                         </template>
                         <template #filter="{filterModel,filterCallback}">
                             <Select v-model="filterModel.value" @change="filterCallback()" :options="actionTypeOptions" optionLabel="label" optionValue="value" placeholder="タイプを選択" class="p-column-filter" />
@@ -196,7 +196,7 @@
         <DataTable :value="modalData" responsiveLayout="scroll" paginator :rows="10" class="p-datatable-sm">
             <Column field="action_type" header="タイプ">
                 <template #body="{data}">
-                    <Tag style="background: transparent;" :value="translateActionType(data.action_type)" :severity="getActionTypeSeverity(data.action_type)" />
+                    {{ translateActionType(data.action_type) }}
                 </template>
             </Column>
             <Column field="subject" header="件名" :sortable="true"></Column>
@@ -332,7 +332,10 @@ const actionTypeTranslations = {
     'meeting': '会議',
     'task': 'タスク',
     'note': 'メモ',
-    'other': 'その他'
+    'other': 'その他',
+    'construction_site': '工事現場',
+    'office_visit': '来社',
+    'wh': 'WH'
 };
 const statusTranslations = {
     'pending': '保留中',
@@ -410,18 +413,6 @@ const formatDate = (dateString) => {
 };
 
 // --- Severity Helpers for Tags ---
-const getActionTypeSeverity = (actionType) => {
-    const severities = {
-        visit: 'primary',
-        call: 'info',
-        email: 'info',
-        meeting: 'primary',
-        task: 'secondary',
-        note: 'warn',
-        other: 'secondary'
-    };
-    return severities[actionType] || 'info';
-};
 const getStatusSeverity = (status, due_date) => {
     const eStatus = getEffectiveStatus(status, due_date);
     const severities = {

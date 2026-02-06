@@ -79,7 +79,7 @@ CREATE TABLE addresses (
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
 
-CREATE TYPE crm_action_type_enum AS ENUM ('visit', 'call', 'email', 'meeting', 'task', 'note', 'other');
+CREATE TYPE crm_action_type_enum AS ENUM ('visit', 'call', 'email', 'meeting', 'task', 'note', 'other', 'construction_site', 'office_visit', 'wh');
 CREATE TYPE crm_action_status_enum AS ENUM ('pending', 'scheduled', 'completed', 'cancelled', 'rescheduled');
 
 CREATE TABLE crm_actions (

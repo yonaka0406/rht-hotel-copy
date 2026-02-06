@@ -17,7 +17,12 @@ let activeUsersInterval = null;
 
 const fetchActiveUsers = async () => {
     try {
-        const response = await fetch('/api/auth/active-users');
+        const authToken = localStorage.getItem('authToken');
+        const response = await fetch('/api/auth/active-users', {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
         if (!response.ok) {
             throw new Error(`HTTPエラー！ステータス: ${response.status}`);
         }
