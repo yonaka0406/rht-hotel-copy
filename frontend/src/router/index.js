@@ -71,6 +71,7 @@ const AccountingReceivables = () => import('@/pages/Accounting/AccountingReceiva
 const AccountingCostBreakdown = () => import('@/pages/Accounting/AccountingCostBreakdown/AccountingCostBreakdown.vue');
 const AccountingDataIntegrityAnalysis = () => import('@/pages/Accounting/AccountingDataIntegrityAnalysis/AccountingDataIntegrityAnalysis.vue');
 const AccountingBudgetActual = () => import('@/pages/Accounting/AccountingBudgetActual/AccountingBudgetActualPage.vue');
+const AccountingUtilityBills = () => import('@/pages/Accounting/AccountingUtilityBills/AccountingUtilityBillsPage.vue');
 
 
 const routes = [
@@ -191,6 +192,7 @@ const routes = [
       { path: 'cost-breakdown', name: 'AccountingCostBreakdown', component: AccountingCostBreakdown },
       { path: 'data-integrity-analysis', name: 'AccountingDataIntegrityAnalysis', component: AccountingDataIntegrityAnalysis },
       { path: 'budget-actual', name: 'AccountingBudgetActual', component: AccountingBudgetActual },
+      { path: 'utility-bills', name: 'AccountingUtilityBills', component: AccountingUtilityBills },
     ],
     meta: { requiresAuth: true, requiresAccounting: true }
   },

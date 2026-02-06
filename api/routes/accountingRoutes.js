@@ -60,4 +60,10 @@ router.get('/accounting/receivables/balances', authMiddleware_accounting, accoun
 router.get('/accounting/receivables/history', authMiddleware_accounting, accountingController.getHistory);
 router.get('/accounting/receivables/search-clients', authMiddleware_accounting, accountingController.searchClients);
 
+// Utility Bills
+router.get('/accounting/utility-details', authMiddleware_accounting, accountingController.getUtilityDetails);
+router.post('/accounting/utility-details', authMiddleware_accounting, accountingController.upsertUtilityDetail);
+router.delete('/accounting/utility-details/:id', authMiddleware_accounting, accountingController.deleteUtilityDetail);
+router.get('/accounting/utility-suggestions', authMiddleware_accounting, accountingController.getUtilitySuggestions);
+
 module.exports = router;
