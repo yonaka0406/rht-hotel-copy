@@ -22,6 +22,9 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
     // titleCell.alignment = { horizontal: 'center', vertical: 'middle', shrinkToFit: true };
 
     // 2. Room Only Rate Field (A3, B3)
+    const row3 = worksheet.getRow(3);
+    row3.height = 30;
+    
     const roomOnlyRateLabelCell = worksheet.getCell('A3');
     roomOnlyRateLabelCell.value = '素泊まり料金';
     roomOnlyRateLabelCell.font = { bold: true };
@@ -36,6 +39,7 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
     const roomOnlyRateValueCell = worksheet.getCell('B3');
     roomOnlyRateValueCell.value = null; // User can input this
     roomOnlyRateValueCell.numFmt = '#,##0';
+    roomOnlyRateValueCell.alignment = { vertical: 'middle' };
     roomOnlyRateValueCell.border = {
         top: { style: 'thin' },
         left: { style: 'thin' },
@@ -58,6 +62,7 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
     const taxRateValueCell = worksheet.getCell('D3');
     taxRateValueCell.value = null; // User can input this
     taxRateValueCell.numFmt = '0.00%';
+    taxRateValueCell.alignment = { vertical: 'middle' };
     taxRateValueCell.border = {
         top: { style: 'thin' },
         left: { style: 'thin' },
@@ -69,7 +74,7 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
     const taxAmountLabelCell = worksheet.getCell('E3');
     taxAmountLabelCell.value = '1人当たり税額';
     taxAmountLabelCell.font = { bold: true };
-    taxAmountLabelCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    taxAmountLabelCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
     taxAmountLabelCell.border = {
         top: { style: 'thin' },
         left: { style: 'thin' },
@@ -80,6 +85,7 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
     const taxAmountValueCell = worksheet.getCell('F3');
     taxAmountValueCell.value = null; // Changed to null as per new requirement to allow input
     taxAmountValueCell.numFmt = '#,##0';
+    taxAmountValueCell.alignment = { vertical: 'middle' };
     taxAmountValueCell.border = {
         top: { style: 'thin' },
         left: { style: 'thin' },
@@ -124,7 +130,7 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
         { key: 'std_accommodation_count', width: 12 },
         { key: 'std_number_of_people', width: 12 },
         { key: 'std_non_accommodation_count', width: 12 },
-        { key: 'std_empty', width: 3 },
+        { key: 'std_empty', width: 10 },
         { key: 'std_tax_amount', width: 15 },
         { key: 'separator1', width: 3 },
         // Monthly (H-M)
@@ -132,7 +138,7 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
         { key: 'mon_accommodation_count', width: 12 },
         { key: 'mon_number_of_people', width: 12 },
         { key: 'mon_non_accommodation_count', width: 12 },
-        { key: 'mon_empty', width: 3 },
+        { key: 'mon_empty', width: 10 },
         { key: 'mon_tax_amount', width: 15 },
         { key: 'separator2', width: 3 },
         // Total (O-T)
@@ -140,7 +146,7 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
         { key: 'tot_accommodation_count', width: 12 },
         { key: 'tot_number_of_people', width: 12 },
         { key: 'tot_non_accommodation_count', width: 12 },
-        { key: 'tot_empty', width: 3 },
+        { key: 'tot_empty', width: 10 },
         { key: 'tot_tax_amount', width: 15 },
     ];
 
