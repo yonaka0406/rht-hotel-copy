@@ -169,6 +169,7 @@
                 :selectedMonth="selectedMonth"
                 :latestMonth="latestMonth"
                 :mappedHotels="mappedHotels"
+                :occupancyData="rawData.occupancyData || []"
             />
 
             <!-- Scatter Charts -->
