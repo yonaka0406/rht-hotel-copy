@@ -594,12 +594,15 @@ const selectExportAccommodationTax = async (requestId, hotelId, dateStart, dateE
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     JOIN hotels h ON rd.hotel_id = h.id
+    LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
+    LEFT JOIN plan_package_categories ppc ON ph.plan_package_category_id = ppc.id
     WHERE rd.hotel_id = $1
       AND rd.date BETWEEN $2 AND $3
       AND rd.cancelled IS NULL
       AND rd.billable = TRUE
       AND r.status IN ('confirmed', 'checked_in', 'checked_out')
       AND r.type <> 'employee'
+      AND (ppc.name IS NULL OR ppc.name != 'マンスリー')
     GROUP BY rd.date, h.formal_name
     ORDER BY rd.date
   `;
