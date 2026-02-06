@@ -861,8 +861,8 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
   }
 };
 
-const selectReservationsInventory = async (requestId, hotelId, startDate, endDate, dbClient = null) => {
-  const executor = dbClient || getPool(requestId);
+const selectReservationsInventory = async (requestId, hotelId, startDate, endDate) => {
+  const pool = getPool(requestId);
   const query = `
       WITH date_range AS (
           SELECT generate_series($2::date, $3::date, '1 day'::interval)::date AS date
@@ -923,7 +923,7 @@ const selectReservationsInventory = async (requestId, hotelId, startDate, endDat
   `;
   const values = [hotelId, startDate, endDate];
   try {
-    const result = await executor.query(query, [hotelId, startDate, endDate]);
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving logs:', err);

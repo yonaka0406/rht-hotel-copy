@@ -61,9 +61,9 @@ const selectReservationHistory = async (requestId, id) => {
         throw new Error('Database error');
     }
 };
-const selectReservationInventoryChange = async (requestId, id, dbClient = null) => {
+const selectReservationInventoryChange = async (requestId, id) => {
     // console.log('selectReservationInventoryChange for id:', id)
-    const executor = dbClient || getPool(requestId);
+    const pool = getPool(requestId);
     const reservationQuery = `
         SELECT
             id,
@@ -184,29 +184,29 @@ const selectReservationInventoryChange = async (requestId, id, dbClient = null) 
                 AND rd_logs.log_time BETWEEN pd.log_time - INTERVAL '10 minutes' AND pd.log_time + INTERVAL '10 minutes'
         `;
 
-        const parentResult = await executor.query(parentDeleteQuery, values);
+        const parentResult = await pool.query(parentDeleteQuery, values);
         if (parentResult.rows.length > 0) {
             // Return affected dates from CASCADE DELETE (individual reservation_details)
             return parentResult.rows;
         }
 
         // If no CASCADE DELETE logs found, check the main reservation query
-        const result = await executor.query(reservationQuery, values);
+        const result = await pool.query(reservationQuery, values);
         if (result.rows.length > 0) {
             return result.rows;
         }
 
         // Fallback to existing reservation_details logic
-        const detailsResult = await executor.query(detailsQuery, values);
+        const detailsResult = await pool.query(detailsQuery, values);
         return detailsResult.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
         throw new Error('Database error');
     }
 };
-const selectReservationGoogleInventoryChange = async (requestId, id, dbClient = null) => {
+const selectReservationGoogleInventoryChange = async (requestId, id) => {
     // console.log('selectReservationGoogleInventoryChange for id:', id)
-    const executor = dbClient || getPool(requestId);
+    const pool = getPool(requestId);
     const reservationQuery = `
         SELECT
             id,
@@ -316,20 +316,20 @@ const selectReservationGoogleInventoryChange = async (requestId, id, dbClient = 
                 AND rd_logs.log_time BETWEEN pd.log_time - INTERVAL '10 minutes' AND pd.log_time + INTERVAL '10 minutes'
         `;
 
-        const parentResult = await executor.query(parentDeleteQuery, values);
+        const parentResult = await pool.query(parentDeleteQuery, values);
         if (parentResult.rows.length > 0) {
             // Return affected dates from CASCADE DELETE (individual reservation_details)
             return parentResult.rows;
         }
 
         // If no CASCADE DELETE logs found, check the main reservation query
-        const result = await executor.query(reservationQuery, values);
+        const result = await pool.query(reservationQuery, values);
         if (result.rows.length > 0) {
             return result.rows;
         }
 
         // Fallback to existing reservation_details logic
-        const detailsResult = await executor.query(detailsQuery, values);
+        const detailsResult = await pool.query(detailsQuery, values);
         return detailsResult.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
