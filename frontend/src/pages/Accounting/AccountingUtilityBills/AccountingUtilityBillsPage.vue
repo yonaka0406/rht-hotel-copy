@@ -4,16 +4,13 @@ import { useAccountingStore } from '@/composables/useAccountingStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
-import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';
-import Select from 'primevue/select';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import InputNumber from 'primevue/inputnumber';
-import InputText from 'primevue/inputtext';
-import Dialog from 'primevue/dialog';
-import Tag from 'primevue/tag';
-import { getUtilityUnit } from '@/utils/accountingUtils';
+
+// Sub-components
+import UtilityBillFilters from './components/UtilityBillFilters.vue';
+import UtilityBillDataTable from './components/UtilityBillDataTable.vue';
+import UtilityBillSuggestions from './components/UtilityBillSuggestions.vue';
+import UtilityBillFormDialog from './components/UtilityBillFormDialog.vue';
 
 const accountingStore = useAccountingStore();
 const hotelStore = useHotelStore();
@@ -39,7 +36,6 @@ const editingItem = ref({
     total_value: 0,
     provider_name: ''
 });
-
 
 const fetchUtilityData = async () => {
     if (!selectedHotelId.value || !selectedMonth.value) return;
@@ -111,12 +107,11 @@ const openEditDialog = (item) => {
     showEditDialog.value = true;
 };
 
-const saveUtilityDetail = async () => {
+const handleSave = async (itemData) => {
     isSaving.value = true;
     try {
-        const data = { ...editingItem.value };
+        const data = { ...itemData };
 
-        // Format dates for backend
         const formatDate = (date) => {
             const d = new Date(date);
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -154,15 +149,6 @@ const deleteItem = (id) => {
             }
         }
     });
-};
-
-const formatCurrency = (val) => {
-    return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(val);
-};
-
-const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('ja-JP');
 };
 
 const processedSuggestions = computed(() => {
@@ -218,161 +204,42 @@ onMounted(async () => {
             </div>
 
             <!-- Filters -->
-            <div class="flex flex-wrap items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-8">
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">施設:</span>
-                    <Select v-model="selectedHotelId" :options="hotelStore.hotels.value" optionLabel="name" optionValue="id" placeholder="施設を選択" fluid class="w-56" />
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">対象月:</span>
-                    <DatePicker v-model="selectedMonth" view="month" dateFormat="yy/mm" fluid class="w-40" />
-                </div>
-
-                <Button icon="pi pi-refresh" @click="fetchUtilityData" :loading="isLoading" severity="secondary" rounded text />
-            </div>
+            <UtilityBillFilters
+                v-model:hotelId="selectedHotelId"
+                v-model:month="selectedMonth"
+                :hotels="hotelStore.hotels.value"
+                :loading="isLoading"
+                @refresh="fetchUtilityData"
+            />
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Main List -->
                 <div class="lg:col-span-2">
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <div class="p-6 border-b border-slate-100 dark:border-slate-700">
-                            <h2 class="text-lg font-bold text-slate-900 dark:text-white">登録済みデータ</h2>
-                        </div>
-                        <DataTable :value="utilityDetails" :loading="isLoading" size="small" class="p-datatable-sm">
-                            <template #empty>データがありません。</template>
-                            <Column field="transaction_date" header="取引日">
-                                <template #body="slotProps">{{ formatDate(slotProps.data.transaction_date) }}</template>
-                            </Column>
-                            <Column field="sub_account_name" header="科目/補助科目">
-                                <template #body="slotProps">
-                                    <div class="flex flex-col">
-                                        <span class="font-bold">{{ slotProps.data.sub_account_name }}</span>
-                                        <span class="text-[10px] text-slate-400">{{ slotProps.data.account_name }}</span>
-                                    </div>
-                                </template>
-                            </Column>
-                            <Column field="quantity" header="数量" text-right>
-                                <template #body="slotProps">
-                                    {{ slotProps.data.quantity }} <small class="text-slate-400">{{ getUtilityUnit(slotProps.data.sub_account_name) }}</small>
-                                </template>
-                            </Column>
-                            <Column field="total_value" header="合計金額" text-right>
-                                <template #body="slotProps">{{ formatCurrency(slotProps.data.total_value) }}</template>
-                            </Column>
-                            <Column field="average_price" header="平均単価" text-right>
-                                <template #body="slotProps">{{ formatCurrency(slotProps.data.average_price) }}</template>
-                            </Column>
-                            <Column header="操作" class="w-24">
-                                <template #body="slotProps">
-                                    <div class="flex gap-1">
-                                        <Button icon="pi pi-pencil" severity="secondary" text rounded size="small" @click="openEditDialog(slotProps.data)" />
-                                        <Button icon="pi pi-trash" severity="danger" text rounded size="small" @click="deleteItem(slotProps.data.id)" />
-                                    </div>
-                                </template>
-                            </Column>
-                        </DataTable>
-                    </div>
+                    <UtilityBillDataTable
+                        :utility-details="utilityDetails"
+                        :loading="isLoading"
+                        @edit="openEditDialog"
+                        @delete="deleteItem"
+                    />
                 </div>
 
                 <!-- Suggestions -->
                 <div>
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <div class="p-6 border-b border-slate-100 dark:border-slate-700">
-                            <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <i class="pi pi-lightbulb text-amber-500"></i>
-                                弥生データからの提案
-                            </h2>
-                            <p class="text-xs text-slate-500 mt-1">未入力の取引と思われる項目を表示しています</p>
-                        </div>
-                        <div class="max-h-[600px] overflow-y-auto">
-                            <div v-if="isLoading" class="p-6 space-y-4">
-                                <div v-for="i in 3" :key="i" class="animate-pulse flex flex-col gap-2">
-                                    <div class="h-4 bg-slate-100 rounded w-1/3"></div>
-                                    <div class="h-8 bg-slate-100 rounded"></div>
-                                </div>
-                            </div>
-                            <div v-else-if="suggestions.length === 0" class="p-8 text-center text-slate-400">
-                                <i class="pi pi-check-circle text-3xl mb-2"></i>
-                                <p>提案はありません</p>
-                            </div>
-                            <div v-else class="divide-y divide-slate-50 dark:divide-slate-700/50">
-                                <div v-for="(s, idx) in processedSuggestions" :key="idx"
-                                    class="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer group"
-                                    :class="{ 'opacity-60 bg-slate-50/50': s.isRegistered }"
-                                    @click="openAddDialog(s)">
-                                    <div class="flex justify-between items-start mb-1">
-                                        <div class="flex gap-1">
-                                            <Tag :value="formatDate(s.transaction_date)" severity="secondary" class="text-[10px]" />
-                                            <Tag v-if="s.isRegistered" value="登録済み" severity="success" class="text-[10px]" />
-                                        </div>
-                                        <span class="font-mono font-bold text-slate-900 dark:text-white">{{ formatCurrency(Math.abs(s.amount)) }}</span>
-                                    </div>
-                                    <div class="font-bold text-sm text-slate-700 dark:text-slate-300">{{ s.sub_account_name }}</div>
-                                    <div class="text-xs text-slate-400 truncate">{{ s.summary }}</div>
-                                    <div class="mt-2 text-[10px] text-violet-600 dark:text-violet-400 font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <i class="pi pi-plus"></i> 詳細を入力する
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <UtilityBillSuggestions
+                        :suggestions="processedSuggestions"
+                        :loading="isLoading"
+                        @select="openAddDialog"
+                    />
                 </div>
             </div>
         </div>
 
         <!-- Edit Dialog -->
-        <Dialog v-model:visible="showEditDialog" :header="editingItem.id ? 'データを編集' : '新規データ入力'" modal class="w-full max-w-md">
-            <div class="flex flex-col gap-4 py-4">
-                <div class="flex flex-col gap-1">
-                    <label class="text-xs font-bold text-slate-400 uppercase">対象月</label>
-                    <DatePicker v-model="editingItem.month" view="month" dateFormat="yy/mm" fluid />
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class="text-xs font-bold text-slate-400 uppercase">取引日</label>
-                    <DatePicker v-model="editingItem.transaction_date" dateFormat="yy/mm/dd" fluid />
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class="text-xs font-bold text-slate-400 uppercase">補助科目</label>
-                    <InputText v-model="editingItem.sub_account_name" placeholder="例: 電気代" fluid />
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class="text-xs font-bold text-slate-400 uppercase">請求元 / プロバイダー</label>
-                    <InputText v-model="editingItem.provider_name" placeholder="例: 東京電力" fluid />
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-xs font-bold text-slate-400 uppercase">数量 ({{ getUtilityUnit(editingItem.sub_account_name) }})</label>
-                        <InputNumber v-model="editingItem.quantity" :minFractionDigits="2" fluid />
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-xs font-bold text-slate-400 uppercase">合計金額 (税込)</label>
-                        <InputNumber v-model="editingItem.total_value" mode="currency" currency="JPY" locale="ja-JP" fluid />
-                    </div>
-                </div>
-                <div v-if="editingItem.quantity > 0" class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700 mt-2">
-                    <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">計算された平均単価</div>
-                    <div class="text-lg font-bold text-violet-600 dark:text-violet-400 font-mono">
-                        {{ formatCurrency(editingItem.total_value / editingItem.quantity) }} / {{ getUtilityUnit(editingItem.sub_account_name) }}
-                    </div>
-                </div>
-            </div>
-            <template #footer>
-                <Button label="キャンセル" icon="pi pi-times" severity="secondary" text @click="showEditDialog = false" />
-                <Button label="保存" icon="pi pi-check" :loading="isSaving" @click="saveUtilityDetail" />
-            </template>
-        </Dialog>
+        <UtilityBillFormDialog
+            v-model:visible="showEditDialog"
+            :item="editingItem"
+            :loading="isSaving"
+            @save="handleSave"
+        />
     </div>
 </template>
-
-<style scoped>
-:deep(.p-datatable-sm .p-datatable-thead > tr > th) {
-    padding: 0.5rem 1rem;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-:deep(.p-datatable-sm .p-datatable-tbody > tr > td) {
-    padding: 0.75rem 1rem;
-}
-</style>

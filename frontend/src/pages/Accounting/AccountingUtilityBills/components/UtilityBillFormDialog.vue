@@ -1,0 +1,79 @@
+<template>
+    <Dialog :visible="visible" @update:visible="$emit('update:visible', $event)" :header="item.id ? 'データを編集' : '新規データ入力'" modal class="w-full max-w-md">
+        <div class="flex flex-col gap-4 py-4">
+            <div class="flex flex-col gap-1">
+                <label class="text-xs font-bold text-slate-400 uppercase">対象月</label>
+                <DatePicker v-model="localItem.month" view="month" dateFormat="yy/mm" fluid />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label class="text-xs font-bold text-slate-400 uppercase">取引日</label>
+                <DatePicker v-model="localItem.transaction_date" dateFormat="yy/mm/dd" fluid />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label class="text-xs font-bold text-slate-400 uppercase">補助科目</label>
+                <InputText v-model="localItem.sub_account_name" placeholder="例: 電気代" fluid />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label class="text-xs font-bold text-slate-400 uppercase">請求元 / プロバイダー</label>
+                <InputText v-model="localItem.provider_name" placeholder="例: 東京電力" fluid />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-slate-400 uppercase">数量 ({{ getUtilityUnit(localItem.sub_account_name) }})</label>
+                    <InputNumber v-model="localItem.quantity" :minFractionDigits="2" fluid />
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-slate-400 uppercase">合計金額 (税込)</label>
+                    <InputNumber v-model="localItem.total_value" mode="currency" currency="JPY" locale="ja-JP" fluid />
+                </div>
+            </div>
+            <div v-if="localItem.quantity > 0" class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700 mt-2">
+                <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">計算された平均単価</div>
+                <div class="text-lg font-bold text-violet-600 dark:text-violet-400 font-mono">
+                    {{ formatCurrency(localItem.total_value / localItem.quantity) }} / {{ getUtilityUnit(localItem.sub_account_name) }}
+                </div>
+            </div>
+        </div>
+        <template #footer>
+            <Button label="キャンセル" icon="pi pi-times" severity="secondary" text @click="$emit('update:visible', false)" />
+            <Button label="保存" icon="pi pi-check" :loading="loading" @click="$emit('save', localItem)" />
+        </template>
+    </Dialog>
+</template>
+
+<script setup>
+import { ref, watch } from 'vue';
+import Dialog from 'primevue/dialog';
+import DatePicker from 'primevue/datepicker';
+import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
+import Button from 'primevue/button';
+import { getUtilityUnit } from '@/utils/accountingUtils';
+
+const props = defineProps({
+    visible: {
+        type: Boolean,
+        required: true
+    },
+    item: {
+        type: Object,
+        required: true
+    },
+    loading: {
+        type: Boolean,
+        default: false
+    }
+});
+
+defineEmits(['update:visible', 'save']);
+
+const localItem = ref({ ...props.item });
+
+watch(() => props.item, (newVal) => {
+    localItem.value = { ...newVal };
+}, { deep: true });
+
+const formatCurrency = (val) => {
+    return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(val);
+};
+</script>
