@@ -358,15 +358,9 @@ const listenForTableChanges = async () => {
             });
           }
         }
-        if (msg.channel === 'reservation_log_inserted' && process.env.NODE_ENV === 'production') {
+        if (msg.channel === 'reservation_log_inserted') {
           const logId = parseInt(msg.payload, 10);
-          const requestId = `ota-sync-dev-${logId}-${Date.now()}`;
-
-          // Use otaSyncService for consistency and connection efficiency.
-          // The service internally ensures that real OTA updates only happen in production.
-          syncReservationInventory(requestId, logId).catch(err => {
-            logger.error('Error in background reservation sync (dev listener):', { logId, requestId, error: err.message });
-          });
+          logger.debug(`[DEV] Database trigger received: reservation_log_inserted. logId: ${logId}`);
         }
       });
 
