@@ -8,14 +8,15 @@
 
                 <!-- Create User Dialog -->
                 <Dialog v-model="createUserDialog" v-if="createUserDialog" header="新規ユーザー登録" :visible="createUserDialog"
-                    :style="{ width: '450px' }" modal :closable="false">
+                    :style="{ width: '450px' }" modal>
                     <form @submit.prevent="submitNewUser">
 
                         <!-- User Email Field -->
                         <div class="field mt-6">
                             <FloatLabel>
                                 <InputText id="email" v-model="newUser.email" class="w-full"
-                                    :class="{ 'p-invalid': emailError }" required @blur="validateEmail(newUser.email)" />
+                                    :class="{ 'p-invalid': emailError }" required @blur="validateEmail(newUser.email)"
+                                    fluid />
                                 <label for="email">メールアドレス</label>
                             </FloatLabel>
                         </div>
@@ -23,7 +24,7 @@
                         <!-- User Name Field -->
                         <div class="field mt-6">
                             <FloatLabel>
-                                <InputText id="name" v-model="newUser.name" class="w-full" />
+                                <InputText id="name" v-model="newUser.name" class="w-full" fluid />
                                 <label for="name">表示名</label>
                             </FloatLabel>
                         </div>
@@ -36,7 +37,7 @@
                                 <Password id="password" v-model="newUser.password" toggleMask feedback
                                     promptLabel="パスワードを決めて下さい" weakLabel="単純すぎる" mediumLabel="平均的な複雑さ"
                                     strongLabel="複雑なパスワード" class="w-full" :class="{ 'p-invalid': passwordError }" required
-                                    @blur="validatePassword(newUser.password)">
+                                    @blur="validatePassword(newUser.password)" fluid>
                                     <template #header>
                                         <div class="font-semibold text-xm mb-4">パスワードを選択してください</div>
                                     </template>
@@ -62,7 +63,7 @@
                             <FloatLabel>
                                 <Select id="role" v-model="newUser.role" :options="roles" optionLabel="role_name"
                                     optionValue="id" class="w-full" :class="{ 'p-invalid': roleError }" required
-                                    @blur="validateRole(newUser.role)" />
+                                    @blur="validateRole(newUser.role)" fluid />
                                 <label for="role">ロール</label>
                             </FloatLabel>
                         </div>
@@ -111,7 +112,7 @@
                                                     <i class="pi pi-search" />
                                                 </InputIcon>
                                                 <InputText v-model="filters['global'].value"
-                                                    placeholder="Keyword Search" />
+                                                    placeholder="Keyword Search" aria-label="キーワード検索" />
                                             </IconField>
                                         </div>
                                     </template>
@@ -128,7 +129,7 @@
                                             <div class="text-center">
                                                 <Button v-if="slotProps.data.id !== 1" icon="pi pi-pencil"
                                                     class="p-button-info p-button-sm"
-                                                    @click="editUser(slotProps.data)" />
+                                                    @click="editUser(slotProps.data)" aria-label="編集" v-tooltip="'編集'" />
                                             </div>
                                         </template>
                                     </Column>
@@ -158,7 +159,7 @@
                                                     <i class="pi pi-search" />
                                                 </InputIcon>
                                                 <InputText v-model="filters['global'].value"
-                                                    placeholder="Keyword Search" />
+                                                    placeholder="Keyword Search" aria-label="キーワード検索" />
                                             </IconField>
                                         </div>
                                     </template>
@@ -171,7 +172,7 @@
                                             <div class="text-center">
                                                 <Button v-if="slotProps.data.id !== 1" icon="pi pi-pencil"
                                                     class="p-button-info p-button-sm"
-                                                    @click="editUser(slotProps.data)" />
+                                                    @click="editUser(slotProps.data)" aria-label="編集" v-tooltip="'編集'" />
                                             </div>
 
                                         </template>
@@ -184,13 +185,13 @@
 
                 <!-- Edit User Dialog -->
                 <Dialog v-model="editUserDialog" v-if="editUserDialog" header="ユーザー編集" :visible="editUserDialog"
-                    :style="{ width: '450px' }" modal :closable="false">
+                    :style="{ width: '450px' }" modal>
                     <form @submit.prevent="submitEditUser">
 
                         <!-- User Email Field -->
                         <div class="field  mt-6">
                             <FloatLabel>
-                                <InputText id="eu_email" v-model="currentUser.email" class="w-full" disabled />
+                                <InputText id="eu_email" v-model="currentUser.email" class="w-full" disabled fluid />
                                 <label for="eu_email">メールアドレス</label>
                             </FloatLabel>
                         </div>
@@ -198,7 +199,7 @@
                         <!-- User Email Field -->
                         <div class="field  mt-6">
                             <FloatLabel>
-                                <InputText id="eu_name" v-model="currentUser.name" class="w-full" />
+                                <InputText id="eu_name" v-model="currentUser.name" class="w-full" fluid />
                                 <label for="eu_name">表示名</label>
                             </FloatLabel>
                         </div>
@@ -208,7 +209,7 @@
                             <FloatLabel>
                                 <Select id="role" v-model="currentUser.role" :options="roles" optionLabel="role_name"
                                     optionValue="id" class="w-full" :class="{ 'p-invalid': roleError }" required
-                                    @blur="validateRole(currentUser.role)" />
+                                    @blur="validateRole(currentUser.role)" fluid />
                                 <label for="role">ロール</label>
                             </FloatLabel>
                         </div>

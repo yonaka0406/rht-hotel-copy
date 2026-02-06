@@ -31,3 +31,8 @@
 ## 2026-02-03 - [Truncated Tax Calculation for Japanese Accounting]
 **Learning:** In Japanese accounting practices, when calculating net prices from tax-inclusive totals, it is standard to calculate the tax portion first and truncate it (`floor`), then subtract this tax amount from the total to get the net price. This differs from simple rounding or floating-point division and must be consistently applied across frontend (Vue), backend (SQL/JS), and database schema (Generated Columns) to prevent penny-off discrepancies in invoices and receipts.
 **Action:** Always use the formula `tax_amount = floor(total * rate / (1 + rate))` and `net_price = total - tax_amount` for Japanese tax-inclusive calculations. Ensure all layers (DB, API, UI) are synchronized with this logic.
+
+## 2026-02-06 - [Standardizing Dialog Interactions and Accessible Controls]
+
+**Learning:** Enabling standard dialog closing behavior (Esc key and 'X' button) by avoiding `:closable="false"` is critical for accessibility and user expectation. Combining this with localized (Japanese) ARIA labels and tooltips for icon-only buttons creates a more inclusive and intuitive interface. Additionally, the `fluid` prop in PrimeVue 4 is the preferred way to ensure form components span the full width of their containers, especially within narrow dialogs.
+**Action:** Always enable standard closing for dialogs unless there is a critical business reason to block it. Pair every icon-only button with a matching `aria-label` and `v-tooltip`. Prefer the `fluid` prop over `class="w-full"` for PrimeVue components.

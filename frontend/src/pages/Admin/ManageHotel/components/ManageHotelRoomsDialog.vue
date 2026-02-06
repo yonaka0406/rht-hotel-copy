@@ -20,7 +20,7 @@
             <Column rowReorder headerStyle="width: 3rem" />
             <Column field="room_number" header="部屋番号">
               <template #editor="slotProps">
-                <InputText v-model="slotProps.data.room_number" />
+                <InputText v-model="slotProps.data.room_number" fluid />
               </template>
             </Column>
             <Column field="capacity" header="人数">
@@ -28,7 +28,7 @@
                     {{ slotProps.data.capacity }}
                 </template>
               <template #editor="slotProps">
-                <InputNumber v-model="slotProps.data.capacity" :min="1" />
+                <InputNumber v-model="slotProps.data.capacity" :min="1" fluid />
               </template>
             </Column>
             <Column field="smoking" header="喫煙">
