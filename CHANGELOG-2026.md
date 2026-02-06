@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improvement: Enhanced label clarity in date selectors across accounting pages.
 - Improvement: Refined UI controls in dialogs with updated styling.
 - Improvement: Improved data filtering and removed debug output from analytics.
+- Improvement: Enhanced the Accommodation Tax Report output within the reservation list by expanding the display from a single total to a categorized breakdown including "Monthly," "Standard," and "Total" values.
 
 ## [1.4.13] - 2026-02-06
 
