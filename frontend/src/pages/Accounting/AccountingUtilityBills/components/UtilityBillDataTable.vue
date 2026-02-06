@@ -5,6 +5,11 @@
         </div>
         <DataTable :value="utilityDetails" :loading="loading" size="small" class="p-datatable-sm">
             <template #empty>データがありません。</template>
+            <Column field="month" header="取引月">
+                <template #body="slotProps">
+                    <span class="font-bold">{{ formatMonth(slotProps.data.month) }}</span>
+                </template>
+            </Column>
             <Column field="transaction_date" header="取引日">
                 <template #body="slotProps">{{ formatDate(slotProps.data.transaction_date) }}</template>
             </Column>
@@ -75,6 +80,12 @@ const formatCurrency = (val) => {
 const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('ja-JP');
+};
+
+const formatMonth = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
 </script>
 

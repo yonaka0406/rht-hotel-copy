@@ -12,8 +12,8 @@ const getUtilityDetails = async (requestId, hotelId, startMonth, endMonth, dbCli
 
     const query = `
         SELECT * FROM acc_utility_details
-        WHERE hotel_id = $1 AND month BETWEEN $2 AND $3
-        ORDER BY month ASC, transaction_date ASC
+        WHERE hotel_id = $1 AND (month BETWEEN $2 AND $3 OR transaction_date BETWEEN $2 AND $3)
+        ORDER BY transaction_date ASC, month ASC
     `;
 
     try {
