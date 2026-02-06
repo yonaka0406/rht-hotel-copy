@@ -5,6 +5,127 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+
+### February 6, 2026
+
+#### Year-over-Year Comparison for Channel Distribution Report（予約分析レポート：チャネル分布の前年同月比較機能）
+
+- **Status**: [x] **Open** [ ] **In Progress** [ ] **Fixed** [ ] **Closed**
+- **Priority**: [ ] **Low** [x] **Medium** [ ] **High** [ ] **Critical**
+- **Source**: User Request
+- **Description**:
+  - In the "Reservation Analysis" report type, add a year-over-year (YoY) comparison to the "Channel Distribution by Hotel" section.
+  - Users should be able to compare the booking channel performance of the selected month with the same month of the previous year.
+- **Expected Behavior**:
+  - The report displays current period data alongside previous year's data for the same month.
+  - Include variance (percentage change) for each channel to highlight growth or decline.
+[Japanese]
+- **概要**:
+  - 「予約分析」レポートにおいて、「ホテル別チャネル分布」に前年度同月の比較データを追加する。
+  - 選択した月の予約チャネル実績を、前年同月の実績と並べて比較できるようにしたい。
+- **期待される動作**:
+  - レポートに当月分と前年同月分のデータが併記されること。
+  - 各チャネルごとに前年比（増減率）を表示し、パフォーマンスの変化を可視化すること。
+
+
+#### Improved Usability for Parking Calendar（駐車場カレンダーへの操作性向上）
+
+- **Status**: [x] **Open** [ ] **In Progress** [ ] **Fixed** [ ] **Closed**
+- **Priority**: [ ] **Low** [x] **Medium** [ ] **High** [ ] **Critical**
+- **Source**: User Request
+- **Description**:
+  - Implement the ability to set blocks by specifying specific parking spot numbers directly from the parking calendar.
+  - Enable moving existing parking reservations using mouse drag-and-drop functionality within the calendar view.
+[Japanese]
+- **概要**:
+  - 駐車場カレンダー上で、特定の駐車場番号を指定して直接ブロック設定（売り止め）ができる機能の実装。
+  - カレンダー内の既存予約を、マウスのドラッグ＆ドロップで直感的に移動できる操作性の向上。
+
+#### Discrepancy Between Tax Totals and Billing Totals in Multi-Month Reservations（月をまたぐ予約における消費税区分合計と請求合計の不一致）
+
+- **Status**: [x] **Open** [ ] **In Progress** [ ] **Fixed** [ ] **Closed**
+- **Priority**: [x] **Low** [ ] **Medium** [ ] **High** [ ] **Critical**
+- **Source**: Bug Report
+- **Description**:
+  - When a reservation spans multiple months and payment is settled in advance for the following month, the "Tax Category Total" and "Payment (Billing) Total" do not match in the invoice editing screen.
+- **Example**:
+  - **Client**: Teshikaga Yuken Kogyo (February 2026)
+  - **Stay Details**: 
+    - Jan 10 – Jan 12 (2 nights): 1,000 yen
+    - Jan 17 – Jan 19 (2 nights): 1,000 yen
+    - Jan 24 – Jan 26 (2 nights): 1,000 yen
+    - Jan 31 – Feb 02 (2 nights): 1,000 yen
+  - **Result**:
+    - **Tax Category Total**: 3,500 yen
+    - **Payment (Billing) Total**: 4,000 yen
+    - **Discrepancy**: The 500 yen portion for Feb 2nd is missing from the tax total.
+- **Steps to Reproduce**:
+  1. Create a reservation that spans across the end of one month and the beginning of the next.
+  2. Settle the full payment, including the portion for the following month.
+  3. Navigate to the Invoice menu and click the "Edit" button.
+  4. Compare the Tax Category Total with the Payment (Billing) Total.
+- **Expected Behavior**:
+  - The Tax Category Total should include all stay dates covered by the settled payment to ensure consistency with the Billing Total.
+[Japanese]
+- **概要**:
+  - 月をまたぐ予約において、次月分を先に清算した場合、請求書作成（編集）画面で「消費税区分合計」と「入金（請求）合計」の金額が一致しない現象が発生している。
+- **例**:
+  - **顧客**: 弟子屈 裕建工業 (2026年2月分)
+  - **宿泊明細**:
+    - 01/10 ～ 01/12 (2泊): 1,000円
+    - 01/17 ～ 01/19 (2泊): 1,000円
+    - 01/24 ～ 01/26 (2泊): 1,000円
+    - 01/31 ～ 02/02 (2泊): 1,000円
+  - **結果**:
+    - **消費税区分合計**: 3,500円
+    - **入金（請求）合計**: 4,000円
+    - **不一致**: 2/2分の500円が消費税計算に合算されていない。
+- **再現手順**:
+  1. 月をまたぐ予約を作成する。
+  2. 次月分も含めて一括で清算を行う。
+  3. 請求書メニューから対象の請求書の「編集」ボタンを押す。
+  4. 画面上の各合計金額を確認する。
+- **期待される動作**:
+  - 清算済みの金額に対応するすべての宿泊日程が消費税計算に含まれ、各合計金額が一致すること。
+
+
+#### Incorrect Invoice Amount in Edit Mode for Multiple Monthly Invoices（同月内の複数請求書作成時における編集画面の金額表示不具合）
+
+- **Status**: [x] **Open** [ ] **In Progress** [ ] **Fixed** [ ] **Closed**
+- **Priority**: [x] **Low** [ ] **Medium** [ ] **High** [ ] **Critical**
+- **Source**: User Report
+- **Description**:
+  - Requested by Mr.Oda
+  - When creating separate invoices for different months within the same period, the second invoice's amount incorrectly defaults to the first invoice's amount upon entering the edit screen.
+  - While the amount is displayed correctly on the list view, it changes to the incorrect value (the amount from the previously created invoice) in the edit/detail screen.
+- **Example Case**:
+  - Client: Takasago B (General Incorporated Association Higher Association)
+  - Issue: The March invoice amount (2,312,000 JPY) incorrectly changes to the February amount (3,808,000 JPY) when opening the edit screen.
+- **Expected Behavior**:
+  - The edit screen should display the correct individual amount associated with that specific invoice record, regardless of other invoices created for the same client.
+- **Steps to Reproduce**:
+  1. Create an invoice for a specific month (e.g., February).
+  2. Create a second invoice for a different month (e.g., March) for the same client.
+  3. Verify the amounts are correct on the invoice list screen.
+  4. Click the "Edit" button for the second invoice.
+  5. Observe that the amount has been overwritten by the first invoice's value.
+[Japanese]
+- **概要**:
+  - 小田さんより依頼。
+  - 同じ月に次月分などを分けて請求書を作成すると、2つ目に作成した請求書の金額が、編集画面を開いた際に1つ目の請求書の金額になってしまう。
+  - 一覧画面では正しい金額が表示されているが、編集ボタンを押して編集画面に遷移すると、値が正しく保持されない。
+- **具体例**:
+  - 対象：高砂B（一般社団法人ハイヤー協会）
+  - 事象：3月分の2,312,000円が、編集画面では2月分の3,808,000円として表示される。
+- **期待される動作**:
+  - 編集画面においても、一覧画面と同様に各請求書固有の正しい金額が表示されること。
+- **再現手順**:
+  1. 特定の月（例：2月分）の請求書を作成する。
+  2. 同じクライアントに対して、別の月（例：3月分）の請求書を別途作成する。
+  3. 請求書一覧画面でそれぞれの金額が正しいことを確認する。
+  4. 2つ目に作成した請求書の「編集」ボタンを押す。
+  5. 編集画面内の金額が、1つ目に作成した請求書の金額に書き換わっていることを確認する。
+
 ### January 16, 2026
 
 #### OTA reservations without reservation_rates values（reservation_ratesの値を持たないOTA予約）
