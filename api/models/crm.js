@@ -124,14 +124,14 @@ const insertAction = async (requestId, actionFields, userId) => {
     `;
 
     const values = [
-        actionFields.client_id,
-        actionFields.action_type,
-        actionFields.action_datetime || null,
+        actionFields.client_id || actionFields.clientId,
+        actionFields.action_type || actionFields.actionType,
+        actionFields.action_datetime || actionFields.actionDateTime || null,
         actionFields.subject,
         actionFields.details || null,
         actionFields.outcome || null,
-        actionFields.assigned_to || null,
-        actionFields.due_date || null,
+        actionFields.assigned_to || actionFields.assignedTo || null,
+        actionFields.due_date || actionFields.dueDate || null,
         actionFields.status || 'pending',
         userId, // created_by
         actionFields.google_calendar_event_id || null,
@@ -175,21 +175,43 @@ const updateAction = async (requestId, actionId, actionFields, userId) => {
     };
     
     // Fields from actionFields
-    if (actionFields.hasOwnProperty('action_datetime')) addFieldToUpdate('action_datetime', actionFields.action_datetime || null);
-    if (actionFields.hasOwnProperty('subject')) addFieldToUpdate('subject', actionFields.subject); // Assuming subject is required if passed
-    if (actionFields.hasOwnProperty('details')) addFieldToUpdate('details', actionFields.details || null);
-    if (actionFields.hasOwnProperty('outcome')) addFieldToUpdate('outcome', actionFields.outcome || null);
-    if (actionFields.hasOwnProperty('assigned_to')) addFieldToUpdate('assigned_to', actionFields.assigned_to || null);
-    if (actionFields.hasOwnProperty('due_date')) addFieldToUpdate('due_date', actionFields.due_date || null);
-    if (actionFields.hasOwnProperty('status')) addFieldToUpdate('status', actionFields.status || 'pending');
-    
-    // Google Calendar specific fields
-    if (actionFields.hasOwnProperty('google_calendar_event_id')) addFieldToUpdate('google_calendar_event_id', actionFields.google_calendar_event_id || null);
-    if (actionFields.hasOwnProperty('google_calendar_html_link')) addFieldToUpdate('google_calendar_html_link', actionFields.google_calendar_html_link || null);
-    if (actionFields.hasOwnProperty('synced_with_google_calendar')) addFieldToUpdate('synced_with_google_calendar', actionFields.synced_with_google_calendar || false);
+    const fieldMap = {
+        client_id: 'client_id',
+        clientId: 'client_id',
+        action_type: 'action_type',
+        actionType: 'action_type',
+        action_datetime: 'action_datetime',
+        actionDateTime: 'action_datetime',
+        subject: 'subject',
+        details: 'details',
+        outcome: 'outcome',
+        assigned_to: 'assigned_to',
+        assignedTo: 'assigned_to',
+        due_date: 'due_date',
+        dueDate: 'due_date',
+        status: 'status',
+        google_calendar_event_id: 'google_calendar_event_id',
+        googleCalendarEventId: 'google_calendar_event_id',
+        google_calendar_html_link: 'google_calendar_html_link',
+        googleCalendarHtmlLink: 'google_calendar_html_link',
+        synced_with_google_calendar: 'synced_with_google_calendar',
+        syncedWithGoogleCalendar: 'synced_with_google_calendar'
+    };
 
-    // Always update updated_by and updated_at
-    if (setClauses.length > 0) { // Only add updated_by if other fields are being updated
+    for (const [objField, dbField] of Object.entries(fieldMap)) {
+        if (objField in actionFields) {
+            const val = actionFields[objField];
+            if (val !== undefined) {
+                // Avoid duplicate additions if both snake_case and camelCase are present
+                if (!setClauses.some(c => c.startsWith(`${dbField} =`))) {
+                    addFieldToUpdate(dbField, val);
+                }
+            }
+        }
+    }
+
+    // Always update updated_by if other fields are being updated
+    if (setClauses.length > 0) {
         addFieldToUpdate('updated_by', userId);        
     }
 
@@ -213,7 +235,9 @@ const updateAction = async (requestId, actionId, actionFields, userId) => {
     `;
     
     try {
-        logger.debug('Executing update crm_action query.', { query, values: anondbValues(values, [/* indices of sensitive values */]) });
+        // Anonymize values for logging if needed.
+        // Note: index-based anonymization is fragile with dynamic queries.
+        logger.debug('Executing update crm_action query.', { query, values: anondbValues(values) });
         const result = await pool.query(query, values);
         if (result.rows && result.rows.length > 0) {
             logger.info(`Successfully updated crm_action with ID: ${result.rows[0].id}.`);

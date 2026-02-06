@@ -2,7 +2,7 @@ const crmModel = require('../models/crm');
 const usersModel = require('../models/user'); // To get user's Google Calendar sync preferences
 const googleCalendarUtils = require('../utils/googleCalendarUtils');
 
-const SYNCABLE_ACTION_TYPES = ['meeting', 'task', 'visit', 'call']; // Define action types that can be synced
+const SYNCABLE_ACTION_TYPES = ['meeting', 'task', 'visit', 'call', 'construction_site', 'office_visit', 'wh']; // Define action types that can be synced
 
 // Helper function to reduce boilerplate for fetching user, to be used internally
 async function _getUserForSync(requestId, userId, logger) {
