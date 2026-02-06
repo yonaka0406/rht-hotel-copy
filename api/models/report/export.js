@@ -588,21 +588,25 @@ const selectExportAccommodationTax = async (requestId, hotelId, dateStart, dateE
     SELECT
       h.formal_name as hotel_name,
       rd.date,
-      COUNT(CASE WHEN COALESCE(rd.is_accommodation, TRUE) THEN 1 END) as accommodation_count,
-      SUM(CASE WHEN COALESCE(rd.is_accommodation, TRUE) THEN rd.number_of_people ELSE 0 END) as number_of_people,
-      COUNT(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) THEN 1 END) as non_accommodation_count
+      -- Standard plan counts
+      COUNT(CASE WHEN COALESCE(rd.is_accommodation, TRUE) AND ph.plan_package_category_id = 1 THEN 1 END) as standard_accommodation_count,
+      SUM(CASE WHEN COALESCE(rd.is_accommodation, TRUE) AND ph.plan_package_category_id = 1 THEN rd.number_of_people ELSE 0 END) as standard_number_of_people,
+      COUNT(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) AND ph.plan_package_category_id = 1 THEN 1 END) as standard_non_accommodation_count,
+      -- Monthly plan counts
+      COUNT(CASE WHEN COALESCE(rd.is_accommodation, TRUE) AND ph.plan_package_category_id = 2 THEN 1 END) as monthly_accommodation_count,
+      SUM(CASE WHEN COALESCE(rd.is_accommodation, TRUE) AND ph.plan_package_category_id = 2 THEN rd.number_of_people ELSE 0 END) as monthly_number_of_people,
+      COUNT(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) AND ph.plan_package_category_id = 2 THEN 1 END) as monthly_non_accommodation_count
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     JOIN hotels h ON rd.hotel_id = h.id
     LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
-    LEFT JOIN plan_package_categories ppc ON ph.plan_package_category_id = ppc.id
     WHERE rd.hotel_id = $1
       AND rd.date BETWEEN $2 AND $3
       AND rd.cancelled IS NULL
       AND rd.billable = TRUE
       AND r.status IN ('confirmed', 'checked_in', 'checked_out')
       AND r.type <> 'employee'
-      AND (ppc.name IS NULL OR ppc.name != 'マンスリー')
+      AND ph.plan_package_category_id IN (1, 2)
     GROUP BY rd.date, h.formal_name
     ORDER BY rd.date
   `;
