@@ -12,6 +12,16 @@
             <div class="flex items-center gap-2">
                 <div class="flex items-center bg-slate-50 dark:bg-slate-900/50 rounded-xl p-1 border border-slate-100 dark:border-slate-800 mr-2">
                     <button 
+                        @click="showPreviousYear = !showPreviousYear"
+                        class="px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1.5"
+                        :class="showPreviousYear ? 'bg-white dark:bg-slate-800 shadow-sm text-violet-600' : 'bg-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'"
+                    >
+                        <i class="pi pi-history text-[8px]"></i>
+                        前年比較
+                    </button>
+                </div>
+                <div class="flex items-center bg-slate-50 dark:bg-slate-900/50 rounded-xl p-1 border border-slate-100 dark:border-slate-800 mr-2">
+                    <button 
                         @click="selectedMetric = 'quantity'"
                         class="px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all"
                         :class="selectedMetric === 'quantity' ? 'bg-white dark:bg-slate-800 shadow-sm text-violet-600' : 'bg-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'"
@@ -100,9 +110,12 @@ const props = defineProps({
 const accountingStore = useAccountingStore();
 const loading = ref(false);
 const rawUtilityData = ref([]);
+const prevYearUtilityData = ref([]);
+const prevOccupancyData = ref([]);
 const selectedType = ref('電気');
 const selectedMetric = ref('quantity'); // 'quantity' or 'total_value'
 const isPerRoom = ref(true); // Default to per sold room
+const showPreviousYear = ref(false);
 
 const typeOptions = [
     { label: '電気', value: '電気' },
@@ -115,12 +128,13 @@ const chartData = computed(() => {
     if (!rawUtilityData.value.length) return [];
 
     // Filter by selected utility type
-    const filtered = rawUtilityData.value.filter(d => d.sub_account_name.includes(selectedType.value));
+    const filterType = (data) => data.filter(d => d.sub_account_name.includes(selectedType.value));
+    const filtered = filterType(rawUtilityData.value);
+    const filteredPrev = showPreviousYear.value ? filterType(prevYearUtilityData.value) : [];
 
     if (props.selectedHotelId === 0) {
         // === ALL HOTELS MODE: RANKING ===
-        // Group by Hotel
-        const byHotel = filtered.reduce((acc, curr) => {
+        const groupHotels = (data, occData) => data.reduce((acc, curr) => {
             const id = curr.hotel_id;
             if (!acc[id]) {
                 const hotelName = props.mappedHotels.find(h => h.hotel_id === id)?.hotel_name || `Hotel ${id}`;
@@ -130,8 +144,7 @@ const chartData = computed(() => {
             acc[id].total_value += parseFloat(curr.total_value);
             acc[id].count += 1;
 
-            // Find matching occupancy for this month/hotel
-            const occ = props.occupancyData.find(o => o.month === curr.month && o.hotel_id === id);
+            const occ = occData.find(o => o.month === curr.month && o.hotel_id === id);
             if (occ) {
                 acc[id].sold_rooms += parseInt(occ.total_sold_rooms || 0);
                 acc[id].occupancy += parseFloat(occ.occupancy_percentage || 0);
@@ -139,38 +152,71 @@ const chartData = computed(() => {
             return acc;
         }, {});
 
-        const hotels = Object.values(byHotel).map(d => ({
-            ...d,
-            // Monthly averages for the period
-            avg_monthly_quantity: d.quantity / d.count,
-            avg_monthly_value: d.total_value / d.count,
-            avg_monthly_sold_rooms: d.sold_rooms / d.count,
-            avg_occupancy: d.occupancy / d.count,
-            // Per room metrics (using total sold rooms over period)
-            quantity_per_room: d.sold_rooms > 0 ? d.quantity / d.sold_rooms : 0,
-            value_per_room: d.sold_rooms > 0 ? d.total_value / d.sold_rooms : 0,
-            // Weighted average unit price
-            average_price: d.quantity === 0 ? 0 : d.total_value / d.quantity
-        }));
+        const currentByHotel = groupHotels(filtered, props.occupancyData);
+        const prevByHotel = groupHotels(filteredPrev, prevOccupancyData.value);
 
-        // Calculate Global Average
-        const validHotels = hotels.length || 1;
+        const hotels = Object.keys(currentByHotel).map(id => {
+            const d = currentByHotel[id];
+            const p = prevByHotel[id];
+            
+            return {
+                ...d,
+                avg_monthly_quantity: d.quantity / d.count,
+                avg_monthly_value: d.total_value / d.count,
+                quantity_per_room: d.sold_rooms > 0 ? d.quantity / d.sold_rooms : 0,
+                value_per_room: d.sold_rooms > 0 ? d.total_value / d.sold_rooms : 0,
+                average_price: d.quantity === 0 ? 0 : d.total_value / d.quantity,
+                avg_occupancy: d.occupancy / d.count,
+                
+                // Previous Year Data
+                prev_quantity_per_room: p && p.sold_rooms > 0 ? p.quantity / p.sold_rooms : 0,
+                prev_value_per_room: p && p.sold_rooms > 0 ? p.total_value / p.sold_rooms : 0,
+                prev_avg_monthly_quantity: p ? p.quantity / p.count : 0,
+                prev_avg_monthly_value: p ? p.total_value / p.count : 0,
+                prev_average_price: p && p.quantity > 0 ? p.total_value / p.quantity : 0,
+                prev_avg_occupancy: p ? p.occupancy / p.count : 0
+            };
+        });
+
+        // Global Average Calculation
+        const calcGlobal = (hList, isPrev = false) => {
+            const valid = hList.length || 1;
+            const qKey = isPrev ? 'prev_avg_monthly_quantity' : 'avg_monthly_quantity';
+            const vKey = isPrev ? 'prev_avg_monthly_value' : 'avg_monthly_value';
+            const qprKey = isPrev ? 'prev_quantity_per_room' : 'quantity_per_room';
+            const vprKey = isPrev ? 'prev_value_per_room' : 'value_per_room';
+            const prcKey = isPrev ? 'prev_average_price' : 'average_price';
+            const occKey = isPrev ? 'prev_avg_occupancy' : 'avg_occupancy';
+
+            return {
+                avg_monthly_quantity: hList.reduce((sum, h) => sum + (h[qKey] || 0), 0) / valid,
+                avg_monthly_value: hList.reduce((sum, h) => sum + (h[vKey] || 0), 0) / valid,
+                quantity_per_room: hList.reduce((sum, h) => sum + (h[qprKey] || 0), 0) / valid,
+                value_per_room: hList.reduce((sum, h) => sum + (h[vprKey] || 0), 0) / valid,
+                average_price: hList.reduce((sum, h) => sum + (h[prcKey] || 0), 0) / valid,
+                avg_occupancy: hList.reduce((sum, h) => sum + (h[occKey] || 0), 0) / valid
+            };
+        };
+
+        const gCurrent = calcGlobal(hotels, false);
+        const gPrev = calcGlobal(hotels, true);
+
         const globalAvg = {
             hotel_name: '全体平均',
-            avg_monthly_quantity: hotels.reduce((sum, h) => sum + h.avg_monthly_quantity, 0) / validHotels,
-            avg_monthly_value: hotels.reduce((sum, h) => sum + h.avg_monthly_value, 0) / validHotels,
-            quantity_per_room: hotels.reduce((sum, h) => sum + h.quantity_per_room, 0) / validHotels,
-            value_per_room: hotels.reduce((sum, h) => sum + h.value_per_room, 0) / validHotels,
-            average_price: hotels.reduce((sum, h) => sum + h.average_price, 0) / validHotels,
-            avg_occupancy: hotels.reduce((sum, h) => sum + h.avg_occupancy, 0) / validHotels,
+            ...gCurrent,
+            prev_quantity_per_room: gPrev.quantity_per_room,
+            prev_value_per_room: gPrev.value_per_room,
+            prev_avg_monthly_quantity: gPrev.avg_monthly_quantity,
+            prev_avg_monthly_value: gPrev.avg_monthly_value,
+            prev_average_price: gPrev.average_price,
+            prev_avg_occupancy: gPrev.avg_occupancy,
             isAverage: true
         };
 
         return { mode: 'ranking', data: hotels, globalAvg };
     } else {
         // === SINGLE HOTEL MODE: TIME SERIES ===
-        // Group by month
-        const grouped = filtered.reduce((acc, curr) => {
+        const groupMonths = (data, occData) => data.reduce((acc, curr) => {
             const month = curr.month;
             if (!acc[month]) {
                 acc[month] = { month, quantity: 0, total_value: 0, count: 0, sold_rooms: 0, occupancy: 0 };
@@ -179,7 +225,7 @@ const chartData = computed(() => {
             acc[month].total_value += parseFloat(curr.total_value);
             acc[month].count += 1;
 
-            const occ = props.occupancyData.find(o => o.month === curr.month && o.hotel_id === props.selectedHotelId);
+            const occ = occData.find(o => o.month === curr.month && o.hotel_id === props.selectedHotelId);
             if (occ) {
                 acc[month].sold_rooms = parseInt(occ.total_sold_rooms || 0);
                 acc[month].occupancy = parseFloat(occ.occupancy_percentage || 0);
@@ -187,12 +233,31 @@ const chartData = computed(() => {
             return acc;
         }, {});
 
-        const data = Object.values(grouped).map(d => ({
-            ...d,
-            quantity_per_room: d.sold_rooms > 0 ? d.quantity / d.sold_rooms : 0,
-            value_per_room: d.sold_rooms > 0 ? d.total_value / d.sold_rooms : 0,
-            average_price: d.quantity === 0 ? 0 : d.total_value / d.quantity
-        })).sort((a, b) => new Date(a.month) - new Date(b.month));
+        const currentByMonth = groupMonths(filtered, props.occupancyData);
+        const prevByMonth = groupMonths(filteredPrev, prevOccupancyData.value);
+
+        const data = Object.keys(currentByMonth).map(month => {
+            const d = currentByMonth[month];
+            
+            // Map previous year month: e.g., if month is 2025-05, we look for 2024-05 in prevByMonth
+            const date = new Date(month);
+            const prevMonthKey = `${date.getFullYear() - 1}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+            const p = prevByMonth[prevMonthKey];
+
+            return {
+                ...d,
+                quantity_per_room: d.sold_rooms > 0 ? d.quantity / d.sold_rooms : 0,
+                value_per_room: d.sold_rooms > 0 ? d.total_value / d.sold_rooms : 0,
+                average_price: d.quantity === 0 ? 0 : d.total_value / d.quantity,
+                
+                prev_quantity_per_room: p && p.sold_rooms > 0 ? p.quantity / p.sold_rooms : 0,
+                prev_value_per_room: p && p.sold_rooms > 0 ? p.total_value / p.sold_rooms : 0,
+                prev_quantity: p ? p.quantity : 0,
+                prev_total_value: p ? p.total_value : 0,
+                prev_average_price: p && p.quantity > 0 ? p.total_value / p.quantity : 0,
+                prev_occupancy: p ? p.occupancy : 0
+            };
+        }).sort((a, b) => new Date(a.month) - new Date(b.month));
 
         return { mode: 'time_series', data };
     }
@@ -204,20 +269,69 @@ const usageCostOption = computed(() => {
     const metricLabel = selectedMetric.value === 'quantity' ? '使用量' : '金額';
     const metricUnit = selectedMetric.value === 'quantity' ? unit : '¥';
     const normalizationLabel = isPerRoom.value ? '(1室あたり)' : '(合計)';
+    
     const valueKey = isPerRoom.value 
         ? (selectedMetric.value === 'quantity' ? 'quantity_per_room' : 'value_per_room')
         : (mode === 'ranking' ? (selectedMetric.value === 'quantity' ? 'avg_monthly_quantity' : 'avg_monthly_value') : (selectedMetric.value === 'quantity' ? 'quantity' : 'total_value'));
 
+    const prevValueKey = isPerRoom.value
+        ? (selectedMetric.value === 'quantity' ? 'prev_quantity_per_room' : 'prev_value_per_room')
+        : (selectedMetric.value === 'quantity' ? (mode === 'ranking' ? 'prev_avg_monthly_quantity' : 'prev_quantity') : (mode === 'ranking' ? 'prev_avg_monthly_value' : 'prev_total_value'));
+
     if (mode === 'ranking') {
         const sorted = [...data].sort((a, b) => b[valueKey] - a[valueKey]);
-        
-        // Find correct insertion index for the average bar to place it in the sequence
         const avgVal = globalAvg[valueKey];
         const insertIdx = sorted.findIndex(h => h[valueKey] < avgVal);
         const displayData = insertIdx === -1 
             ? [...sorted, globalAvg] 
             : [...sorted.slice(0, insertIdx), globalAvg, ...sorted.slice(insertIdx)];
         
+        const series = [
+            {
+                name: `${metricLabel} (当年)`,
+                type: 'bar',
+                itemStyle: { color: selectedMetric.value === 'quantity' ? '#fbbf24' : '#8b5cf6' },
+                data: displayData.map(d => ({
+                    value: d[valueKey],
+                    itemStyle: { color: d.isAverage ? '#ef4444' : (selectedMetric.value === 'quantity' ? '#fbbf24' : '#8b5cf6') }
+                }))
+            }
+        ];
+
+        if (showPreviousYear.value) {
+            series.push({
+                name: `${metricLabel} (前年)`,
+                type: 'bar',
+                itemStyle: { color: selectedMetric.value === 'quantity' ? '#fde68a' : '#c4b5fd' },
+                data: displayData.map(d => ({
+                    value: d[prevValueKey],
+                    itemStyle: { color: d.isAverage ? '#fca5a5' : (selectedMetric.value === 'quantity' ? '#fde68a' : '#c4b5fd'), opacity: 0.8 }
+                }))
+            });
+        }
+
+        series.push({
+            name: '稼働率 (当年)',
+            type: 'line',
+            yAxisIndex: 1,
+            data: displayData.map(d => d.avg_occupancy),
+            itemStyle: { color: '#10b981' },
+            lineStyle: { width: 2, type: 'dashed' },
+            symbol: 'circle'
+        });
+
+        if (showPreviousYear.value) {
+            series.push({
+                name: '稼働率 (前年)',
+                type: 'line',
+                yAxisIndex: 1,
+                data: displayData.map(d => d.prev_avg_occupancy),
+                itemStyle: { color: '#6ee7b7' },
+                lineStyle: { width: 1, type: 'dotted' },
+                symbol: 'none'
+            });
+        }
+
         return {
             title: { text: `${metricLabel}${normalizationLabel} 施設別ランキング`, left: 'center', textStyle: { fontSize: 14 } },
             tooltip: { 
@@ -229,60 +343,106 @@ const usageCostOption = computed(() => {
                     let html = `<div class="font-bold mb-2">${d.hotel_name}</div>`;
                     
                     const mainVal = d[valueKey];
-                    const perRoomVal = d[isQty ? 'quantity_per_room' : 'value_per_room'];
-                    const totalVal = d[isQty ? 'avg_monthly_quantity' : 'avg_monthly_value'];
+                    const prevVal = d[prevValueKey];
+                    const diff = prevVal > 0 ? ((mainVal - prevVal) / prevVal) * 100 : null;
                     
                     html += `<div class="flex justify-between gap-4 mb-1">
-                        <span class="text-slate-400">表示値:</span>
-                        <span class="font-bold text-violet-600">${isQty ? mainVal.toFixed(2) : Math.round(mainVal).toLocaleString()}${isPerRoom.value ? (isQty ? unit+'/室' : '円/室') : (isQty ? unit : '円')}</span>
+                        <span class="text-slate-400">${metricLabel} (当年):</span>
+                        <span class="font-bold text-violet-600">${isQty ? mainVal.toFixed(2) : Math.round(mainVal).toLocaleString()}${metricUnit}</span>
+                    </div>`;
+
+                    if (showPreviousYear.value) {
+                        html += `<div class="flex justify-between gap-4 mb-1">
+                            <span class="text-slate-400">${metricLabel} (前年):</span>
+                            <span class="font-bold text-slate-500">${isQty ? prevVal.toFixed(2) : Math.round(prevVal).toLocaleString()}${metricUnit}</span>
+                        </div>`;
+                        if (diff !== null) {
+                            html += `<div class="flex justify-between gap-4 mb-1 text-[10px]">
+                                <span class="text-slate-400">前年比:</span>
+                                <span class="${diff > 0 ? 'text-red-500' : 'text-emerald-500'} font-bold">${diff > 0 ? '+' : ''}${diff.toFixed(1)}%</span>
+                            </div>`;
+                        }
+                    }
+                    
+                    html += `<div class="mt-2 pt-2 border-t border-slate-100">
+                        <div class="flex justify-between gap-4 mb-1 text-[10px]">
+                            <span class="text-slate-400">実数合計 (当年月平均):</span>
+                            <span>${isQty ? d.avg_monthly_quantity.toFixed(2) : Math.round(d.avg_monthly_value).toLocaleString()}${isQty ? unit : '円'}</span>
+                        </div>
                     </div>`;
                     
-                    html += `<div class="flex justify-between gap-4 mb-1 text-[10px]">
-                        <span class="text-slate-400">実数合計 (月平均):</span>
-                        <span>${isQty ? totalVal.toFixed(2) : Math.round(totalVal).toLocaleString()}${isQty ? unit : '円'}</span>
-                    </div>`;
-                    
-                    html += `<div class="flex justify-between gap-4 mb-1 text-[10px]">
-                        <span class="text-slate-400">1室あたり:</span>
-                        <span>${isQty ? perRoomVal.toFixed(2) : Math.round(perRoomVal).toLocaleString()}${isQty ? unit : '円'}/室</span>
-                    </div>`;
-                    
-                    html += `<div class="flex justify-between gap-4 mt-2 pt-2 border-t border-slate-100">
-                        <span class="text-slate-400">稼働率:</span>
+                    html += `<div class="flex justify-between gap-4 mt-1 pt-1 border-t border-slate-50">
+                        <span class="text-slate-400">稼働率 (当年):</span>
                         <span class="font-bold text-emerald-500">${d.avg_occupancy.toFixed(1)}%</span>
                     </div>`;
+
+                    if (showPreviousYear.value) {
+                        html += `<div class="flex justify-between gap-4 mb-1 text-[10px]">
+                            <span class="text-slate-400">稼働率 (前年):</span>
+                            <span class="text-emerald-400">${d.prev_avg_occupancy.toFixed(1)}%</span>
+                        </div>`;
+                    }
                     return html;
                 }
             },
-            legend: { data: [metricLabel, '稼働率'], bottom: 0 },
+            legend: { 
+                data: [
+                    `${metricLabel} (当年)`, 
+                    `${metricLabel} (前年)`, 
+                    '稼働率 (当年)', 
+                    '稼働率 (前年)'
+                ].filter(n => showPreviousYear.value || !n.includes('(前年)')), 
+                bottom: 0 
+            },
             grid: { left: '3%', right: '4%', bottom: '20%', containLabel: true },
             xAxis: { type: 'category', data: displayData.map(d => d.hotel_name), axisLabel: { interval: 0, rotate: 45 } },
             yAxis: [
                 { type: 'value', name: `${metricLabel} (${metricUnit})`, position: 'left' },
                 { type: 'value', name: '稼働率 (%)', position: 'right', min: 0, max: 100, axisLabel: { formatter: '{value}%' } }
             ],
-            series: [
-                {
-                    name: metricLabel,
-                    type: 'bar',
-                    data: displayData.map(d => ({
-                        value: d[valueKey],
-                        itemStyle: { color: d.isAverage ? '#ef4444' : (selectedMetric.value === 'quantity' ? '#fbbf24' : '#8b5cf6') }
-                    }))
-                },
-                {
-                    name: '稼働率',
-                    type: 'line',
-                    yAxisIndex: 1,
-                    data: displayData.map(d => d.avg_occupancy),
-                    itemStyle: { color: '#10b981' },
-                    lineStyle: { width: 2, type: 'dashed' },
-                    symbol: 'circle'
-                }
-            ]
+            series
         };
     } else {
         const months = data.map(d => `${new Date(d.month).getMonth() + 1}月`);
+        const series = [
+            {
+                name: `${metricLabel} (当年)`,
+                type: 'bar',
+                data: data.map(d => d[valueKey]),
+                itemStyle: { color: selectedMetric.value === 'quantity' ? '#fbbf24' : '#8b5cf6' }
+            }
+        ];
+
+        if (showPreviousYear.value) {
+            series.push({
+                name: `${metricLabel} (前年)`,
+                type: 'bar',
+                data: data.map(d => d[prevValueKey]),
+                itemStyle: { color: selectedMetric.value === 'quantity' ? '#fde68a' : '#c4b5fd', opacity: 0.8 }
+            });
+        }
+
+        series.push({
+            name: '稼働率 (当年)',
+            type: 'line',
+            yAxisIndex: 1,
+            data: data.map(d => d.occupancy),
+            itemStyle: { color: '#10b981' },
+            lineStyle: { width: 3 },
+            smooth: true
+        });
+
+        if (showPreviousYear.value) {
+            series.push({
+                name: '稼働率 (前年)',
+                type: 'line',
+                yAxisIndex: 1,
+                data: data.map(d => d.prev_occupancy),
+                itemStyle: { color: '#6ee7b7' },
+                lineStyle: { width: 1, type: 'dashed' },
+                smooth: true
+            });
+        }
         
         return {
             title: { text: `${metricLabel}${normalizationLabel} の推移`, left: 'center', textStyle: { fontSize: 14 } },
@@ -295,55 +455,64 @@ const usageCostOption = computed(() => {
                     let html = `<div class="font-bold mb-2">${new Date(d.month).getMonth() + 1}月のデータ</div>`;
                     
                     const mainVal = d[valueKey];
-                    const perRoomVal = d[isQty ? 'quantity_per_room' : 'value_per_room'];
-                    const totalVal = d[isQty ? 'quantity' : 'total_value'];
+                    const prevVal = d[prevValueKey];
+                    const diff = prevVal > 0 ? ((mainVal - prevVal) / prevVal) * 100 : null;
                     
                     html += `<div class="flex justify-between gap-4 mb-1">
-                        <span class="text-slate-400">${metricLabel}:</span>
-                        <span class="font-bold text-violet-600">${isQty ? mainVal.toFixed(2) : Math.round(mainVal).toLocaleString()}${isPerRoom.value ? (isQty ? unit+'/室' : '円/室') : (isQty ? unit : '円')}</span>
+                        <span class="text-slate-400">${metricLabel} (当年):</span>
+                        <span class="font-bold text-violet-600">${isQty ? mainVal.toFixed(2) : Math.round(mainVal).toLocaleString()}${metricUnit}</span>
+                    </div>`;
+
+                    if (showPreviousYear.value) {
+                        html += `<div class="flex justify-between gap-4 mb-1">
+                            <span class="text-slate-400">${metricLabel} (前年):</span>
+                            <span class="font-bold text-slate-500">${isQty ? prevVal.toFixed(2) : Math.round(prevVal).toLocaleString()}${metricUnit}</span>
+                        </div>`;
+                        if (diff !== null) {
+                            html += `<div class="flex justify-between gap-4 mb-1 text-[10px]">
+                                <span class="text-slate-400">前年比:</span>
+                                <span class="${diff > 0 ? 'text-red-500' : 'text-emerald-500'} font-bold">${diff > 0 ? '+' : ''}${diff.toFixed(1)}%</span>
+                            </div>`;
+                        }
+                    }
+                    
+                    html += `<div class="mt-2 pt-2 border-t border-slate-100">
+                        <div class="flex justify-between gap-4 mb-1 text-[10px]">
+                            <span class="text-slate-400">実数合計 (当年):</span>
+                            <span>${isQty ? d.quantity.toFixed(2) : Math.round(d.total_value).toLocaleString()}${isQty ? unit : '円'}</span>
+                        </div>
                     </div>`;
                     
-                    html += `<div class="flex justify-between gap-4 mb-1 text-[10px]">
-                        <span class="text-slate-400">実数合計:</span>
-                        <span>${isQty ? totalVal.toFixed(2) : Math.round(totalVal).toLocaleString()}${isQty ? unit : '円'}</span>
-                    </div>`;
-                    
-                    html += `<div class="flex justify-between gap-4 mb-1 text-[10px]">
-                        <span class="text-slate-400">1室あたり:</span>
-                        <span>${isQty ? perRoomVal.toFixed(2) : Math.round(perRoomVal).toLocaleString()}${isQty ? unit : '円'}/室</span>
-                    </div>`;
-                    
-                    html += `<div class="flex justify-between gap-4 mt-2 pt-2 border-t border-slate-100">
-                        <span class="text-slate-400">稼働率:</span>
+                    html += `<div class="flex justify-between gap-4 mt-1 pt-1 border-t border-slate-50">
+                        <span class="text-slate-400">稼働率 (当年):</span>
                         <span class="font-bold text-emerald-500">${d.occupancy.toFixed(1)}%</span>
                     </div>`;
+
+                    if (showPreviousYear.value) {
+                        html += `<div class="flex justify-between gap-4 mb-1 text-[10px]">
+                            <span class="text-slate-400">稼働率 (前年):</span>
+                            <span class="text-emerald-400">${d.prev_occupancy.toFixed(1)}%</span>
+                        </div>`;
+                    }
                     return html;
                 }
             },
-            legend: { data: [metricLabel, '稼働率'], bottom: 0 },
+            legend: { 
+                data: [
+                    `${metricLabel} (当年)`, 
+                    `${metricLabel} (前年)`, 
+                    '稼働率 (当年)', 
+                    '稼働率 (前年)'
+                ].filter(n => showPreviousYear.value || !n.includes('(前年)')), 
+                bottom: 0 
+            },
             grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
             xAxis: { type: 'category', data: months },
             yAxis: [
                 { type: 'value', name: `${metricLabel} (${metricUnit})`, position: 'left' },
                 { type: 'value', name: '稼働率 (%)', position: 'right', min: 0, max: 100, axisLabel: { formatter: '{value}%' } }
             ],
-            series: [
-                {
-                    name: metricLabel,
-                    type: 'bar',
-                    data: data.map(d => d[valueKey]),
-                    itemStyle: { color: selectedMetric.value === 'quantity' ? '#fbbf24' : '#8b5cf6' }
-                },
-                {
-                    name: '稼働率',
-                    type: 'line',
-                    yAxisIndex: 1,
-                    data: data.map(d => d.occupancy),
-                    itemStyle: { color: '#10b981' },
-                    lineStyle: { width: 3 },
-                    smooth: true
-                }
-            ]
+            series
         };
     }
 });
@@ -354,13 +523,35 @@ const unitPriceOption = computed(() => {
 
     if (mode === 'ranking') {
         const sorted = [...data].sort((a, b) => b.average_price - a.average_price);
-        
-        // Position average bar correctly in the sequence
         const avgVal = globalAvg.average_price;
         const insertIdx = sorted.findIndex(h => h.average_price < avgVal);
         const displayData = insertIdx === -1 
             ? [...sorted, globalAvg] 
             : [...sorted.slice(0, insertIdx), globalAvg, ...sorted.slice(insertIdx)];
+
+        const series = [
+            {
+                name: '平均単価 (当年)',
+                type: 'bar',
+                itemStyle: { color: '#10b981' },
+                data: displayData.map(d => ({
+                    value: d.average_price,
+                    itemStyle: { color: d.isAverage ? '#ef4444' : '#10b981' }
+                }))
+            }
+        ];
+
+        if (showPreviousYear.value) {
+            series.push({
+                name: '平均単価 (前年)',
+                type: 'bar',
+                itemStyle: { color: '#6ee7b7' },
+                data: displayData.map(d => ({
+                    value: d.prev_average_price,
+                    itemStyle: { color: d.isAverage ? '#fca5a5' : '#6ee7b7', opacity: 0.8 }
+                }))
+            });
+        }
 
         return {
             title: { text: '平均単価 施設別ランキング', left: 'center', textStyle: { fontSize: 14 } },
@@ -369,29 +560,61 @@ const unitPriceOption = computed(() => {
                 axisPointer: { type: 'shadow' },
                 formatter: (params) => {
                     const d = displayData[params[0].dataIndex];
-                    return `<div class="font-bold mb-1">${d.hotel_name}</div>
-                            <div class="flex justify-between gap-4">
-                                <span class="text-slate-400">平均単価:</span>
-                                <span class="font-bold text-emerald-500">¥${Math.round(d.average_price).toLocaleString()} / ${unit}</span>
+                    let html = `<div class="font-bold mb-2">${d.hotel_name}</div>`;
+                    
+                    const mainVal = d.average_price;
+                    const prevVal = d.prev_average_price;
+                    const diff = prevVal > 0 ? ((mainVal - prevVal) / prevVal) * 100 : null;
+                    
+                    html += `<div class="flex justify-between gap-4 mb-1">
+                        <span class="text-slate-400">当年単価:</span>
+                        <span class="font-bold text-emerald-500">¥${Math.round(mainVal).toLocaleString()} / ${unit}</span>
+                    </div>`;
+
+                    if (showPreviousYear.value) {
+                        html += `<div class="flex justify-between gap-4 mb-1">
+                            <span class="text-slate-400">前年単価:</span>
+                            <span class="font-bold text-slate-500">¥${Math.round(prevVal).toLocaleString()} / ${unit}</span>
+                        </div>`;
+                        if (diff !== null) {
+                            html += `<div class="flex justify-between gap-4 mb-1 text-[10px]">
+                                <span class="text-slate-400">単価騰落率:</span>
+                                <span class="${diff > 0 ? 'text-red-500' : 'text-emerald-500'} font-bold">${diff > 0 ? '+' : ''}${diff.toFixed(1)}%</span>
                             </div>`;
+                        }
+                    }
+                    return html;
                 }
             },
+            legend: { data: ['平均単価 (当年)', '平均単価 (前年)'].filter(n => showPreviousYear.value || !n.includes('(前年)')), bottom: 0 },
             grid: { left: '3%', right: '4%', bottom: '20%', containLabel: true },
             xAxis: { type: 'category', data: displayData.map(d => d.hotel_name), axisLabel: { interval: 0, rotate: 45 } },
             yAxis: { type: 'value', name: `単価 (¥/${unit})` },
-            series: [
-                {
-                    name: '平均単価',
-                    type: 'bar',
-                    data: displayData.map(d => ({
-                        value: d.average_price,
-                        itemStyle: { color: d.isAverage ? '#ef4444' : '#10b981' }
-                    }))
-                }
-            ]
+            series
         };
     } else {
         const months = data.map(d => `${new Date(d.month).getMonth() + 1}月`);
+        const series = [
+            {
+                name: '平均単価 (当年)',
+                type: 'line',
+                data: data.map(d => d.average_price),
+                itemStyle: { color: '#10b981' },
+                areaStyle: { opacity: 0.1 },
+                smooth: true
+            }
+        ];
+
+        if (showPreviousYear.value) {
+            series.push({
+                name: '平均単価 (前年)',
+                type: 'line',
+                data: data.map(d => d.prev_average_price),
+                itemStyle: { color: '#6ee7b7' },
+                lineStyle: { type: 'dashed' },
+                smooth: true
+            });
+        }
 
         return {
             title: { text: '平均単価の推移', left: 'center', textStyle: { fontSize: 14 } },
@@ -399,26 +622,37 @@ const unitPriceOption = computed(() => {
                 trigger: 'axis',
                 formatter: (params) => {
                     const d = data[params[0].dataIndex];
-                    return `<div class="font-bold mb-1">${new Date(d.month).getMonth() + 1}月のデータ</div>
-                            <div class="flex justify-between gap-4">
-                                <span class="text-slate-400">平均単価:</span>
-                                <span class="font-bold text-emerald-500">¥${Math.round(d.average_price).toLocaleString()} / ${unit}</span>
+                    let html = `<div class="font-bold mb-2">${new Date(d.month).getMonth() + 1}月のデータ</div>`;
+                    
+                    const mainVal = d.average_price;
+                    const prevVal = d.prev_average_price;
+                    const diff = prevVal > 0 ? ((mainVal - prevVal) / prevVal) * 100 : null;
+                    
+                    html += `<div class="flex justify-between gap-4 mb-1">
+                        <span class="text-slate-400">当年単価:</span>
+                        <span class="font-bold text-emerald-500">¥${Math.round(mainVal).toLocaleString()} / ${unit}</span>
+                    </div>`;
+
+                    if (showPreviousYear.value) {
+                        html += `<div class="flex justify-between gap-4 mb-1">
+                            <span class="text-slate-400">前年単価:</span>
+                            <span class="font-bold text-slate-500">¥${Math.round(prevVal).toLocaleString()} / ${unit}</span>
+                        </div>`;
+                        if (diff !== null) {
+                            html += `<div class="flex justify-between gap-4 mb-1 text-[10px]">
+                                <span class="text-slate-400">単価騰落率:</span>
+                                <span class="${diff > 0 ? 'text-red-500' : 'text-emerald-500'} font-bold">${diff > 0 ? '+' : ''}${diff.toFixed(1)}%</span>
                             </div>`;
+                        }
+                    }
+                    return html;
                 }
             },
+            legend: { data: ['平均単価 (当年)', '平均単価 (前年)'].filter(n => showPreviousYear.value || !n.includes('(前年)')), bottom: 0 },
             grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
             xAxis: { type: 'category', data: months },
             yAxis: { type: 'value', name: `単価 (¥/${unit})` },
-            series: [
-                {
-                    name: '平均単価',
-                    type: 'line',
-                    data: data.map(d => d.average_price),
-                    itemStyle: { color: '#10b981' },
-                    areaStyle: { opacity: 0.1 },
-                    smooth: true
-                }
-            ]
+            series
         };
     }
 });
@@ -443,20 +677,43 @@ const fetchData = async () => {
             filterBy: 'month'
         };
 
-        if (props.selectedHotelId !== 0) {
-            const data = await accountingStore.fetchUtilityDetails({
-                ...params,
-                hotelId: props.selectedHotelId
-            });
-            rawUtilityData.value = data || [];
-        } else if (props.mappedHotels?.length > 0) {
-            const allDetails = await Promise.all(props.mappedHotels.map(h =>
-                accountingStore.fetchUtilityDetails({ ...params, hotelId: h.hotel_id })
-            ));
-            rawUtilityData.value = allDetails.flat();
+        const fetchForParams = async (p) => {
+            if (props.selectedHotelId !== 0) {
+                const [details, breakdown] = await Promise.all([
+                    accountingStore.fetchUtilityDetails({ ...p, hotelId: props.selectedHotelId }),
+                    accountingStore.fetchCostBreakdown({ topN: 1 }) // Used to get occupancy data
+                ]);
+                return { details: details || [], occupancy: breakdown?.data?.occupancyData || [] };
+            } else if (props.mappedHotels?.length > 0) {
+                const [allDetails, breakdown] = await Promise.all([
+                    Promise.all(props.mappedHotels.map(h =>
+                        accountingStore.fetchUtilityDetails({ ...p, hotelId: h.hotel_id })
+                    )),
+                    accountingStore.fetchCostBreakdown({ topN: 1 })
+                ]);
+                return { details: allDetails.flat(), occupancy: breakdown?.data?.occupancyData || [] };
+            }
+            return { details: [], occupancy: [] };
+        };
+
+        const currentResult = await fetchForParams(params);
+        rawUtilityData.value = currentResult.details;
+        // occupancyData is passed as prop, but if we need more context we use the result
+
+        if (showPreviousYear.value) {
+            const prevParams = {
+                startMonth: formatDate(new Date(twelveMonthsAgo.getFullYear() - 1, twelveMonthsAgo.getMonth(), 1)),
+                endMonth: formatDate(new Date(referenceDate.getFullYear() - 1, referenceDate.getMonth(), 1)),
+                filterBy: 'month'
+            };
+            const prevResult = await fetchForParams(prevParams);
+            prevYearUtilityData.value = prevResult.details;
+            prevOccupancyData.value = prevResult.occupancy;
         } else {
-            rawUtilityData.value = [];
+            prevYearUtilityData.value = [];
+            prevOccupancyData.value = [];
         }
+
     } catch (e) {
         console.error('Failed to fetch utility details for breakdown:', e);
     } finally {
@@ -464,7 +721,7 @@ const fetchData = async () => {
     }
 };
 
-watch(() => [props.selectedHotelId, props.selectedMonth], fetchData);
+watch(() => [props.selectedHotelId, props.selectedMonth, showPreviousYear.value], fetchData);
 
 onMounted(fetchData);
 </script>

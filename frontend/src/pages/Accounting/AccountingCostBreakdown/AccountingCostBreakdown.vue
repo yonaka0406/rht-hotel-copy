@@ -224,7 +224,7 @@ import InputNumber from 'primevue/inputnumber';
 import Select from 'primevue/select';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import { RadarChart, ScatterChart, LineChart } from 'echarts/charts';
+import { RadarChart, ScatterChart, LineChart, BarChart } from 'echarts/charts';
 import {
     TitleComponent,
     TooltipComponent,
@@ -244,6 +244,7 @@ use([
     RadarChart,
     ScatterChart,
     LineChart,
+    BarChart,
     TitleComponent,
     TooltipComponent,
     LegendComponent,
