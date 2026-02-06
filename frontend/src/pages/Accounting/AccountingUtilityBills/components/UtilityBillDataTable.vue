@@ -45,8 +45,8 @@
             <Column header="操作" class="w-24">
                 <template #body="slotProps">
                     <div class="flex gap-1">
-                        <Button icon="pi pi-pencil" severity="secondary" text rounded size="small" @click="$emit('edit', slotProps.data)" aria-label="編集" />
-                        <Button icon="pi pi-trash" severity="danger" text rounded size="small" @click="$emit('delete', slotProps.data.id)" aria-label="削除" />
+                        <Button icon="pi pi-pencil" severity="secondary" text rounded size="small" @click="$emit('edit', slotProps.data)" aria-label="編集" v-tooltip.top="'編集'" />
+                        <Button icon="pi pi-trash" severity="danger" text rounded size="small" @click="$emit('delete', slotProps.data.id)" aria-label="削除" v-tooltip.top="'削除'" />
                     </div>
                 </template>
             </Column>

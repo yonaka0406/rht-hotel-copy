@@ -31,3 +31,7 @@
 ## 2026-02-03 - [Truncated Tax Calculation for Japanese Accounting]
 **Learning:** In Japanese accounting practices, when calculating net prices from tax-inclusive totals, it is standard to calculate the tax portion first and truncate it (`floor`), then subtract this tax amount from the total to get the net price. This differs from simple rounding or floating-point division and must be consistently applied across frontend (Vue), backend (SQL/JS), and database schema (Generated Columns) to prevent penny-off discrepancies in invoices and receipts.
 **Action:** Always use the formula `tax_amount = floor(total * rate / (1 + rate))` and `net_price = total - tax_amount` for Japanese tax-inclusive calculations. Ensure all layers (DB, API, UI) are synchronized with this logic.
+
+## 2024-05-22 - [Keyboard Accessibility for Suggestion Cards]
+**Learning:** For non-semantic interactive elements (like divs used as cards), adding `role="button"` and `tabindex="0"` is not enough. You must also implement keydown listeners for `Enter` and `Space` to ensure full parity with native button behavior. Additionally, items that are visually "disabled" (e.g., already registered) should be removed from the tab order using `tabindex="-1"` and have their interactions disabled to prevent confusion.
+**Action:** Always pair `role="button"` with `@keydown.enter` and `@keydown.space.prevent`. Use `tabindex="-1"` for interactive elements that are in a disabled state.

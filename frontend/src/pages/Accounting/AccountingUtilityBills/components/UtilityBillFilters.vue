@@ -10,7 +10,7 @@
             <DatePicker v-model="month" view="month" dateFormat="yy/mm" fluid class="w-40" />
         </div>
 
-        <Button icon="pi pi-refresh" @click="$emit('refresh')" :loading="loading" severity="secondary" rounded text aria-label="データを更新" />
+        <Button icon="pi pi-refresh" @click="$emit('refresh')" :loading="loading" severity="secondary" rounded text aria-label="データを更新" v-tooltip.top="'データを更新'" />
     </div>
 </template>
 
