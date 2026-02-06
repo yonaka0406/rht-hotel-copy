@@ -595,7 +595,11 @@ const selectExportAccommodationTax = async (requestId, hotelId, dateStart, dateE
       -- Monthly plan counts
       COUNT(CASE WHEN COALESCE(rd.is_accommodation, TRUE) AND ph.plan_package_category_id = 2 THEN 1 END) as monthly_accommodation_count,
       SUM(CASE WHEN COALESCE(rd.is_accommodation, TRUE) AND ph.plan_package_category_id = 2 THEN rd.number_of_people ELSE 0 END) as monthly_number_of_people,
-      COUNT(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) AND ph.plan_package_category_id = 2 THEN 1 END) as monthly_non_accommodation_count
+      COUNT(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) AND ph.plan_package_category_id = 2 THEN 1 END) as monthly_non_accommodation_count,
+      -- Total counts (exclude NULL and 0, include all category_id >= 1)
+      COUNT(CASE WHEN COALESCE(rd.is_accommodation, TRUE) THEN 1 END) as total_accommodation_count,
+      SUM(CASE WHEN COALESCE(rd.is_accommodation, TRUE) THEN rd.number_of_people ELSE 0 END) as total_number_of_people,
+      COUNT(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) THEN 1 END) as total_non_accommodation_count
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     JOIN hotels h ON rd.hotel_id = h.id
@@ -606,7 +610,6 @@ const selectExportAccommodationTax = async (requestId, hotelId, dateStart, dateE
       AND rd.billable = TRUE
       AND r.status IN ('confirmed', 'checked_in', 'checked_out')
       AND r.type <> 'employee'
-      AND ph.plan_package_category_id IN (1, 2)
     GROUP BY rd.date, h.formal_name
     ORDER BY rd.date
   `;
