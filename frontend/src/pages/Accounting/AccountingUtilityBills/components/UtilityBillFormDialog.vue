@@ -2,7 +2,7 @@
     <Dialog :visible="visible" @update:visible="$emit('update:visible', $event)" :header="item.id ? 'データを編集' : '新規データ入力'" modal class="w-full max-w-md">
         <div class="flex flex-col gap-4 py-4">
             <div class="flex flex-col gap-1">
-                <label class="text-xs font-bold text-slate-400 uppercase">対象月</label>
+                <label class="text-xs font-bold text-slate-400 uppercase">取引月</label>
                 <DatePicker v-model="localItem.month" view="month" dateFormat="yy/mm" fluid />
             </div>
             <div class="flex flex-col gap-1">

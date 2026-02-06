@@ -6,7 +6,7 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">対象月:</span>
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">取引月:</span>
             <DatePicker v-model="month" view="month" dateFormat="yy/mm" fluid class="w-40" />
         </div>
 

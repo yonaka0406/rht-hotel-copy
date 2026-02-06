@@ -34,7 +34,7 @@ const dateValue = computed({
         </div>
 
         <div class="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 min-w-[240px]">
-            <span class="text-sm font-medium text-slate-600 dark:text-slate-400 ml-2 whitespace-nowrap">対象月:</span>
+            <span class="text-sm font-medium text-slate-600 dark:text-slate-400 ml-2 whitespace-nowrap">取引月:</span>
             <DatePicker 
                 v-model="dateValue" 
                 view="month" 
