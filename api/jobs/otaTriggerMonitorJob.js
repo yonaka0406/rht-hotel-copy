@@ -38,6 +38,7 @@ class OTATriggerMonitorJob {
         this.isRunning = false;
         this.lastCheck = null;
         this.intervalId = null;
+        this.dbClientInvalid = false;
     }
 
     /**
@@ -97,18 +98,12 @@ class OTATriggerMonitorJob {
                 // 1. Ensure DB connection
                 if (!dbClient) {
                     dbClient = await getProdPool().connect();
+                    this.dbClientInvalid = false;
                     logger.info('OTA Trigger Monitor Job acquired database connection');
 
                     dbClient.on('error', (err) => {
                         logger.error('Persistent dbClient error in OTA Trigger Monitor Job', { error: err.message });
-                        if (dbClient) {
-                            try {
-                                dbClient.release();
-                            } catch (releaseErr) {
-                                logger.error('Error releasing dbClient in OTA Trigger Monitor error handler:', releaseErr);
-                            }
-                        }
-                        dbClient = null;
+                        this.dbClientInvalid = true;
                     });
                 }
 
@@ -148,6 +143,10 @@ class OTATriggerMonitorJob {
      * Run a single monitoring check
      */
     async runCheck(dbClient = null) {
+        if (this.dbClientInvalid) {
+            throw new Error('Database client is in an error state');
+        }
+
         let logId = null;
         const checkStartTime = new Date();
 
@@ -225,7 +224,8 @@ class OTATriggerMonitorJob {
 
             // Identify database connection errors
             const pgConnectionErrors = ['57P01', '57P02', '08006', '08003', '08000', '08001', '08004', '08007', '08P01'];
-            const isDbConnError = pgConnectionErrors.includes(error.code) || (error.code && error.code.startsWith('ECONN'));
+            const errorCode = error.code ? String(error.code) : null;
+            const isDbConnError = pgConnectionErrors.includes(errorCode) || (errorCode && errorCode.startsWith('ECONN'));
 
             // Send error alert only if it's NOT a DB connection error (likely transient during reboots)
             if (this.options.enableAlerts && !isDbConnError) {

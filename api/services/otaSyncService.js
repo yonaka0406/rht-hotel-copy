@@ -26,15 +26,15 @@ async function syncReservationInventory(requestId, logId) {
             // SAFETY CHECK: Only enqueue Google Sheets updates in production environment.
             if (process.env.NODE_ENV === 'production') {
                 const googleData = await selectReservationGoogleInventoryChange(requestId, logId, dbClient);
-                if (googleData && googleData.length > 0) {
+                for (const row of googleData) {
                     await dbClient.query(
                         `INSERT INTO google_sheets_queue (hotel_id, check_in, check_out, status)
                         VALUES ($1, $2, $3, 'pending')
                         ON CONFLICT (hotel_id, check_in, check_out) WHERE status = 'pending'
                         DO NOTHING`,
-                        [googleData[0].hotel_id, googleData[0].check_in, googleData[0].check_out]
+                        [row.hotel_id, row.check_in, row.check_out]
                     );
-                    logger.debug(`[otaSyncService] Queued Google Sheets update for hotel ${googleData[0].hotel_id}`, { requestId, logId });
+                    logger.debug(`[otaSyncService] Queued Google Sheets update for hotel ${row.hotel_id}`, { requestId, logId, checkIn: row.check_in, checkOut: row.check_out });
                 }
             } else {
                 logger.info(`[otaSyncService] Skipping Google Sheets enqueue for logId ${logId} (not in production environment)`, { requestId });
@@ -48,10 +48,12 @@ async function syncReservationInventory(requestId, logId) {
             // SAFETY CHECK: Only perform real OTA updates in production environment.
             if (process.env.NODE_ENV === 'production') {
                 const scLogs = await selectReservationInventoryChange(requestId, logId, dbClient);
-                if (scLogs && scLogs.length > 0) {
-                    const { hotel_id, check_in, check_out } = scLogs[0];
 
-                    // Get inventory data
+                // Iterate over all affected segments to ensure consistency (e.g. in multi-row cascade deletes)
+                for (const logRow of scLogs) {
+                    const { hotel_id, check_in, check_out } = logRow;
+
+                    // Get inventory data for this segment
                     const inventory = await selectReservationsInventory(requestId, hotel_id, check_in, check_out, dbClient);
 
                     if (inventory && inventory.length > 0) {
@@ -70,7 +72,7 @@ async function syncReservationInventory(requestId, logId) {
                         };
 
                         await updateInventoryMultipleDays(dummyReq, dummyRes, dbClient, { skipStockCheck: true });
-                        logger.info(`[otaSyncService] Successfully initiated OTA sync for hotel ${hotel_id}`, { requestId, logId });
+                        logger.info(`[otaSyncService] Successfully initiated OTA sync for hotel ${hotel_id} segment ${check_in}-${check_out}`, { requestId, logId });
                     }
                 }
             } else {

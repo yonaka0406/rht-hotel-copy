@@ -1262,7 +1262,9 @@ const updateInventoryMultipleDays = async (req, res, dbClientArg = null, options
 
             const stockCheckMap = new Map();
             stockCheckResults.forEach(item => {
-                const key = `${item.netRmTypeGroupCode}-${item.saleDate}`;
+            const normalizedCode = String(item.netRmTypeGroupCode || '').toLowerCase().trim();
+            const normalizedDate = String(item.saleDate || '').trim();
+            const key = `${normalizedCode}-${normalizedDate}`;
                 stockCheckMap.set(key, parseInt(item.remainingCount));
             });
 
@@ -1270,7 +1272,11 @@ const updateInventoryMultipleDays = async (req, res, dbClientArg = null, options
             for (const item of filteredInventory) {
                 const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
                 const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
-                const lookupKey = `${item.netrmtypegroupcode}-${itemDateYYYYMMDD}`;
+
+            const normalizedCode = String(item.netrmtypegroupcode || '').toLowerCase().trim();
+            const normalizedDate = String(itemDateYYYYMMDD || '').trim();
+            const lookupKey = `${normalizedCode}-${normalizedDate}`;
+
                 const currentRemainingStock = stockCheckMap.get(lookupKey);
 
                 if (currentRemainingStock !== undefined) {
