@@ -130,43 +130,65 @@ const displayData = computed(() => {
         startMonthIdx = endMonthIdx;
     }
 
-    for (let i = startMonthIdx; i <= endMonthIdx; i++) {
+    let cumulativeRevenue = 0;
+    let cumulativeCosts = 0;
+    let cumulativeOperatingProfit = 0;
+
+    let prevCumulativeRevenue = 0;
+    let prevCumulativeOperatingProfit = 0;
+
+    // We need to calculate cumulative values from the start of the year, even if we only display one month
+    for (let i = 0; i <= endMonthIdx; i++) {
         const monthStr = `${year}-${String(i + 1).padStart(2, '0')}`;
         const currentData = processedDataByMonth.value[monthStr] || { month: monthStr, revenue: 0, costs: 0, operatingProfit: 0, costRatio: 0, margin: 0 };
 
-        // Calculate MoM
-        const prevMonthDate = new Date(year, i - 1, 1);
-        const prevMonthStr = formatDate(prevMonthDate).substring(0, 7);
-        const prevMonthData = processedDataByMonth.value[prevMonthStr];
+        cumulativeRevenue += currentData.revenue;
+        cumulativeCosts += currentData.costs;
+        cumulativeOperatingProfit += currentData.operatingProfit;
 
-        const revenueMoM = (prevMonthData && prevMonthData.revenue !== 0)
-            ? ((currentData.revenue - prevMonthData.revenue) / prevMonthData.revenue) * 100
-            : null;
-        const profitMoM = (prevMonthData && prevMonthData.operatingProfit !== 0)
-            ? ((currentData.operatingProfit - prevMonthData.operatingProfit) / Math.abs(prevMonthData.operatingProfit)) * 100
-            : null;
-
-        // Calculate YoY
         const prevYearMonthStr = `${year - 1}-${String(i + 1).padStart(2, '0')}`;
-        const prevYearData = processedDataByMonth.value[prevYearMonthStr];
+        const prevYearData = processedDataByMonth.value[prevYearMonthStr] || { revenue: 0, operatingProfit: 0 };
 
-        const revenueYoY = (prevYearData && prevYearData.revenue !== 0)
-            ? ((currentData.revenue - prevYearData.revenue) / prevYearData.revenue) * 100
-            : null;
-        const profitYoY = (prevYearData && prevYearData.operatingProfit !== 0)
-            ? ((currentData.operatingProfit - prevYearData.operatingProfit) / Math.abs(prevYearData.operatingProfit)) * 100
-            : null;
+        prevCumulativeRevenue += prevYearData.revenue;
+        prevCumulativeOperatingProfit += prevYearData.operatingProfit;
 
-        result.push({
-            ...currentData,
-            monthLabel: `${year}年${i + 1}月`,
-            revenueMoM,
-            profitMoM,
-            revenueYoY,
-            profitYoY,
-            prevRevenue: prevYearData?.revenue || 0,
-            prevOperatingProfit: prevYearData?.operatingProfit || 0
-        });
+        if (i >= startMonthIdx) {
+            // Calculate MoM
+            const prevMonthDate = new Date(year, i - 1, 1);
+            const prevMonthStr = formatDate(prevMonthDate).substring(0, 7);
+            const prevMonthData = processedDataByMonth.value[prevMonthStr];
+
+            const revenueMoM = (prevMonthData && prevMonthData.revenue !== 0)
+                ? ((currentData.revenue - prevMonthData.revenue) / Math.abs(prevMonthData.revenue)) * 100
+                : null;
+            const profitMoM = (prevMonthData && prevMonthData.operatingProfit !== 0)
+                ? ((currentData.operatingProfit - prevMonthData.operatingProfit) / Math.abs(prevMonthData.operatingProfit)) * 100
+                : null;
+
+            // Calculate YoY
+            const revenueYoY = (prevYearData.revenue !== 0)
+                ? ((currentData.revenue - prevYearData.revenue) / Math.abs(prevYearData.revenue)) * 100
+                : null;
+            const profitYoY = (prevYearData.operatingProfit !== 0)
+                ? ((currentData.operatingProfit - prevYearData.operatingProfit) / Math.abs(prevYearData.operatingProfit)) * 100
+                : null;
+
+            result.push({
+                ...currentData,
+                monthLabel: `${year}年${i + 1}月`,
+                revenueMoM,
+                profitMoM,
+                revenueYoY,
+                profitYoY,
+                prevRevenue: prevYearData.revenue,
+                prevOperatingProfit: prevYearData.operatingProfit,
+                cumulativeRevenue,
+                cumulativeCosts,
+                cumulativeOperatingProfit,
+                prevCumulativeRevenue,
+                prevCumulativeOperatingProfit
+            });
+        }
     }
 
     return result;

@@ -9,7 +9,6 @@
                         :options="comparisonOptions"
                         optionLabel="label"
                         optionValue="value"
-                        multiple
                         class="p-button-sm"
                     />
                 </div>
@@ -107,14 +106,16 @@ const props = defineProps({
     }
 });
 
-const comparisonMode = ref([]);
+const comparisonMode = ref('standard');
 const comparisonOptions = [
-    { label: 'MoM', value: 'mom' },
-    { label: 'YoY', value: 'yoy' }
+    { label: '標準', value: 'standard' },
+    { label: '前月比', value: 'mom' },
+    { label: '前年比', value: 'yoy' },
+    { label: '両方', value: 'both' }
 ];
 
-const showMoM = computed(() => comparisonMode.value.includes('mom'));
-const showYoY = computed(() => comparisonMode.value.includes('yoy'));
+const showMoM = computed(() => ['mom', 'both'].includes(comparisonMode.value));
+const showYoY = computed(() => ['yoy', 'both'].includes(comparisonMode.value));
 
 const tableData = computed(() => {
     if (props.viewMode !== 'yearCumulative' || props.data.length === 0) {

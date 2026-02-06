@@ -21,7 +21,16 @@
                 <div v-if="!hasData" class="flex items-center justify-center h-80 text-gray-400">
                     表示するデータがありません
                 </div>
-                <div v-else ref="chartRef" class="w-full h-80"></div>
+                <div v-else class="space-y-8">
+                    <div v-if="viewMode === 'yearCumulative'" class="text-center font-semibold text-gray-600 dark:text-gray-400 mb-2">月次推移</div>
+                    <div ref="chartRef" class="w-full h-80"></div>
+
+                    <template v-if="viewMode === 'yearCumulative'">
+                        <Divider />
+                        <div class="text-center font-semibold text-gray-600 dark:text-gray-400 mb-2">累計推移</div>
+                        <div ref="cumulativeChartRef" class="w-full h-80"></div>
+                    </template>
+                </div>
             </template>
         </Card>
     </Panel>
@@ -29,7 +38,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
-import { Card, Panel, ToggleButton } from 'primevue';
+import { Card, Panel, ToggleButton, Divider } from 'primevue';
 import * as echarts from 'echarts/core';
 import { TooltipComponent, GridComponent, LegendComponent } from 'echarts/components';
 import { LineChart, BarChart } from 'echarts/charts';
@@ -60,10 +69,12 @@ const props = defineProps({
 defineEmits(['update:comparePreviousYear']);
 
 const chartRef = ref(null);
+const cumulativeChartRef = ref(null);
 let myChart = null;
+let myCumulativeChart = null;
 
 const panelTitle = computed(() => {
-    return props.viewMode === 'month' ? '損益比較' : '損益推移';
+    return props.viewMode === 'month' ? '損益比較' : '損益・累計推移';
 });
 
 const formatCurrency = (value) => {
@@ -79,6 +90,10 @@ const initChart = () => {
 
     if (!myChart) {
         myChart = echarts.init(chartRef.value);
+    }
+
+    if (props.viewMode === 'yearCumulative' && cumulativeChartRef.value && !myCumulativeChart) {
+        myCumulativeChart = echarts.init(cumulativeChartRef.value);
     }
 
     const isMonthView = props.viewMode === 'month';
@@ -222,10 +237,63 @@ const initChart = () => {
     };
 
     myChart.setOption(option, true);
+
+    if (props.viewMode === 'yearCumulative' && myCumulativeChart) {
+        const cumulativeOption = {
+            ...option,
+            series: [
+                {
+                    name: '売上高',
+                    type: 'line',
+                    data: props.data.map(d => d.cumulativeRevenue),
+                    itemStyle: { color: '#10b981' },
+                    smooth: true,
+                    areaStyle: { opacity: 0.1 }
+                },
+                {
+                    name: '費用',
+                    type: 'line',
+                    data: props.data.map(d => Math.abs(d.cumulativeCosts)),
+                    itemStyle: { color: '#f97316' },
+                    smooth: true
+                },
+                {
+                    name: '営業利益',
+                    type: 'line',
+                    data: props.data.map(d => d.cumulativeOperatingProfit),
+                    itemStyle: { color: '#3b82f6' },
+                    smooth: true,
+                    areaStyle: { opacity: 0.1 }
+                }
+            ]
+        };
+
+        if (props.comparePreviousYear) {
+            cumulativeOption.series.push({
+                name: '売上高 (前年)',
+                type: 'line',
+                data: props.data.map(d => d.prevCumulativeRevenue),
+                itemStyle: { color: '#10b981', opacity: 0.3 },
+                lineStyle: { type: 'dashed' },
+                smooth: true
+            });
+            cumulativeOption.series.push({
+                name: '営業利益 (前年)',
+                type: 'line',
+                data: props.data.map(d => d.prevCumulativeOperatingProfit),
+                itemStyle: { color: '#3b82f6', opacity: 0.3 },
+                lineStyle: { type: 'dashed' },
+                smooth: true
+            });
+        }
+
+        myCumulativeChart.setOption(cumulativeOption, true);
+    }
 };
 
 const handleResize = () => {
     if (myChart) myChart.resize();
+    if (myCumulativeChart) myCumulativeChart.resize();
 };
 
 onMounted(() => {
@@ -236,9 +304,14 @@ onMounted(() => {
 onBeforeUnmount(() => {
     window.removeEventListener('resize', handleResize);
     if (myChart) myChart.dispose();
+    if (myCumulativeChart) myCumulativeChart.dispose();
 });
 
-watch(() => props.data, () => {
+watch([() => props.data, () => props.viewMode], () => {
+    if (myCumulativeChart) {
+        myCumulativeChart.dispose();
+        myCumulativeChart = null;
+    }
     nextTick(() => {
         initChart();
     });
