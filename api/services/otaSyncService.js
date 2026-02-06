@@ -48,22 +48,27 @@ async function syncReservationInventory(requestId, logId) {
                 const inventory = await selectReservationsInventory(requestId, hotel_id, check_in, check_out, dbClient);
 
                 if (inventory && inventory.length > 0) {
-                    // Call the controller logic directly.
-                    // We mimic req/res but pass the existing dbClient.
-                    const dummyReq = {
-                        requestId,
-                        params: { hotel_id, log_id: logId },
-                        body: inventory
-                    };
-                    const dummyRes = {
-                        status: () => dummyRes,
-                        send: () => dummyRes,
-                        json: () => dummyRes,
-                        headersSent: false
-                    };
+                    // SAFETY CHECK: Only perform real OTA updates in production environment.
+                    if (process.env.NODE_ENV === 'production') {
+                        // Call the controller logic directly.
+                        // We mimic req/res but pass the existing dbClient.
+                        const dummyReq = {
+                            requestId,
+                            params: { hotel_id, log_id: logId },
+                            body: inventory
+                        };
+                        const dummyRes = {
+                            status: () => dummyRes,
+                            send: () => dummyRes,
+                            json: () => dummyRes,
+                            headersSent: false
+                        };
 
-                    await updateInventoryMultipleDays(dummyReq, dummyRes, dbClient);
-                    logger.info(`[otaSyncService] Successfully initiated OTA sync for hotel ${hotel_id}`, { requestId, logId });
+                        await updateInventoryMultipleDays(dummyReq, dummyRes, dbClient);
+                        logger.info(`[otaSyncService] Successfully initiated OTA sync for hotel ${hotel_id}`, { requestId, logId });
+                    } else {
+                        logger.info(`[otaSyncService] Skipping real OTA sync for hotel ${hotel_id} (not in production environment)`, { requestId, logId });
+                    }
                 }
             }
         } catch (otaError) {

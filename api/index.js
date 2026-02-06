@@ -358,62 +358,15 @@ const listenForTableChanges = async () => {
             });
           }
         }
-        // Google and Site Controller update should be made only in production
-        if (msg.channel === 'reservation_log_inserted' && process.env.NODE_ENV === 'production') {
+        if (msg.channel === 'reservation_log_inserted') {
           const logId = parseInt(msg.payload, 10);
-          logger.debug('Notification received: reservation_log_inserted (dev)', { logId });
+          const requestId = `ota-sync-dev-${logId}-${Date.now()}`;
 
-          let response = null;
-          response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              // No Authorization header needed for internal calls if backend doesn't require it for these specific log routes
-            }
+          // Use otaSyncService for consistency and connection efficiency.
+          // The service internally ensures that real OTA updates only happen in production.
+          syncReservationInventory(requestId, logId).catch(err => {
+            logger.error('Error in background reservation sync (dev listener):', { logId, requestId, error: err.message });
           });
-          const googleData = await response.json();
-          if (googleData && Object.keys(googleData).length > 0) {
-            const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
-            await fetch(`${baseUrl}/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-              }
-            });
-          }
-
-          response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          });
-          const data = await response.json();
-          if (data && Object.keys(data).length > 0) {
-            response = await fetch(`${baseUrl}/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-              }
-            });
-            const inventory = await response.json();
-
-            try {
-              if (process.env.NODE_ENV === 'production') {
-                await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify(inventory),
-                });
-              }
-
-              logger.debug(`Successfully updated site controller for hotel ${data[0].hotel_id} (dev)`);
-            } catch (siteControllerError) {
-              logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (dev):`, { error: siteControllerError.message, stack: siteControllerError.stack });
-            }
-          }
         }
       });
 
@@ -459,8 +412,24 @@ const listenForTableChanges = async () => {
           const logId = parseInt(msg.payload, 10);
           const requestId = `ota-sync-${logId}-${Date.now()}`;
 
-          // Use otaSyncService to handle the entire flow using a single connection.
-          // This replaces the multiple internal 'fetch' calls which were causing connection spikes.
+          /**
+           * ARCHITECTURAL REFACTOR: CONNECTION SPIKE PREVENTION
+           *
+           * Previously, this listener triggered multiple internal HTTP 'fetch' requests
+           * to the application's own endpoints (google, site-controller, etc). Each
+           * 'fetch' created a new isolated request context, forcing the API to acquire
+           * a new database connection for every step. In a burst, this caused a flurry
+           * of ~10 connections in milliseconds, saturating the PG server.
+           *
+           * We now use 'syncReservationInventory' which calls the controllers and models
+           * DIRECTLY. By doing so, we can pass a single 'dbClient' (acquired once from
+           * the pool) through the entire execution chain.
+           *
+           * Benefits:
+           * 1. 10x reduction in connection overhead (1 connection vs 10 per sync).
+           * 2. Massive reduction in PostgreSQL CPU saturation.
+           * 3. Atomicity: The entire background sync sequence shares the same client.
+           */
           syncReservationInventory(requestId, logId).catch(err => {
             logger.error('Error in background reservation sync:', { logId, requestId, error: err.message });
           });
