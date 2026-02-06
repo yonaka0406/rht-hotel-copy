@@ -21,9 +21,17 @@
             </div>
             <div v-else class="divide-y divide-slate-50 dark:divide-slate-700/50">
                 <div v-for="(s, idx) in suggestions" :key="idx"
-                    class="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer group"
-                    :class="{ 'opacity-60 bg-slate-50/50': s.isRegistered }"
-                    @click="$emit('select', s)">
+                    class="p-4 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-500"
+                    :class="{
+                        'opacity-60 bg-slate-50/50 cursor-default': s.isRegistered,
+                        'hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer': !s.isRegistered
+                    }"
+                    role="button"
+                    :tabindex="s.isRegistered ? -1 : 0"
+                    :aria-label="`${s.sub_account_name}の提案を選択: ${formatCurrency(Math.abs(s.amount))}`"
+                    @click="!s.isRegistered && $emit('select', s)"
+                    @keydown.enter="!s.isRegistered && $emit('select', s)"
+                    @keydown.space.prevent="!s.isRegistered && $emit('select', s)">
                     <div class="flex justify-between items-start mb-1">
                         <div class="flex gap-1">
                             <Tag :value="formatDate(s.transaction_date)" severity="secondary" class="text-[10px]" />
