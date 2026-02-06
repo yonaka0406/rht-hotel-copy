@@ -1,4 +1,4 @@
-const reservationsMainModel = require('../models/reservations/main');
+const reservationsMainModel = require('../models/reservations/details');
 
 // --- Mocking Infrastructure ---
 const mockDbClientOrPool = {
@@ -35,13 +35,17 @@ describe('reservationsMainModel', () => {
             };
 
             mockDbClientOrPool.query.mockImplementation((query, values) => {
-                if (/SELECT reservation_id FROM reservation_details/.test(query)) {
+                // console.log('TEST QUERY:', query);
+                // selectReservationDetailsById
+                if (query.includes('SELECT * FROM reservation_details') && query.includes('WHERE id = $1::UUID')) {
                     return Promise.resolve({ rows: [{ reservation_id: 'res-uuid-1' }] });
                 }
-                if (/SELECT status FROM reservations/.test(query)) {
+                // selectReservationById
+                if (query.includes('SELECT * FROM reservations') && query.includes('WHERE id = $1::UUID')) {
                     return Promise.resolve({ rows: [{ status: 'confirmed' }] });
                 }
-                if (/SELECT \* FROM reservation_rates/.test(query)) {
+                // selectRatesByDetailsId
+                if (query.includes('SELECT * FROM reservation_rates')) {
                     return Promise.resolve({
                         rows: [
                             { adjustment_type: 'base_rate', adjustment_value: 5000, include_in_cancel_fee: true, tax_rate: 0.1, price: 5000 },
@@ -50,11 +54,16 @@ describe('reservationsMainModel', () => {
                         ]
                     });
                 }
-                if (/UPDATE reservation_details/.test(query)) {
+                // updateDetailsCancelledStatus
+                if (query.includes('UPDATE reservation_details') && query.includes('cancelled = gen_random_uuid()')) {
                     return Promise.resolve({ rows: [{ id: reservationData.id, price: 5500 }] });
                 }
-                // Default to returning a valid remaining details result
-                return Promise.resolve({ rows: [{ new_check_in: '2023-01-01', new_check_out: '2023-01-02' }] });
+                // remainingDetailsQuery
+                if (query.includes('MIN(date)') && query.includes('MAX(date)') && query.includes('FROM reservation_details')) {
+                    return Promise.resolve({ rows: [{ new_check_in: '2023-01-01', new_check_out: '2023-01-02' }] });
+                }
+                // Default
+                return Promise.resolve({ rows: [], rowCount: 1 });
             });
 
             const updatedDetail = await reservationsMainModel.updateReservationDetailStatus(
@@ -66,7 +75,7 @@ describe('reservationsMainModel', () => {
             expect(mockDbClientOrPool.query).toHaveBeenCalledWith('COMMIT');
 
             expect(mockDbClientOrPool.query).toHaveBeenCalledWith(
-                expect.stringMatching(/UPDATE reservation_details/),
+                expect.stringMatching(/UPDATE reservation_details/i),
                 expect.arrayContaining([5500])
             );
 
@@ -84,25 +93,33 @@ describe('reservationsMainModel', () => {
             };
 
             mockDbClientOrPool.query.mockImplementation((query, values) => {
-                if (/SELECT reservation_id FROM reservation_details/.test(query)) {
+                // selectReservationDetailsById
+                if (query.includes('SELECT * FROM reservation_details') && query.includes('WHERE id = $1::UUID')) {
                     return Promise.resolve({ rows: [{ reservation_id: 'res-uuid-2' }] });
                 }
-                if (/SELECT status FROM reservations/.test(query)) {
+                // selectReservationById
+                if (query.includes('SELECT * FROM reservations') && query.includes('WHERE id = $1::UUID')) {
                     return Promise.resolve({ rows: [{ status: 'confirmed' }] });
                 }
-                if (/SELECT \* FROM reservation_rates/.test(query)) {
+                // selectRatesByDetailsId
+                if (query.includes('SELECT * FROM reservation_rates')) {
                     return Promise.resolve({
                         rows: [
-                            { adjustment_type: 'base_rate', adjustment_value: 5000, include_in_cancel_fee: true, tax_rate: 0.1, price: 5000 },
+                            { adjustment_type: 'base_rate', adjustment_value: 5000, include_in_cancel_fee: false, tax_rate: 0.1, price: 5000 },
                             { adjustment_type: 'flat_fee', adjustment_value: 2000, include_in_cancel_fee: false, tax_rate: 0.1, price: 2000 },
                         ]
                     });
                 }
-                if (/UPDATE reservation_details/.test(query)) {
+                // updateDetailsCancelledStatus
+                if (query.includes('UPDATE reservation_details') && query.includes('cancelled = gen_random_uuid()')) {
                     return Promise.resolve({ rows: [{ id: reservationData.id, price: 0 }] });
                 }
-                // Default to returning a valid remaining details result
-                return Promise.resolve({ rows: [{ new_check_in: '2023-01-01', new_check_out: '2023-01-02' }] });
+                // remainingDetailsQuery
+                if (query.includes('MIN(date)') && query.includes('MAX(date)') && query.includes('FROM reservation_details')) {
+                    return Promise.resolve({ rows: [{ new_check_in: '2023-01-01', new_check_out: '2023-01-02' }] });
+                }
+                // Default
+                return Promise.resolve({ rows: [], rowCount: 1 });
             });
 
             const updatedDetail = await reservationsMainModel.updateReservationDetailStatus(
@@ -111,7 +128,7 @@ describe('reservationsMainModel', () => {
             );
 
             expect(mockDbClientOrPool.query).toHaveBeenCalledWith(
-                expect.stringMatching(/UPDATE reservation_details/),
+                expect.stringMatching(/UPDATE reservation_details/i),
                 expect.arrayContaining([0])
             );
 

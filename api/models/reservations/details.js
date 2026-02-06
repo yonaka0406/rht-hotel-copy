@@ -260,7 +260,12 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
   }
 };
 
+const __setGetPool = (newGetPool) => { getPool = newGetPool; };
+const __getOriginalGetPool = () => require('../../config/database').getPool;
+
 module.exports = {
+  __setGetPool,
+  __getOriginalGetPool,
   selectReservationDetailsById,
   insertReservationDetails,
   updateReservationDetailStatus,

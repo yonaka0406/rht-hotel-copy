@@ -4,6 +4,7 @@ import { formatDate } from '@/utils/dateUtils';
 export function useModernDragDrop(dependencies) {
   const {
     dateRange,
+    reservedRooms,
     emit,
     getRoomNumber,
     rowHeight
@@ -12,6 +13,7 @@ export function useModernDragDrop(dependencies) {
   const draggingBlock = ref(null);
   const dropTargetRoomId = ref(null);
   const dropTargetDateIndex = ref(null);
+  const hasConflict = ref(false);
 
   const handleDragStart = (event, block) => {
     draggingBlock.value = block;
@@ -34,6 +36,7 @@ export function useModernDragDrop(dependencies) {
     draggingBlock.value = null;
     dropTargetRoomId.value = null;
     dropTargetDateIndex.value = null;
+    hasConflict.value = false;
   };
 
   const handleDragOver = (event, room) => {
@@ -44,7 +47,38 @@ export function useModernDragDrop(dependencies) {
 
     const rect = event.currentTarget.getBoundingClientRect();
     const relativeY = event.clientY - rect.top;
-    dropTargetDateIndex.value = Math.floor(relativeY / rowHeight);
+    const dateIndex = Math.floor(relativeY / rowHeight);
+    dropTargetDateIndex.value = dateIndex;
+
+    // Conflict Check
+    if (dateIndex >= 0 && dateIndex < dateRange.value.length) {
+      const sourceBlock = draggingBlock.value;
+      const durationDays = sourceBlock.items.length;
+
+      let conflict = false;
+      for (let i = 0; i < durationDays; i++) {
+        const targetIndex = dateIndex + i;
+        if (targetIndex >= dateRange.value.length) {
+          conflict = true;
+          break;
+        }
+
+        const targetDate = dateRange.value[targetIndex];
+        const isOccupied = reservedRooms.value.some(r =>
+          r.room_id === room.room_id &&
+          formatDate(new Date(r.date)) === targetDate &&
+          r.reservation_id !== sourceBlock.reservation_id
+        );
+
+        if (isOccupied) {
+          conflict = true;
+          break;
+        }
+      }
+      hasConflict.value = conflict;
+    } else {
+      hasConflict.value = false;
+    }
   };
 
   const handleDrop = (event, room) => {
@@ -101,6 +135,7 @@ export function useModernDragDrop(dependencies) {
     draggingBlock,
     dropTargetRoomId,
     dropTargetDateIndex,
+    hasConflict,
     handleDragStart,
     handleDragEnd,
     handleDragOver,

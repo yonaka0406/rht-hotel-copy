@@ -73,7 +73,7 @@
                 <!-- Drop Highlight -->
                 <div v-if="dropTargetRoomId === room.room_id && draggingBlock" class="absolute inset-x-0 pointer-events-none z-0">
                   <div v-for="i in draggingBlock.items.length" :key="i"
-                       class="bg-green-500/20 border-y border-green-500/30"
+                       :class="hasConflict ? 'bg-red-500/40 border-y border-red-500/50' : 'bg-green-500/20 border-y border-green-500/30'"
                        :style="{
                          position: 'absolute',
                          top: (dropTargetDateIndex + i - 1) * rowHeight + 'px',
@@ -354,17 +354,19 @@ const handleGridDoubleClick = (event, room) => {
 };
 
 // Drag and Drop Logic
-const { dateRange } = toRefs(props);
+const { dateRange, reservedRooms } = toRefs(props);
 const {
   draggingBlock,
   dropTargetRoomId,
   dropTargetDateIndex,
+  hasConflict,
   handleDragStart,
   handleDragEnd,
   handleDragOver,
   handleDrop
 } = useModernDragDrop({
   dateRange,
+  reservedRooms,
   emit,
   getRoomNumber,
   rowHeight
