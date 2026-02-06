@@ -1050,10 +1050,11 @@ const successOTAReservations = async (req, res, hotel_id_arg, outputId_arg, dbCl
     const hotel_id = (hotel_id_arg && typeof hotel_id_arg !== 'function' && typeof hotel_id_arg !== 'object') ? hotel_id_arg : (req.params?.hotel_id || req.query?.hotel_id);
     const outputId = (outputId_arg && typeof outputId_arg !== 'function' && typeof outputId_arg !== 'object') ? outputId_arg : (req.params?.outputId || req.query?.outputId);
 
+    const requestId = req?.requestId || 'no-request-id';
     logger.info(`Calling OutputCompleteService for hotel_id: ${hotel_id}, outputId: ${outputId}`);
 
     try {
-        let template = await selectXMLTemplate(req.requestId, hotel_id, name, dbClient);
+        let template = await selectXMLTemplate(requestId, hotel_id, name, dbClient);
 
         template = template.replace("{{outputId}}", outputId);
 
@@ -1065,7 +1066,7 @@ const successOTAReservations = async (req, res, hotel_id_arg, outputId_arg, dbCl
             error: error.message,
             hotel_id,
             outputId,
-            requestId: req.requestId,
+            requestId: requestId,
             stack: error.stack
         });
         if (res && !res.headersSent) {
@@ -1134,7 +1135,7 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate, dbClient = 
             .replace('{{searchDurationTo}}', range.end);
 
         let retryCount = 0;
-        const maxRetries = 3;
+        const maxRetries = 5;
         let lastError = null;
 
         while (retryCount <= maxRetries) {
@@ -1163,7 +1164,8 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate, dbClient = 
                         const backoffDelay = Math.pow(2, retryCount) * 1000 + Math.random() * 1000;
                         logger.warn(`Rate limit (E013) hit in checkOTAStock, retrying in ${Math.round(backoffDelay)}ms... (Attempt ${retryCount}/${maxRetries})`, {
                             hotel_id,
-                            range
+                            range,
+                            requestId: req.requestId
                         });
                         await new Promise(resolve => setTimeout(resolve, backoffDelay));
                         continue;
@@ -1177,17 +1179,24 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate, dbClient = 
 
     return allResponses;
 };
-const updateInventoryMultipleDays = async (req, res) => {
+const updateInventoryMultipleDays = async (req, res, dbClientArg = null, options = {}) => {
     const hotel_id = req.params.hotel_id;
     const log_id = req.params.log_id;
     const inventory = req.body;
     if (!Array.isArray(inventory)) {
-        return res.status(400).send({ error: 'Inventory data must be an array.' });
+        if (res && !res.headersSent) return res.status(400).send({ error: 'Inventory data must be an array.' });
+        return;
     }
 
     const name = 'NetStockBulkAdjustmentService';
-    const pool = getPool(req.requestId);
-    let dbClient = null;
+
+    // Add an initial random jitter (0-3000ms) to prevent mass concurrent triggers from hitting the
+    // third-party search API at the exact same millisecond.
+    const initialJitter = Math.floor(Math.random() * 3000);
+    await new Promise(resolve => setTimeout(resolve, initialJitter));
+
+    let dbClient = dbClientArg;
+    let shouldRelease = false;
     let minDate = null;
     let maxDate = null;
 
@@ -1202,7 +1211,11 @@ const updateInventoryMultipleDays = async (req, res) => {
     };
 
     try {
-        dbClient = await pool.connect();
+        if (!dbClient) {
+            const pool = getPool(req.requestId);
+            dbClient = await pool.connect();
+            shouldRelease = true;
+        }
 
         const template = await selectXMLTemplate(req.requestId, hotel_id, name, dbClient);
         if (!template) {
@@ -1233,39 +1246,56 @@ const updateInventoryMultipleDays = async (req, res) => {
         maxDate = range.maxDate;
 
         if (!minDate || !maxDate) {
-            return res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
+            if (res && !res.headersSent) res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
+            return;
         }
 
-        let stockCheckResults = await checkOTAStock(req, res, hotel_id, minDate, maxDate, dbClient);
-        if (!Array.isArray(stockCheckResults)) {
-            logger.error('checkOTAStock did not return an array:', stockCheckResults);
-            stockCheckResults = [];
-        }
+        const skipStockCheck = options.skipStockCheck || false;
+        let needsUpdate = true;
 
-        const stockCheckMap = new Map();
-        stockCheckResults.forEach(item => {
-            const key = `${item.netRmTypeGroupCode}-${item.saleDate}`;
-            stockCheckMap.set(key, parseInt(item.remainingCount));
-        });
+        if (!skipStockCheck) {
+            let stockCheckResults = await checkOTAStock(req, res, hotel_id, minDate, maxDate, dbClient);
+            if (!Array.isArray(stockCheckResults)) {
+                logger.error('checkOTAStock did not return an array:', stockCheckResults);
+                stockCheckResults = [];
+            }
 
-        let needsUpdate = false;
-        for (const item of filteredInventory) {
-            const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
-            const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
-            const lookupKey = `${item.netrmtypegroupcode}-${itemDateYYYYMMDD}`;
-            const currentRemainingStock = stockCheckMap.get(lookupKey);
+            const stockCheckMap = new Map();
+            stockCheckResults.forEach(item => {
+            const normalizedCode = String(item.netRmTypeGroupCode || '').toLowerCase().trim();
+            const normalizedDate = String(item.saleDate || '').trim();
+            const key = `${normalizedCode}-${normalizedDate}`;
+                stockCheckMap.set(key, parseInt(item.remainingCount));
+            });
 
-            if (currentRemainingStock !== undefined) {
-                if (expectedRemainingCount < 0) {
-                    if (currentRemainingStock !== 0) { needsUpdate = true; break; }
+            needsUpdate = false;
+            for (const item of filteredInventory) {
+                const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
+                const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
+
+            const normalizedCode = String(item.netrmtypegroupcode || '').toLowerCase().trim();
+            const normalizedDate = String(itemDateYYYYMMDD || '').trim();
+            const lookupKey = `${normalizedCode}-${normalizedDate}`;
+
+                const currentRemainingStock = stockCheckMap.get(lookupKey);
+
+                if (currentRemainingStock !== undefined) {
+                    if (expectedRemainingCount < 0) {
+                        if (currentRemainingStock !== 0) { needsUpdate = true; break; }
+                    } else {
+                        if (currentRemainingStock !== expectedRemainingCount) { needsUpdate = true; break; }
+                    }
                 } else {
-                    if (currentRemainingStock !== expectedRemainingCount) { needsUpdate = true; break; }
+                    // If no info found on OTA, assume update is needed
+                    needsUpdate = true;
+                    break;
                 }
             }
         }
 
         if (!needsUpdate) {
-            return res.status(200).send({ message: 'Inventory already matches current stock. No update needed.' });
+            if (res && !res.headersSent) res.status(200).send({ message: 'Inventory already matches current stock. No update needed.' });
+            return;
         }
 
         const processInventoryBatch = async (batch, batch_no) => {
@@ -1320,7 +1350,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         } else {
             await processInventoryBatch(filteredInventory, 0);
         }
-        res.status(200).send({ success: true, message: 'Inventory update processed.' });
+        if (res && !res.headersSent) res.status(200).send({ success: true, message: 'Inventory update processed.' });
     } catch (error) {
         const dateRange = {
             from: minDate ? (minDate instanceof Date ? minDate.toISOString().split('T')[0] : minDate) : 'N/A',
@@ -1336,7 +1366,7 @@ const updateInventoryMultipleDays = async (req, res) => {
             res.status(500).send({ success: false, message: error.message });
         }
     } finally {
-        if (dbClient) {
+        if (shouldRelease && dbClient) {
             try {
                 dbClient.release();
             } catch (releaseErr) {
@@ -1346,14 +1376,14 @@ const updateInventoryMultipleDays = async (req, res) => {
     }
 };
 
-const manualUpdateInventoryMultipleDays = async (req, res) => {
+const manualUpdateInventoryMultipleDays = async (req, res, dbClientArg = null) => {
     const hotel_id = req.params.hotel_id;
     const log_id = req.params.log_id;
     const inventory = req.body;
 
     const name = 'NetStockBulkAdjustmentService';
-    const pool = getPool(req.requestId);
-    let dbClient = null;
+    let dbClient = dbClientArg;
+    let shouldRelease = false;
     let minDate = null;
     let maxDate = null;
 
@@ -1367,7 +1397,11 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
     };
 
     try {
-        dbClient = await pool.connect();
+        if (!dbClient) {
+            const pool = getPool(req.requestId);
+            dbClient = await pool.connect();
+            shouldRelease = true;
+        }
 
         const template = await selectXMLTemplate(req.requestId, hotel_id, name, dbClient);
         if (!template) {
@@ -1467,7 +1501,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
         } else {
             await processInventoryBatch(filteredInventory, 0);
         }
-        res.status(200).send({ success: true, message: 'Inventory update processed.' });
+        if (res && !res.headersSent) res.status(200).send({ success: true, message: 'Inventory update processed.' });
     } catch (error) {
         const dateRange = {
             from: minDate ? (minDate instanceof Date ? minDate.toISOString().split('T')[0] : minDate) : 'N/A',
@@ -1483,7 +1517,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             res.status(500).send({ success: false, message: error.message });
         }
     } finally {
-        if (dbClient) {
+        if (shouldRelease && dbClient) {
             try {
                 dbClient.release();
             } catch (releaseErr) {

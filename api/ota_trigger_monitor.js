@@ -5,7 +5,7 @@
  */
 
 require('dotenv').config();
-const { pool } = require('./config/database');
+const { getProdPool } = require('./config/database');
 const { sendGenericEmail } = require('./utils/emailUtils');
 
 /**
@@ -280,7 +280,7 @@ async function performAutoRemediation(missingTriggers, baseUrl) {
     return results;
 }
 
-async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
+async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = null) {
     console.log(`🔍 Checking for missing OTA triggers in the last ${hoursBack} hour(s)...\n`);
 
     const {
@@ -288,8 +288,15 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
         baseUrl = 'http://localhost:5000'
     } = options;
 
-    const client = await pool.connect();
+    let client = dbClient;
+    let shouldRelease = false;
+
     try {
+        if (!client) {
+            const pool = getProdPool();
+            client = await pool.connect();
+            shouldRelease = true;
+        }
         const startTime = new Date();
 
         // Calculate time range
@@ -648,7 +655,9 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
             message: 'Monitoring failed due to error'
         };
     } finally {
-        client.release();
+        if (shouldRelease && client) {
+            client.release();
+        }
     }
 }
 
