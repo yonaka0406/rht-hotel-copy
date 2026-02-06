@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-02-06
+
+- New Feature: Added utility bills management with create, edit, and delete capabilities.
+- New Feature: Introduced utility cost breakdown visualization with consumption charts and year-over-year comparisons.
+- New Feature: Added utility suggestions feature for cost tracking and budget reconciliation.
+- New Feature: Integrated utility details into the budget-actual comparison view.
+- New Feature: Added utility bills entry action card to the accounting dashboard.
+- Improvement: Enhanced label clarity in date selectors across accounting pages.
+- Improvement: Refined UI controls in dialogs with updated styling.
+- Improvement: Improved data filtering and removed debug output from analytics.
+
 ## [1.4.13] - 2026-02-06
 
 - New Feature: Added public start/stop controls for the OTA XML poller and an exposed poll interval setting.
@@ -14,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bug Fix: Standardized 8-character request IDs for more reliable tracking.
 - Bug Fix: Enhanced poller logging and error handling.
 - Refactor: Switched to sequential, DB-driven queue processing and enabled optional injected DB client support for more consistent resource handling.
-- New Feature: Converted the "Subject" (件名) field in the New Action dialog to a dropdown menu for standardized data entry. 
+- New Feature: Converted the "Subject" (件名) field in the New Action dialog to a dropdown menu for standardized data entry.
 - Improvement: Expanded the "Action Type" dropdown options to include "Construction Site" (工事現場), "Office Visit" (来社), and "WH".
 
 ---
