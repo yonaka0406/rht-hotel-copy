@@ -26,6 +26,7 @@ const { scheduleDailySalesOccPdfJob } = require('./jobs/dailySalesOccPdfJob');
 const { startGoogleSheetsPoller } = require('./jobs/googleSheetsPoller.js');
 const { startOtaXmlPoller, stopOtaXmlPoller, POLL_INTERVAL } = require('./jobs/otaXmlPoller.js');
 const { defaultMonitor: otaTriggerMonitor } = require('./jobs/otaTriggerMonitorJob.js');
+const { syncReservationInventory } = require('./services/otaSyncService');
 
 const app = express();
 
@@ -455,86 +456,14 @@ const listenForTableChanges = async () => {
           }
         }
         if (msg.channel === 'reservation_log_inserted') {
-
           const logId = parseInt(msg.payload, 10);
-          // logger.info('Notification received: reservation_log_inserted (prod)', { logId });
+          const requestId = `ota-sync-${logId}-${Date.now()}`;
 
-          let response = null;
-
-          /*
-          // --- Old Logic ---
-          response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
+          // Use otaSyncService to handle the entire flow using a single connection.
+          // This replaces the multiple internal 'fetch' calls which were causing connection spikes.
+          syncReservationInventory(requestId, logId).catch(err => {
+            logger.error('Error in background reservation sync:', { logId, requestId, error: err.message });
           });
-          const googleData = await response.json();
-          if (googleData && Object.keys(googleData).length > 0) {
-            const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
-            await fetch(`${baseUrl}/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' }
-            });
-          }
-          if (googleData && Object.keys(googleData).length > 0) {
-            const sheetId = '1LF3HOd7wyI0tlXuCqrnd-1m9OIoUb5EN7pegg0lJnt8'; // prod-parking
-            await fetch(`${baseUrl}/api/report/res/google-parking/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' }
-            });
-          }
-          */
-
-          // --- New Google Sheets Queue Logic ---
-          try {
-            // 1. Get Google params (same as before)
-            const googleRes = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' }
-            });
-            const googleData = await googleRes.json();
-
-            // 2. INSERT task into queue. DO NOT call Google API.
-            if (googleData && googleData.length > 0) {
-              const prodDb = db.getProdPool();
-              await prodDb.query(
-                `INSERT INTO google_sheets_queue (hotel_id, check_in, check_out, status) 
-                   VALUES ($1, $2, $3, 'pending')
-                   ON CONFLICT (hotel_id, check_in, check_out) WHERE status = 'pending'
-                   DO NOTHING`,
-                [googleData[0].hotel_id, googleData[0].check_in, googleData[0].check_out]
-              );
-            }
-          } catch (queueError) {
-            logger.error('Failed to queue Google Sheets update for prod', { error: queueError.message, logId });
-          }
-
-
-          response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          const data = await response.json();
-          if (data && Object.keys(data).length > 0) {
-            response = await fetch(`${baseUrl}/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' }
-            });
-            const inventory = await response.json();
-
-            try {
-              if (process.env.NODE_ENV === 'production') {
-                await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(inventory),
-                });
-              }
-
-              // logger.info(`Successfully updated site controller for hotel ${data[0].hotel_id} (prod)`);
-            } catch (siteControllerError) {
-              // logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (prod):`, { error: siteControllerError.message, stack: siteControllerError.stack });
-            }
-          }
         }
       });
 

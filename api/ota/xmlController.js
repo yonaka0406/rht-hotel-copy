@@ -1179,12 +1179,13 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate, dbClient = 
 
     return allResponses;
 };
-const updateInventoryMultipleDays = async (req, res) => {
+const updateInventoryMultipleDays = async (req, res, dbClientArg = null) => {
     const hotel_id = req.params.hotel_id;
     const log_id = req.params.log_id;
     const inventory = req.body;
     if (!Array.isArray(inventory)) {
-        return res.status(400).send({ error: 'Inventory data must be an array.' });
+        if (res && !res.headersSent) return res.status(400).send({ error: 'Inventory data must be an array.' });
+        return;
     }
 
     const name = 'NetStockBulkAdjustmentService';
@@ -1194,8 +1195,8 @@ const updateInventoryMultipleDays = async (req, res) => {
     const initialJitter = Math.floor(Math.random() * 3000);
     await new Promise(resolve => setTimeout(resolve, initialJitter));
 
-    const pool = getPool(req.requestId);
-    let dbClient = null;
+    let dbClient = dbClientArg;
+    let shouldRelease = false;
     let minDate = null;
     let maxDate = null;
 
@@ -1210,7 +1211,11 @@ const updateInventoryMultipleDays = async (req, res) => {
     };
 
     try {
-        dbClient = await pool.connect();
+        if (!dbClient) {
+            const pool = getPool(req.requestId);
+            dbClient = await pool.connect();
+            shouldRelease = true;
+        }
 
         const template = await selectXMLTemplate(req.requestId, hotel_id, name, dbClient);
         if (!template) {
@@ -1273,7 +1278,8 @@ const updateInventoryMultipleDays = async (req, res) => {
         }
 
         if (!needsUpdate) {
-            return res.status(200).send({ message: 'Inventory already matches current stock. No update needed.' });
+            if (res && !res.headersSent) res.status(200).send({ message: 'Inventory already matches current stock. No update needed.' });
+            return;
         }
 
         const processInventoryBatch = async (batch, batch_no) => {
@@ -1328,7 +1334,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         } else {
             await processInventoryBatch(filteredInventory, 0);
         }
-        res.status(200).send({ success: true, message: 'Inventory update processed.' });
+        if (res && !res.headersSent) res.status(200).send({ success: true, message: 'Inventory update processed.' });
     } catch (error) {
         const dateRange = {
             from: minDate ? (minDate instanceof Date ? minDate.toISOString().split('T')[0] : minDate) : 'N/A',
@@ -1344,7 +1350,7 @@ const updateInventoryMultipleDays = async (req, res) => {
             res.status(500).send({ success: false, message: error.message });
         }
     } finally {
-        if (dbClient) {
+        if (shouldRelease && dbClient) {
             try {
                 dbClient.release();
             } catch (releaseErr) {
@@ -1354,14 +1360,14 @@ const updateInventoryMultipleDays = async (req, res) => {
     }
 };
 
-const manualUpdateInventoryMultipleDays = async (req, res) => {
+const manualUpdateInventoryMultipleDays = async (req, res, dbClientArg = null) => {
     const hotel_id = req.params.hotel_id;
     const log_id = req.params.log_id;
     const inventory = req.body;
 
     const name = 'NetStockBulkAdjustmentService';
-    const pool = getPool(req.requestId);
-    let dbClient = null;
+    let dbClient = dbClientArg;
+    let shouldRelease = false;
     let minDate = null;
     let maxDate = null;
 
@@ -1375,7 +1381,11 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
     };
 
     try {
-        dbClient = await pool.connect();
+        if (!dbClient) {
+            const pool = getPool(req.requestId);
+            dbClient = await pool.connect();
+            shouldRelease = true;
+        }
 
         const template = await selectXMLTemplate(req.requestId, hotel_id, name, dbClient);
         if (!template) {
@@ -1475,7 +1485,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
         } else {
             await processInventoryBatch(filteredInventory, 0);
         }
-        res.status(200).send({ success: true, message: 'Inventory update processed.' });
+        if (res && !res.headersSent) res.status(200).send({ success: true, message: 'Inventory update processed.' });
     } catch (error) {
         const dateRange = {
             from: minDate ? (minDate instanceof Date ? minDate.toISOString().split('T')[0] : minDate) : 'N/A',
@@ -1491,7 +1501,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             res.status(500).send({ success: false, message: error.message });
         }
     } finally {
-        if (dbClient) {
+        if (shouldRelease && dbClient) {
             try {
                 dbClient.release();
             } catch (releaseErr) {
