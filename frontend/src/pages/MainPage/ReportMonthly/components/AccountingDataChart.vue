@@ -245,6 +245,8 @@ const initChart = () => {
                 {
                     name: '売上高',
                     type: 'line',
+                    symbol: 'diamond',
+                    symbolSize: 8,
                     data: props.data.map(d => d.cumulativeRevenue),
                     itemStyle: { color: '#10b981' },
                     smooth: true,
@@ -253,6 +255,8 @@ const initChart = () => {
                 {
                     name: '費用',
                     type: 'line',
+                    symbol: 'diamond',
+                    symbolSize: 8,
                     data: props.data.map(d => Math.abs(d.cumulativeCosts)),
                     itemStyle: { color: '#f97316' },
                     smooth: true
@@ -260,6 +264,8 @@ const initChart = () => {
                 {
                     name: '営業利益',
                     type: 'line',
+                    symbol: 'diamond',
+                    symbolSize: 8,
                     data: props.data.map(d => d.cumulativeOperatingProfit),
                     itemStyle: { color: '#3b82f6' },
                     smooth: true,
@@ -272,6 +278,8 @@ const initChart = () => {
             cumulativeOption.series.push({
                 name: '売上高 (前年)',
                 type: 'line',
+                symbol: 'diamond',
+                symbolSize: 6,
                 data: props.data.map(d => d.prevCumulativeRevenue),
                 itemStyle: { color: '#10b981', opacity: 0.3 },
                 lineStyle: { type: 'dashed' },
@@ -280,6 +288,8 @@ const initChart = () => {
             cumulativeOption.series.push({
                 name: '営業利益 (前年)',
                 type: 'line',
+                symbol: 'diamond',
+                symbolSize: 6,
                 data: props.data.map(d => d.prevCumulativeOperatingProfit),
                 itemStyle: { color: '#3b82f6', opacity: 0.3 },
                 lineStyle: { type: 'dashed' },
