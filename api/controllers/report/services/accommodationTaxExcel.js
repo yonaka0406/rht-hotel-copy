@@ -175,6 +175,11 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
             const monAccomCount = parseInt(row.monthly_accommodation_count || 0);
             const monPeopleCount = parseInt(row.monthly_number_of_people || 0);
             const monNonAccomCount = parseInt(row.monthly_non_accommodation_count || 0);
+            
+            // Total values (from database, not calculated)
+            const totAccomCount = parseInt(row.total_accommodation_count || 0);
+            const totPeopleCount = parseInt(row.total_number_of_people || 0);
+            const totNonAccomCount = parseInt(row.total_non_accommodation_count || 0);
 
             // Tax formulas
             const stdTaxFormula = `IF(AND(B3<>"", D3<>""), ROUNDDOWN(B3*D3*C${rowIndex}, 0), IF(F3<>"", ROUNDDOWN(F3*C${rowIndex}, 0), 0))`;
@@ -200,12 +205,36 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
                 separator2: '',
                 // Total (O-T)
                 tot_date: dateStr,
-                tot_accommodation_count: { formula: `B${rowIndex}+I${rowIndex}` },
-                tot_number_of_people: { formula: `C${rowIndex}+J${rowIndex}` },
-                tot_non_accommodation_count: { formula: `D${rowIndex}+K${rowIndex}` },
+                tot_accommodation_count: totAccomCount,
+                tot_number_of_people: totPeopleCount,
+                tot_non_accommodation_count: totNonAccomCount,
                 tot_empty: '',
                 tot_tax_amount: { formula: totTaxFormula },
             });
+
+            // Highlight cells in red if standard + monthly != total
+            const currentRow = worksheet.getRow(rowIndex);
+            
+            // Check accommodation count (columns B, I, P)
+            if (stdAccomCount + monAccomCount !== totAccomCount) {
+                currentRow.getCell('B').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } };
+                currentRow.getCell('I').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } };
+                currentRow.getCell('P').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } };
+            }
+            
+            // Check number of people (columns C, J, Q)
+            if (stdPeopleCount + monPeopleCount !== totPeopleCount) {
+                currentRow.getCell('C').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } };
+                currentRow.getCell('J').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } };
+                currentRow.getCell('Q').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } };
+            }
+            
+            // Check non-accommodation count (columns D, K, R)
+            if (stdNonAccomCount + monNonAccomCount !== totNonAccomCount) {
+                currentRow.getCell('D').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } };
+                currentRow.getCell('K').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } };
+                currentRow.getCell('R').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } };
+            }
         });
     }
 
