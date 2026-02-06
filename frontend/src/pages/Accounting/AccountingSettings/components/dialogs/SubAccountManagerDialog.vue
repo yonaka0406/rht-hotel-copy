@@ -76,8 +76,10 @@
             </div>
             
             <div class="flex justify-end pt-6">
-                <Button label="閉じる" @click="$emit('update:visible', false)" severity="secondary" text
-                    class="px-6 py-2 rounded-xl font-bold !bg-transparent" />
+                <button @click="$emit('update:visible', false)"
+                    class="px-6 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer">
+                    閉じる
+                </button>
             </div>
 
             <ConfirmDialog group="subaccount-manager" />
