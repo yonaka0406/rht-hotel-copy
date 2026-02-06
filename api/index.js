@@ -358,7 +358,7 @@ const listenForTableChanges = async () => {
             });
           }
         }
-        if (msg.channel === 'reservation_log_inserted') {
+        if (msg.channel === 'reservation_log_inserted' && process.env.NODE_ENV === 'production') {
           const logId = parseInt(msg.payload, 10);
           const requestId = `ota-sync-dev-${logId}-${Date.now()}`;
 
@@ -408,7 +408,7 @@ const listenForTableChanges = async () => {
             });
           }
         }
-        if (msg.channel === 'reservation_log_inserted') {
+        if (msg.channel === 'reservation_log_inserted' && process.env.NODE_ENV === 'production') {
           const logId = parseInt(msg.payload, 10);
           const requestId = `ota-sync-${logId}-${Date.now()}`;
 
