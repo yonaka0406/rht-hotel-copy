@@ -23,16 +23,21 @@ async function syncReservationInventory(requestId, logId) {
 
         // 1. Google Sheets sync (enqueue task)
         try {
-            const googleData = await selectReservationGoogleInventoryChange(requestId, logId, dbClient);
-            if (googleData && googleData.length > 0) {
-                await dbClient.query(
-                    `INSERT INTO google_sheets_queue (hotel_id, check_in, check_out, status)
-                       VALUES ($1, $2, $3, 'pending')
-                       ON CONFLICT (hotel_id, check_in, check_out) WHERE status = 'pending'
-                       DO NOTHING`,
-                    [googleData[0].hotel_id, googleData[0].check_in, googleData[0].check_out]
-                );
-                logger.debug(`[otaSyncService] Queued Google Sheets update for hotel ${googleData[0].hotel_id}`, { requestId, logId });
+            // SAFETY CHECK: Only enqueue Google Sheets updates in production environment.
+            if (process.env.NODE_ENV === 'production') {
+                const googleData = await selectReservationGoogleInventoryChange(requestId, logId, dbClient);
+                if (googleData && googleData.length > 0) {
+                    await dbClient.query(
+                        `INSERT INTO google_sheets_queue (hotel_id, check_in, check_out, status)
+                        VALUES ($1, $2, $3, 'pending')
+                        ON CONFLICT (hotel_id, check_in, check_out) WHERE status = 'pending'
+                        DO NOTHING`,
+                        [googleData[0].hotel_id, googleData[0].check_in, googleData[0].check_out]
+                    );
+                    logger.debug(`[otaSyncService] Queued Google Sheets update for hotel ${googleData[0].hotel_id}`, { requestId, logId });
+                }
+            } else {
+                logger.info(`[otaSyncService] Skipping Google Sheets enqueue for logId ${logId} (not in production environment)`, { requestId });
             }
         } catch (googleError) {
             logger.error(`[otaSyncService] Failed to queue Google Sheets update`, { error: googleError.message, logId, requestId });
@@ -64,7 +69,7 @@ async function syncReservationInventory(requestId, logId) {
                             headersSent: false
                         };
 
-                        await updateInventoryMultipleDays(dummyReq, dummyRes, dbClient);
+                        await updateInventoryMultipleDays(dummyReq, dummyRes, dbClient, { skipStockCheck: true });
                         logger.info(`[otaSyncService] Successfully initiated OTA sync for hotel ${hotel_id}`, { requestId, logId });
                     } else {
                         logger.info(`[otaSyncService] Skipping real OTA sync for hotel ${hotel_id} (not in production environment)`, { requestId, logId });

@@ -1179,7 +1179,7 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate, dbClient = 
 
     return allResponses;
 };
-const updateInventoryMultipleDays = async (req, res, dbClientArg = null) => {
+const updateInventoryMultipleDays = async (req, res, dbClientArg = null, options = {}) => {
     const hotel_id = req.params.hotel_id;
     const log_id = req.params.log_id;
     const inventory = req.body;
@@ -1246,33 +1246,43 @@ const updateInventoryMultipleDays = async (req, res, dbClientArg = null) => {
         maxDate = range.maxDate;
 
         if (!minDate || !maxDate) {
-            return res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
+            if (res && !res.headersSent) res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
+            return;
         }
 
-        let stockCheckResults = await checkOTAStock(req, res, hotel_id, minDate, maxDate, dbClient);
-        if (!Array.isArray(stockCheckResults)) {
-            logger.error('checkOTAStock did not return an array:', stockCheckResults);
-            stockCheckResults = [];
-        }
+        const skipStockCheck = options.skipStockCheck || false;
+        let needsUpdate = true;
 
-        const stockCheckMap = new Map();
-        stockCheckResults.forEach(item => {
-            const key = `${item.netRmTypeGroupCode}-${item.saleDate}`;
-            stockCheckMap.set(key, parseInt(item.remainingCount));
-        });
+        if (!skipStockCheck) {
+            let stockCheckResults = await checkOTAStock(req, res, hotel_id, minDate, maxDate, dbClient);
+            if (!Array.isArray(stockCheckResults)) {
+                logger.error('checkOTAStock did not return an array:', stockCheckResults);
+                stockCheckResults = [];
+            }
 
-        let needsUpdate = false;
-        for (const item of filteredInventory) {
-            const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
-            const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
-            const lookupKey = `${item.netrmtypegroupcode}-${itemDateYYYYMMDD}`;
-            const currentRemainingStock = stockCheckMap.get(lookupKey);
+            const stockCheckMap = new Map();
+            stockCheckResults.forEach(item => {
+                const key = `${item.netRmTypeGroupCode}-${item.saleDate}`;
+                stockCheckMap.set(key, parseInt(item.remainingCount));
+            });
 
-            if (currentRemainingStock !== undefined) {
-                if (expectedRemainingCount < 0) {
-                    if (currentRemainingStock !== 0) { needsUpdate = true; break; }
+            needsUpdate = false;
+            for (const item of filteredInventory) {
+                const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
+                const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
+                const lookupKey = `${item.netrmtypegroupcode}-${itemDateYYYYMMDD}`;
+                const currentRemainingStock = stockCheckMap.get(lookupKey);
+
+                if (currentRemainingStock !== undefined) {
+                    if (expectedRemainingCount < 0) {
+                        if (currentRemainingStock !== 0) { needsUpdate = true; break; }
+                    } else {
+                        if (currentRemainingStock !== expectedRemainingCount) { needsUpdate = true; break; }
+                    }
                 } else {
-                    if (currentRemainingStock !== expectedRemainingCount) { needsUpdate = true; break; }
+                    // If no info found on OTA, assume update is needed
+                    needsUpdate = true;
+                    break;
                 }
             }
         }
