@@ -1,6 +1,64 @@
 {
   "entries": [
     {
+      "version": "1.5.1",
+      "date": "2026-02-06",
+      "changes": [
+        {
+          "type": "performance",
+          "description": "開発環境および本番環境の両方でデータベース接続プールを50から100接続に増加しました。"
+        },
+        {
+          "type": "performance",
+          "description": "同時OTA同期操作に対応するため、接続タイムアウトを2秒から10秒に延長しました。"
+        },
+        {
+          "type": "performance",
+          "description": "接続の再利用とオーバーヘッド削減のため、アイドルタイムアウトを2秒から30秒に増加しました。"
+        },
+        {
+          "type": "fix",
+          "description": "一括予約更新時の「接続タイムアウト超過」エラーを解決しました。"
+        },
+        {
+          "type": "fix",
+          "description": "stockCheckMapの作成と検索において、部屋タイプコードを小文字に正規化し、空白をトリムすることで一貫したキー形式を実現しました。"
+        },
+        {
+          "type": "fix",
+          "description": "ExpressのnextファンクションがdbClientとして扱われることを防ぐため、型チェックを追加しました。"
+        },
+        {
+          "type": "fix",
+          "description": "updateInventoryMultipleDaysおよびmanualUpdateInventoryMultipleDaysにおける「executor.query is not a function」エラーを修正しました。"
+        },
+        {
+          "type": "fix",
+          "description": "Escキーと×ボタンの機能を有効にするため、ダイアログの閉じる動作を標準化しました。"
+        },
+        {
+          "type": "improvement",
+          "description": "OTAおよび在庫同期プロセスのエラーハンドリングと復旧ロジックを強化しました。"
+        },
+        {
+          "type": "improvement",
+          "description": "より良いリトライとバックオフメカニズムにより、バックグラウンド同期操作の信頼性を向上させました。"
+        },
+        {
+          "type": "improvement",
+          "description": "管理ページ全体のアクションボタンとフォームコントロールにARIAラベルを追加しました。"
+        },
+        {
+          "type": "improvement",
+          "description": "より良いアフォーダンスのため、インタラクティブ要素のツールチップを強化しました。"
+        },
+        {
+          "type": "improvement",
+          "description": "レイアウトの一貫性向上のため、ダイアログ内のフォーム入力フィールドを全幅表示にしました。"
+        }
+      ]
+    },
+    {
       "version": "1.5.0",
       "date": "2026-02-06",
       "changes": [

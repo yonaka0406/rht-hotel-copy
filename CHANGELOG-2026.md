@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.1] - 2026-02-06
+
+- Performance: Increased database connection pool from 50 to 100 connections for both development and production environments.
+- Performance: Extended connection timeout from 2s to 10s to handle concurrent OTA sync operations.
+- Performance: Increased idle timeout from 2s to 30s for better connection reuse and reduced overhead.
+- Bug Fix: Resolved 'timeout exceeded when trying to connect' errors during bulk reservation updates.
+- Bug Fix: Normalized room type codes to lowercase with trimmed whitespace in stockCheckMap creation and lookup for consistent key format.
+- Bug Fix: Added type checking to prevent Express 'next' function from being treated as dbClient.
+- Bug Fix: Fixed 'executor.query is not a function' error in updateInventoryMultipleDays and manualUpdateInventoryMultipleDays.
+- Bug Fix: Standardized dialog closing behavior to enable Esc key and X button functionality.
+- Improvement: Enhanced error handling and recovery logic for OTA and inventory synchronization processes.
+- Improvement: Improved reliability of background sync operations with better retry and backoff mechanisms.
+- Improvement: Added ARIA labels to action buttons and form controls across admin pages.
+- Improvement: Enhanced tooltips on interactive elements for better affordance.
+- Improvement: Form input fields in dialogs now render full-width for improved layout consistency.
+
+---
+
 ## [1.5.0] - 2026-02-06
 
 - New Feature: Added utility bills management with create, edit, and delete capabilities.
@@ -17,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improvement: Enhanced label clarity in date selectors across accounting pages.
 - Improvement: Refined UI controls in dialogs with updated styling.
 - Improvement: Improved data filtering and removed debug output from analytics.
-- Improvement: Enhanced the Accommodation Tax Report output within the reservation list by expanding the display from a single total to a categorized breakdown including "Monthly," "Standard," and "Total" values.
 
 ## [1.4.13] - 2026-02-06
 
@@ -28,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactor: Switched to sequential, DB-driven queue processing and enabled optional injected DB client support for more consistent resource handling.
 - New Feature: Converted the "Subject" (件名) field in the New Action dialog to a dropdown menu for standardized data entry.
 - Improvement: Expanded the "Action Type" dropdown options to include "Construction Site" (工事現場), "Office Visit" (来社), and "WH".
+- Improvement: Enhanced the Accommodation Tax Report output within the reservation list by expanding the display from a single total to a categorized breakdown including "Monthly," "Standard," and "Total" values.
 
 ---
 
