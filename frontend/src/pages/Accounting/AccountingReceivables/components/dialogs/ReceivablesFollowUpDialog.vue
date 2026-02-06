@@ -178,14 +178,15 @@
 
       <template #footer>
         <div class="flex items-center justify-between p-6 border-t border-slate-100 dark:border-slate-700">
-          <button @click="close" class="px-6 py-3 bg-transparent text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl transition-all cursor-pointer border-none">
+          <button @click="close"
+            class="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer">
             キャンセル
           </button>
           <div class="flex items-center gap-3">
               <button 
                 v-if="linkedClient && activeTab === 'history'"
                 @click="activeTab = 'new'"
-                class="px-6 py-3 bg-white dark:bg-slate-800 text-violet-600 border border-violet-200 dark:border-violet-700 font-bold rounded-xl hover:bg-violet-50 transition-all cursor-pointer"
+                class="px-6 py-3 bg-white dark:bg-slate-800 text-violet-600 border border-violet-200 dark:border-violet-700 font-bold rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/50 transition-all cursor-pointer"
               >
                 新規アクション
               </button>
@@ -193,9 +194,10 @@
                 v-if="linkedClient && activeTab === 'new'"
                 @click="submitCRMAction" 
                 :disabled="!isActionValid || isSubmitting"
-                class="px-8 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-all shadow-lg shadow-violet-200 dark:shadow-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border-none"
+                class="px-8 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-all shadow-lg shadow-violet-200 dark:shadow-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <i v-if="isSubmitting" class="pi pi-spin pi-spinner"></i>
+                <i v-else class="pi pi-check"></i>
                 <span>アクションを登録</span>
               </button>
           </div>

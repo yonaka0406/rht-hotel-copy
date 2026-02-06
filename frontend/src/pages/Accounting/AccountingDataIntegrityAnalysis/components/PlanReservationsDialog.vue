@@ -163,11 +163,14 @@
         </div>
 
         <template #footer>
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center px-4 pb-4">
                 <div class="text-sm text-slate-500 dark:text-slate-400">
                     合計: {{ reservations?.length || 0 }} 件の予約明細
                 </div>
-                <Button label="閉じる" text @click="closeDialog" />
+                <button @click="closeDialog"
+                    class="px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer">
+                    閉じる
+                </button>
             </div>
         </template>
     </Dialog>
