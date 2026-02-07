@@ -288,12 +288,12 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
     } = options;
 
     const outputBuffer = [];
-    const log = (msg = '') => {
+    const monitorLog = (msg = '') => {
         if (quiet) outputBuffer.push(msg);
         else console.log(msg);
     };
 
-    log(`🔍 Checking for missing OTA triggers in the last ${hoursBack} hour(s)...\n`);
+    monitorLog(`🔍 Checking for missing OTA triggers in the last ${hoursBack} hour(s)...\n`);
 
     let client = dbClient;
     let shouldRelease = false;
@@ -310,8 +310,8 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
         const endTime = new Date();
         const checkStartTime = new Date(endTime.getTime() - (hoursBack * 60 * 60 * 1000));
 
-        log(`📅 Time Range: ${checkStartTime.toISOString()} to ${endTime.toISOString()}`);
-        log(`   JST: ${new Date(checkStartTime.getTime() + 9 * 60 * 60 * 1000).toISOString()} to ${new Date(endTime.getTime() + 9 * 60 * 60 * 1000).toISOString()}\n`);
+        monitorLog(`📅 Time Range: ${checkStartTime.toISOString()} to ${endTime.toISOString()}`);
+        monitorLog(`   JST: ${new Date(checkStartTime.getTime() + 9 * 60 * 60 * 1000).toISOString()} to ${new Date(endTime.getTime() + 9 * 60 * 60 * 1000).toISOString()}\n`);
 
         // 1. Find all trigger candidates in the last hour
         const triggerCandidates = await client.query(`
@@ -394,14 +394,14 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
             ORDER BY fl.log_time DESC
         `, [checkStartTime, endTime]);
 
-        log(`1. TRIGGER CANDIDATES FOUND: ${triggerCandidates.rows.length}`);
+        monitorLog(`1. TRIGGER CANDIDATES FOUND: ${triggerCandidates.rows.length}`);
 
         if (triggerCandidates.rows.length === 0) {
             if (quiet) {
                 const jstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
                 console.log(`✅ OTA Monitor (last ${hoursBack}h): No activity detected - ${jstNow} JST`);
             } else {
-                log('   ✅ No reservation changes in the last hour - nothing to check\n');
+                monitorLog('   ✅ No reservation changes in the last hour - nothing to check\n');
             }
             return {
                 success: true,
@@ -424,13 +424,13 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
             hotelSummary[candidate.hotel_id].count++;
         });
 
-        log('   By Hotel:');
+        monitorLog('   By Hotel:');
         Object.entries(hotelSummary).forEach(([hotelId, summary]) => {
-            log(`     Hotel ${hotelId} (${summary.name}): ${summary.count} changes`);
+            monitorLog(`     Hotel ${hotelId} (${summary.name}): ${summary.count} changes`);
         });
 
         // 2. Check each candidate for missing OTA requests
-        log('\n2. CHECKING FOR MISSING OTA REQUESTS:');
+        monitorLog('\n2. CHECKING FOR MISSING OTA REQUESTS:');
 
         const missingTriggers = [];
         const silentSkips = [];
@@ -440,7 +440,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
             const batch = triggerCandidates.rows.slice(i, i + batchSize);
 
             // Process batch in parallel for better performance
-            const batchPromises = batch.map(async (log) => {
+            const batchPromises = batch.map(async (candidate) => {
                 // First check for OTA requests within 5 minutes
                 const otaCheck = await client.query(`
                     SELECT 
@@ -456,7 +456,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
                         AND service_name LIKE '%Stock%'
                     ORDER BY created_at ASC
                     LIMIT 1
-                `, [log.hotel_id, log.log_time]);
+                `, [candidate.hotel_id, candidate.log_time]);
 
                 if (otaCheck.rows.length === 0) {
                     // No OTA request found - check if this might be a silent skip
@@ -474,10 +474,10 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
                             AND service_name LIKE '%Stock%'
                         ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $2::timestamp)))
                         LIMIT 1
-                    `, [log.hotel_id, log.log_time]);
+                    `, [candidate.hotel_id, candidate.log_time]);
 
                     return {
-                        ...log,
+                        ...candidate,
                         gap_reason: 'NO_OTA_WITHIN_5_MIN',
                         next_ota: null,
                         nearby_ota: widerOtaCheck.rows[0] || null,
@@ -485,7 +485,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
                     };
                 } else {
                     return {
-                        ...log,
+                        ...candidate,
                         gap_reason: null,
                         next_ota: otaCheck.rows[0]
                     };
@@ -523,25 +523,31 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
         const totalWithOTA = totalCandidates - totalMissing - totalSilentSkips;
         const successRate = ((totalWithOTA) / totalCandidates * 100);
 
-        log(`\n3. MONITORING REPORT:`);
-        log(`   Total candidates: ${totalCandidates}`);
-        log(`   With OTA triggers: ${totalWithOTA}`);
-        log(`   Missing triggers: ${totalMissing}`);
-        log(`   Possible silent skips: ${totalSilentSkips}`);
-        log(`   Success rate: ${successRate.toFixed(1)}%`);
+        monitorLog(`\n3. MONITORING REPORT:`);
+        monitorLog(`   Total candidates: ${totalCandidates}`);
+        monitorLog(`   With OTA triggers: ${totalWithOTA}`);
+        monitorLog(`   Missing triggers: ${totalMissing}`);
+        monitorLog(`   Possible silent skips: ${totalSilentSkips}`);
+        monitorLog(`   Success rate: ${successRate.toFixed(1)}%`);
 
         if (totalMissing === 0 && totalSilentSkips === 0) {
-            log(`   ✅ All reservation changes have corresponding OTA requests`);
+            monitorLog(`   ✅ All reservation changes have corresponding OTA requests`);
         } else if (totalMissing === 0 && totalSilentSkips > 0) {
-            log(`   ⚠️  ${totalSilentSkips} possible silent skips (stocks may have already matched)`);
+            monitorLog(`   ⚠️  ${totalSilentSkips} possible silent skips (stocks may have already matched)`);
         } else {
-            log(`   🚨 ${totalMissing} reservation changes are missing OTA requests`);
+            monitorLog(`   🚨 ${totalMissing} reservation changes are missing OTA requests`);
             if (totalSilentSkips > 0) {
-                log(`   ℹ️  ${totalSilentSkips} additional cases may be silent skips`);
+                monitorLog(`   ℹ️  ${totalSilentSkips} additional cases may be silent skips`);
+            }
+
+            // Flush buffer here if quiet mode and there are issues
+            if (quiet) {
+                console.log(outputBuffer.join('\n'));
+                outputBuffer.length = 0; // Clear it to prevent double printing at the end
             }
 
             // Send email notification for inconsistency
-            log('\n   📧 SENDING EMAIL NOTIFICATION:');
+            monitorLog('\n   📧 SENDING EMAIL NOTIFICATION:');
             await sendOTANotificationEmail('INCONSISTENCY', {
                 missingTriggers,
                 totalCandidates,
@@ -550,32 +556,32 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
             });
 
             // Show details of missing triggers
-            log('\n   MISSING TRIGGERS:');
+            monitorLog('\n   MISSING TRIGGERS:');
             missingTriggers.forEach((trigger, i) => {
                 const jst = new Date(trigger.log_time.getTime() + (9 * 60 * 60 * 1000));
-                log(`     ${i + 1}. ${jst.toISOString()} JST - Hotel ${trigger.hotel_id} (${trigger.hotel_name})`);
-                log(`        ${trigger.action} - ${trigger.client_name || 'Unknown Client'} - Status: ${trigger.status}`);
-                log(`        Check-in: ${trigger.check_in}, Log ID: ${trigger.id}`);
+                monitorLog(`     ${i + 1}. ${jst.toISOString()} JST - Hotel ${trigger.hotel_id} (${trigger.hotel_name})`);
+                monitorLog(`        ${trigger.action} - ${trigger.client_name || 'Unknown Client'} - Status: ${trigger.status}`);
+                monitorLog(`        Check-in: ${trigger.check_in}, Log ID: ${trigger.id}`);
                 if (trigger.nearby_ota) {
                     const nearbyGap = Math.round(trigger.nearby_ota.minutes_gap * 100) / 100;
-                    log(`        Nearby OTA: ${nearbyGap} min gap (${trigger.nearby_ota.service_name})`);
+                    monitorLog(`        Nearby OTA: ${nearbyGap} min gap (${trigger.nearby_ota.service_name})`);
                 }
             });
 
             // Show silent skips if any
             if (totalSilentSkips > 0) {
-                log('\n   POSSIBLE SILENT SKIPS:');
+                monitorLog('\n   POSSIBLE SILENT SKIPS:');
                 silentSkips.forEach((skip, i) => {
                     const jst = new Date(skip.log_time.getTime() + (9 * 60 * 60 * 1000));
-                    log(`     ${i + 1}. ${jst.toISOString()} JST - Hotel ${skip.hotel_id} (${skip.hotel_name})`);
-                    log(`        ${skip.action} - ${skip.client_name || 'Unknown Client'} - Status: ${skip.status}`);
-                    log(`        Reason: No OTA activity nearby (stocks may have matched)`);
+                    monitorLog(`     ${i + 1}. ${jst.toISOString()} JST - Hotel ${skip.hotel_id} (${skip.hotel_name})`);
+                    monitorLog(`        ${skip.action} - ${skip.client_name || 'Unknown Client'} - Status: ${skip.status}`);
+                    monitorLog(`        Reason: No OTA activity nearby (stocks may have matched)`);
                 });
             }
 
             // Pattern analysis for missing triggers
             if (totalMissing > 1) {
-                log('\n   PATTERN ANALYSIS:');
+                monitorLog('\n   PATTERN ANALYSIS:');
 
                 const actionCounts = {};
                 const statusCounts = {};
@@ -589,27 +595,27 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
                     hotelCounts[trigger.hotel_id] = (hotelCounts[trigger.hotel_id] || 0) + 1;
                 });
 
-                log(`     By Action: ${Object.entries(actionCounts).map(([k, v]) => `${k}:${v}`).join(', ')}`);
-                log(`     By Status: ${Object.entries(statusCounts).map(([k, v]) => `${k}:${v}`).join(', ')}`);
-                log(`     By Hotel: ${Object.entries(hotelCounts).map(([k, v]) => `Hotel ${k}:${v}`).join(', ')}`);
+                monitorLog(`     By Action: ${Object.entries(actionCounts).map(([k, v]) => `${k}:${v}`).join(', ')}`);
+                monitorLog(`     By Status: ${Object.entries(statusCounts).map(([k, v]) => `${k}:${v}`).join(', ')}`);
+                monitorLog(`     By Hotel: ${Object.entries(hotelCounts).map(([k, v]) => `Hotel ${k}:${v}`).join(', ')}`);
             }
         }
 
         // 5. Automatic remediation if enabled
         let remediationResults = null;
         if (autoRemediate && missingTriggers.length > 0) {
-            log(`\n5. AUTOMATIC REMEDIATION:`);
-            log(`   Auto-remediation enabled - attempting to fix ${missingTriggers.length} missing triggers`);
+            monitorLog(`\n5. AUTOMATIC REMEDIATION:`);
+            monitorLog(`   Auto-remediation enabled - attempting to fix ${missingTriggers.length} missing triggers`);
 
             remediationResults = await performAutoRemediation(missingTriggers, baseUrl);
 
-            log(`   Remediation completed:`);
-            log(`     Successful requests: ${remediationResults.successful}`);
-            log(`     Failed requests: ${remediationResults.failed}`);
-            log(`     Skipped (overlapping): ${remediationResults.skipped}`);
+            monitorLog(`   Remediation completed:`);
+            monitorLog(`     Successful requests: ${remediationResults.successful}`);
+            monitorLog(`     Failed requests: ${remediationResults.failed}`);
+            monitorLog(`     Skipped (overlapping): ${remediationResults.skipped}`);
 
             // Send email notification for remediation
-            log('\n   📧 SENDING REMEDIATION EMAIL NOTIFICATION:');
+            monitorLog('\n   📧 SENDING REMEDIATION EMAIL NOTIFICATION:');
             await sendOTANotificationEmail('REMEDIATION', {
                 remediationResults,
                 missingTriggers: missingTriggers.length
@@ -618,30 +624,30 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
 
         // 6. Performance metrics
         const executionTime = Math.max(1, new Date() - startTime);
-        log(`\n${autoRemediate ? '6' : '5'}. PERFORMANCE METRICS:`);
-        log(`   Execution time: ${executionTime}ms`);
-        log(`   Candidates per second: ${(totalCandidates / (executionTime / 1000)).toFixed(1)}`);
+        monitorLog(`\n${autoRemediate ? '6' : '5'}. PERFORMANCE METRICS:`);
+        monitorLog(`   Execution time: ${executionTime}ms`);
+        monitorLog(`   Candidates per second: ${(totalCandidates / (executionTime / 1000)).toFixed(1)}`);
 
         // 7. Recommendations based on results
-        log(`\n${autoRemediate ? '7' : '6'}. RECOMMENDATIONS:`);
+        monitorLog(`\n${autoRemediate ? '7' : '6'}. RECOMMENDATIONS:`);
 
         if (successRate === 100) {
-            log(`   ✅ System operating normally - continue monitoring`);
+            monitorLog(`   ✅ System operating normally - continue monitoring`);
         } else if (successRate >= 95) {
-            log(`   ⚠️  Minor issues detected - investigate specific cases`);
-            log(`   - Check logs for the missing trigger times`);
-            log(`   - Verify OTA service connectivity`);
+            monitorLog(`   ⚠️  Minor issues detected - investigate specific cases`);
+            monitorLog(`   - Check logs for the missing trigger times`);
+            monitorLog(`   - Verify OTA service connectivity`);
         } else if (successRate >= 80) {
-            log(`   🟡 Moderate issues - system degradation detected`);
-            log(`   - Check Node.js application health`);
-            log(`   - Verify database notification system`);
-            log(`   - Consider manual OTA sync for affected reservations`);
+            monitorLog(`   🟡 Moderate issues - system degradation detected`);
+            monitorLog(`   - Check Node.js application health`);
+            monitorLog(`   - Verify database notification system`);
+            monitorLog(`   - Consider manual OTA sync for affected reservations`);
         } else {
-            log(`   🚨 CRITICAL: Major system failure detected`);
-            log(`   - Immediate investigation required`);
-            log(`   - Check if Node.js application is running`);
-            log(`   - Verify PostgreSQL notification system`);
-            log(`   - Manual OTA sync required for all affected reservations`);
+            monitorLog(`   🚨 CRITICAL: Major system failure detected`);
+            monitorLog(`   - Immediate investigation required`);
+            monitorLog(`   - Check if Node.js application is running`);
+            monitorLog(`   - Verify PostgreSQL notification system`);
+            monitorLog(`   - Manual OTA sync required for all affected reservations`);
         }
 
         // If quiet mode and success rate is 100%, output just one line
@@ -649,8 +655,8 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
             if (successRate === 100) {
                 const jstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
                 console.log(`✅ OTA Monitor (last ${hoursBack}h): 100% success (${totalCandidates} candidates) - ${jstNow} JST`);
-            } else {
-                // If there are issues, output the full buffered log
+            } else if (outputBuffer.length > 0) {
+                // If there are still items in the buffer (e.g. from Recommendations that were added after the flush)
                 console.log(outputBuffer.join('\n'));
             }
         }

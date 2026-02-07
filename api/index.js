@@ -357,11 +357,6 @@ const processOTASyncQueue = async () => {
     // Trigger next item processing
     setImmediate(processOTASyncQueue);
   }
-
-  // If we have capacity, try to process another one immediately
-  if (activeSyncs < MAX_CONCURRENT_SYNCS) {
-    setImmediate(processOTASyncQueue);
-  }
 };
 
 const addToOTASyncQueue = (logId) => {
@@ -531,6 +526,32 @@ app.listen(PORT, '0.0.0.0', () => {
 // Graceful shutdown
 const shutdown = async (signal) => {
   logger.info(`Starting graceful shutdown due to ${signal}...`);
+
+  // 0. Wait for OTA Sync Queue to drain
+  logger.info('Checking OTA sync queue before shutdown...', {
+    queueLength: otaSyncQueue.length,
+    activeSyncs,
+    queueContents: otaSyncQueue
+  });
+
+  if (otaSyncQueue.length > 0 || activeSyncs > 0) {
+    logger.info(`Draining OTA sync queue (limit: ${MAX_CONCURRENT_SYNCS} concurrent)...`);
+    const drainTimeout = 30000; // 30 seconds timeout
+    const startTime = Date.now();
+
+    while ((otaSyncQueue.length > 0 || activeSyncs > 0) && (Date.now() - startTime < drainTimeout)) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    if (otaSyncQueue.length > 0 || activeSyncs > 0) {
+      logger.warn('OTA sync queue drain timed out. Some syncs may be lost.', {
+        remaining: otaSyncQueue.length,
+        active: activeSyncs
+      });
+    } else {
+      logger.info('OTA sync queue drained successfully.');
+    }
+  }
 
   // 1. Close Socket.IO server to disconnect clients
   await new Promise(resolve => {
