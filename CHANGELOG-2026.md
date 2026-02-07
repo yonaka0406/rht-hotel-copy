@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.2] - 2026-02-07
+
+- New Feature: Added hotel-wide toggle and date-range filter for reservation search; scope controls exposed to the search composable.
+- New Feature: Implemented compact, denser search result layout with enhanced info, keyboard and screen-reader accessibility.
+- Bug Fix: Search now returns real reservation results (no placeholder).
+- Bug Fix: Fixed stale results by including UI-driven scopes in cache keys.
+- Performance: Optimized multi-table search for better performance.
+- Tests: Updated unit tests for immediate search behavior and scope-aware flows.
+
+---
+
 ## [1.5.1] - 2026-02-06
 
 - Performance: Increased database connection pool from 50 to 100 connections for both development and production environments.
