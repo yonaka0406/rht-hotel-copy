@@ -281,12 +281,19 @@ async function performAutoRemediation(missingTriggers, baseUrl) {
 }
 
 async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = null) {
-    console.log(`🔍 Checking for missing OTA triggers in the last ${hoursBack} hour(s)...\n`);
-
     const {
         autoRemediate = false,
-        baseUrl = 'http://localhost:5000'
+        baseUrl = 'http://localhost:5000',
+        quiet = false
     } = options;
+
+    const outputBuffer = [];
+    const log = (msg = '') => {
+        if (quiet) outputBuffer.push(msg);
+        else console.log(msg);
+    };
+
+    log(`🔍 Checking for missing OTA triggers in the last ${hoursBack} hour(s)...\n`);
 
     let client = dbClient;
     let shouldRelease = false;
@@ -303,8 +310,8 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
         const endTime = new Date();
         const checkStartTime = new Date(endTime.getTime() - (hoursBack * 60 * 60 * 1000));
 
-        console.log(`📅 Time Range: ${checkStartTime.toISOString()} to ${endTime.toISOString()}`);
-        console.log(`   JST: ${new Date(checkStartTime.getTime() + 9 * 60 * 60 * 1000).toISOString()} to ${new Date(endTime.getTime() + 9 * 60 * 60 * 1000).toISOString()}\n`);
+        log(`📅 Time Range: ${checkStartTime.toISOString()} to ${endTime.toISOString()}`);
+        log(`   JST: ${new Date(checkStartTime.getTime() + 9 * 60 * 60 * 1000).toISOString()} to ${new Date(endTime.getTime() + 9 * 60 * 60 * 1000).toISOString()}\n`);
 
         // 1. Find all trigger candidates in the last hour
         const triggerCandidates = await client.query(`
@@ -387,10 +394,15 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
             ORDER BY fl.log_time DESC
         `, [checkStartTime, endTime]);
 
-        console.log(`1. TRIGGER CANDIDATES FOUND: ${triggerCandidates.rows.length}`);
+        log(`1. TRIGGER CANDIDATES FOUND: ${triggerCandidates.rows.length}`);
 
         if (triggerCandidates.rows.length === 0) {
-            console.log('   ✅ No reservation changes in the last hour - nothing to check\n');
+            if (quiet) {
+                const jstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+                console.log(`✅ OTA Monitor (last ${hoursBack}h): No activity detected - ${jstNow} JST`);
+            } else {
+                log('   ✅ No reservation changes in the last hour - nothing to check\n');
+            }
             return {
                 success: true,
                 totalCandidates: 0,
@@ -412,13 +424,13 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
             hotelSummary[candidate.hotel_id].count++;
         });
 
-        console.log('   By Hotel:');
+        log('   By Hotel:');
         Object.entries(hotelSummary).forEach(([hotelId, summary]) => {
-            console.log(`     Hotel ${hotelId} (${summary.name}): ${summary.count} changes`);
+            log(`     Hotel ${hotelId} (${summary.name}): ${summary.count} changes`);
         });
 
         // 2. Check each candidate for missing OTA requests
-        console.log('\n2. CHECKING FOR MISSING OTA REQUESTS:');
+        log('\n2. CHECKING FOR MISSING OTA REQUESTS:');
 
         const missingTriggers = [];
         const silentSkips = [];
@@ -494,13 +506,13 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
             });
 
             // Progress update for large batches
-            if (triggerCandidates.rows.length > 20) {
+            if (triggerCandidates.rows.length > 20 && !quiet) {
                 const processed = Math.min(i + batchSize, triggerCandidates.rows.length);
                 process.stdout.write(`\r   Progress: ${processed}/${triggerCandidates.rows.length} (${Math.round(processed / triggerCandidates.rows.length * 100)}%)`);
             }
         }
 
-        if (triggerCandidates.rows.length > 20) {
+        if (triggerCandidates.rows.length > 20 && !quiet) {
             console.log(''); // New line after progress
         }
 
@@ -511,25 +523,25 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
         const totalWithOTA = totalCandidates - totalMissing - totalSilentSkips;
         const successRate = ((totalWithOTA) / totalCandidates * 100);
 
-        console.log(`\n3. MONITORING REPORT:`);
-        console.log(`   Total candidates: ${totalCandidates}`);
-        console.log(`   With OTA triggers: ${totalWithOTA}`);
-        console.log(`   Missing triggers: ${totalMissing}`);
-        console.log(`   Possible silent skips: ${totalSilentSkips}`);
-        console.log(`   Success rate: ${successRate.toFixed(1)}%`);
+        log(`\n3. MONITORING REPORT:`);
+        log(`   Total candidates: ${totalCandidates}`);
+        log(`   With OTA triggers: ${totalWithOTA}`);
+        log(`   Missing triggers: ${totalMissing}`);
+        log(`   Possible silent skips: ${totalSilentSkips}`);
+        log(`   Success rate: ${successRate.toFixed(1)}%`);
 
         if (totalMissing === 0 && totalSilentSkips === 0) {
-            console.log(`   ✅ All reservation changes have corresponding OTA requests`);
+            log(`   ✅ All reservation changes have corresponding OTA requests`);
         } else if (totalMissing === 0 && totalSilentSkips > 0) {
-            console.log(`   ⚠️  ${totalSilentSkips} possible silent skips (stocks may have already matched)`);
+            log(`   ⚠️  ${totalSilentSkips} possible silent skips (stocks may have already matched)`);
         } else {
-            console.log(`   🚨 ${totalMissing} reservation changes are missing OTA requests`);
+            log(`   🚨 ${totalMissing} reservation changes are missing OTA requests`);
             if (totalSilentSkips > 0) {
-                console.log(`   ℹ️  ${totalSilentSkips} additional cases may be silent skips`);
+                log(`   ℹ️  ${totalSilentSkips} additional cases may be silent skips`);
             }
 
             // Send email notification for inconsistency
-            console.log('\n   📧 SENDING EMAIL NOTIFICATION:');
+            log('\n   📧 SENDING EMAIL NOTIFICATION:');
             await sendOTANotificationEmail('INCONSISTENCY', {
                 missingTriggers,
                 totalCandidates,
@@ -538,32 +550,32 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
             });
 
             // Show details of missing triggers
-            console.log('\n   MISSING TRIGGERS:');
+            log('\n   MISSING TRIGGERS:');
             missingTriggers.forEach((trigger, i) => {
                 const jst = new Date(trigger.log_time.getTime() + (9 * 60 * 60 * 1000));
-                console.log(`     ${i + 1}. ${jst.toISOString()} JST - Hotel ${trigger.hotel_id} (${trigger.hotel_name})`);
-                console.log(`        ${trigger.action} - ${trigger.client_name || 'Unknown Client'} - Status: ${trigger.status}`);
-                console.log(`        Check-in: ${trigger.check_in}, Log ID: ${trigger.id}`);
+                log(`     ${i + 1}. ${jst.toISOString()} JST - Hotel ${trigger.hotel_id} (${trigger.hotel_name})`);
+                log(`        ${trigger.action} - ${trigger.client_name || 'Unknown Client'} - Status: ${trigger.status}`);
+                log(`        Check-in: ${trigger.check_in}, Log ID: ${trigger.id}`);
                 if (trigger.nearby_ota) {
                     const nearbyGap = Math.round(trigger.nearby_ota.minutes_gap * 100) / 100;
-                    console.log(`        Nearby OTA: ${nearbyGap} min gap (${trigger.nearby_ota.service_name})`);
+                    log(`        Nearby OTA: ${nearbyGap} min gap (${trigger.nearby_ota.service_name})`);
                 }
             });
 
             // Show silent skips if any
             if (totalSilentSkips > 0) {
-                console.log('\n   POSSIBLE SILENT SKIPS:');
+                log('\n   POSSIBLE SILENT SKIPS:');
                 silentSkips.forEach((skip, i) => {
                     const jst = new Date(skip.log_time.getTime() + (9 * 60 * 60 * 1000));
-                    console.log(`     ${i + 1}. ${jst.toISOString()} JST - Hotel ${skip.hotel_id} (${skip.hotel_name})`);
-                    console.log(`        ${skip.action} - ${skip.client_name || 'Unknown Client'} - Status: ${skip.status}`);
-                    console.log(`        Reason: No OTA activity nearby (stocks may have matched)`);
+                    log(`     ${i + 1}. ${jst.toISOString()} JST - Hotel ${skip.hotel_id} (${skip.hotel_name})`);
+                    log(`        ${skip.action} - ${skip.client_name || 'Unknown Client'} - Status: ${skip.status}`);
+                    log(`        Reason: No OTA activity nearby (stocks may have matched)`);
                 });
             }
 
             // Pattern analysis for missing triggers
             if (totalMissing > 1) {
-                console.log('\n   PATTERN ANALYSIS:');
+                log('\n   PATTERN ANALYSIS:');
 
                 const actionCounts = {};
                 const statusCounts = {};
@@ -577,27 +589,27 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
                     hotelCounts[trigger.hotel_id] = (hotelCounts[trigger.hotel_id] || 0) + 1;
                 });
 
-                console.log(`     By Action: ${Object.entries(actionCounts).map(([k, v]) => `${k}:${v}`).join(', ')}`);
-                console.log(`     By Status: ${Object.entries(statusCounts).map(([k, v]) => `${k}:${v}`).join(', ')}`);
-                console.log(`     By Hotel: ${Object.entries(hotelCounts).map(([k, v]) => `Hotel ${k}:${v}`).join(', ')}`);
+                log(`     By Action: ${Object.entries(actionCounts).map(([k, v]) => `${k}:${v}`).join(', ')}`);
+                log(`     By Status: ${Object.entries(statusCounts).map(([k, v]) => `${k}:${v}`).join(', ')}`);
+                log(`     By Hotel: ${Object.entries(hotelCounts).map(([k, v]) => `Hotel ${k}:${v}`).join(', ')}`);
             }
         }
 
         // 5. Automatic remediation if enabled
         let remediationResults = null;
         if (autoRemediate && missingTriggers.length > 0) {
-            console.log(`\n5. AUTOMATIC REMEDIATION:`);
-            console.log(`   Auto-remediation enabled - attempting to fix ${missingTriggers.length} missing triggers`);
+            log(`\n5. AUTOMATIC REMEDIATION:`);
+            log(`   Auto-remediation enabled - attempting to fix ${missingTriggers.length} missing triggers`);
 
             remediationResults = await performAutoRemediation(missingTriggers, baseUrl);
 
-            console.log(`   Remediation completed:`);
-            console.log(`     Successful requests: ${remediationResults.successful}`);
-            console.log(`     Failed requests: ${remediationResults.failed}`);
-            console.log(`     Skipped (overlapping): ${remediationResults.skipped}`);
+            log(`   Remediation completed:`);
+            log(`     Successful requests: ${remediationResults.successful}`);
+            log(`     Failed requests: ${remediationResults.failed}`);
+            log(`     Skipped (overlapping): ${remediationResults.skipped}`);
 
             // Send email notification for remediation
-            console.log('\n   📧 SENDING REMEDIATION EMAIL NOTIFICATION:');
+            log('\n   📧 SENDING REMEDIATION EMAIL NOTIFICATION:');
             await sendOTANotificationEmail('REMEDIATION', {
                 remediationResults,
                 missingTriggers: missingTriggers.length
@@ -605,31 +617,42 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}, dbClient = n
         }
 
         // 6. Performance metrics
-        const executionTime = new Date() - startTime;
-        console.log(`\n${autoRemediate ? '6' : '5'}. PERFORMANCE METRICS:`);
-        console.log(`   Execution time: ${executionTime}ms`);
-        console.log(`   Candidates per second: ${(totalCandidates / (executionTime / 1000)).toFixed(1)}`);
+        const executionTime = Math.max(1, new Date() - startTime);
+        log(`\n${autoRemediate ? '6' : '5'}. PERFORMANCE METRICS:`);
+        log(`   Execution time: ${executionTime}ms`);
+        log(`   Candidates per second: ${(totalCandidates / (executionTime / 1000)).toFixed(1)}`);
 
         // 7. Recommendations based on results
-        console.log(`\n${autoRemediate ? '7' : '6'}. RECOMMENDATIONS:`);
+        log(`\n${autoRemediate ? '7' : '6'}. RECOMMENDATIONS:`);
 
         if (successRate === 100) {
-            console.log(`   ✅ System operating normally - continue monitoring`);
+            log(`   ✅ System operating normally - continue monitoring`);
         } else if (successRate >= 95) {
-            console.log(`   ⚠️  Minor issues detected - investigate specific cases`);
-            console.log(`   - Check logs for the missing trigger times`);
-            console.log(`   - Verify OTA service connectivity`);
+            log(`   ⚠️  Minor issues detected - investigate specific cases`);
+            log(`   - Check logs for the missing trigger times`);
+            log(`   - Verify OTA service connectivity`);
         } else if (successRate >= 80) {
-            console.log(`   🟡 Moderate issues - system degradation detected`);
-            console.log(`   - Check Node.js application health`);
-            console.log(`   - Verify database notification system`);
-            console.log(`   - Consider manual OTA sync for affected reservations`);
+            log(`   🟡 Moderate issues - system degradation detected`);
+            log(`   - Check Node.js application health`);
+            log(`   - Verify database notification system`);
+            log(`   - Consider manual OTA sync for affected reservations`);
         } else {
-            console.log(`   🚨 CRITICAL: Major system failure detected`);
-            console.log(`   - Immediate investigation required`);
-            console.log(`   - Check if Node.js application is running`);
-            console.log(`   - Verify PostgreSQL notification system`);
-            console.log(`   - Manual OTA sync required for all affected reservations`);
+            log(`   🚨 CRITICAL: Major system failure detected`);
+            log(`   - Immediate investigation required`);
+            log(`   - Check if Node.js application is running`);
+            log(`   - Verify PostgreSQL notification system`);
+            log(`   - Manual OTA sync required for all affected reservations`);
+        }
+
+        // If quiet mode and success rate is 100%, output just one line
+        if (quiet) {
+            if (successRate === 100) {
+                const jstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+                console.log(`✅ OTA Monitor (last ${hoursBack}h): 100% success (${totalCandidates} candidates) - ${jstNow} JST`);
+            } else {
+                // If there are issues, output the full buffered log
+                console.log(outputBuffer.join('\n'));
+            }
         }
 
         return {
@@ -669,14 +692,16 @@ async function main() {
     if (args.includes('--help') || args.includes('-h')) {
         console.log('🔍 OTA TRIGGER MONITORING SYSTEM');
         console.log('================================\n');
-        console.log('Usage: node ota_trigger_monitor.js [hours] [--auto-remediate]');
+        console.log('Usage: node ota_trigger_monitor.js [hours] [--auto-remediate] [--quiet]');
         console.log('');
         console.log('Arguments:');
         console.log('  hours              Number of hours to look back (default: 1, max: 24)');
         console.log('  --auto-remediate   Enable automatic remediation of missing triggers');
+        console.log('  --quiet, -q        Concise output (one line) if 100% success');
         console.log('');
         console.log('Examples:');
         console.log('  node ota_trigger_monitor.js 1                    # Check last hour');
+        console.log('  node ota_trigger_monitor.js 1 --quiet            # Concise check');
         console.log('  node ota_trigger_monitor.js 6                    # Check last 6 hours');
         console.log('  node ota_trigger_monitor.js 1 --auto-remediate   # Check and fix missing triggers');
         console.log('');
@@ -690,6 +715,7 @@ async function main() {
 
     const hoursBack = args[0] ? parseInt(args[0]) : 1;
     const autoRemediate = args.includes('--auto-remediate') || args.includes('true');
+    const quiet = args.includes('--quiet') || args.includes('-q');
 
     console.log('🔍 OTA TRIGGER MONITORING SYSTEM');
     console.log('================================\n');
@@ -700,7 +726,8 @@ async function main() {
 
     const result = await checkMissingOTATriggers(hoursBack, {
         autoRemediate,
-        baseUrl: 'http://localhost:5000'
+        baseUrl: 'http://localhost:5000',
+        quiet
     });
 
     console.log('\n================================');

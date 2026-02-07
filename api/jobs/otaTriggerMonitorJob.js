@@ -31,6 +31,7 @@ class OTATriggerMonitorJob {
             enableAlerts: options.enableAlerts !== false, // Default to true
             enableLogging: options.enableLogging !== false, // Default to true
             autoRemediate: options.autoRemediate !== false, // Default to true
+            quiet: options.quiet !== false, // Default to true
             baseUrl: options.baseUrl || 'http://localhost:5000',
             ...options
         };
@@ -159,7 +160,8 @@ class OTATriggerMonitorJob {
 
             const result = await checkMissingOTATriggers(this.options.monitoringWindowHours, {
                 autoRemediate: this.options.autoRemediate,
-                baseUrl: this.options.baseUrl
+                baseUrl: this.options.baseUrl,
+                quiet: this.options.quiet
             }, dbClient);
 
             this.lastCheck = {

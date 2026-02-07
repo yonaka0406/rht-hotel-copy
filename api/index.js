@@ -325,6 +325,50 @@ const prodListenClient = new Pool({
   max: 50,
 });
 
+/**
+ * OTA Sync Task Queue
+ * Prevents connection pool exhaustion by limiting concurrent sync operations.
+ *
+ * ARCHITECTURAL REFACTOR: CONNECTION SPIKE PREVENTION
+ * Previously, bursts of reservation logs would trigger simultaneous calls to
+ * syncReservationInventory, each acquiring a database connection and saturating
+ * the pool (PostgreSQL error: "too many clients already").
+ *
+ * We now use a simple concurrency-limited queue to process these syncs sequentially
+ * or in small controlled batches.
+ */
+const otaSyncQueue = [];
+let activeSyncs = 0;
+const MAX_CONCURRENT_SYNCS = 2; // Process up to 2 syncs at a time
+
+const processOTASyncQueue = async () => {
+  if (otaSyncQueue.length === 0 || activeSyncs >= MAX_CONCURRENT_SYNCS) return;
+
+  activeSyncs++;
+  const logId = otaSyncQueue.shift();
+  const requestId = `ota-sync-${logId}-${Date.now()}`;
+
+  try {
+    await syncReservationInventory(requestId, logId);
+  } catch (err) {
+    logger.error('Error in background reservation sync:', { logId, requestId, error: err.message });
+  } finally {
+    activeSyncs--;
+    // Trigger next item processing
+    setImmediate(processOTASyncQueue);
+  }
+
+  // If we have capacity, try to process another one immediately
+  if (activeSyncs < MAX_CONCURRENT_SYNCS) {
+    setImmediate(processOTASyncQueue);
+  }
+};
+
+const addToOTASyncQueue = (logId) => {
+  otaSyncQueue.push(logId);
+  processOTASyncQueue();
+};
+
 // Function to listen for changes in a specific table
 const listenForTableChanges = async () => {
 
@@ -404,29 +448,7 @@ const listenForTableChanges = async () => {
         }
         if (msg.channel === 'reservation_log_inserted' && process.env.NODE_ENV === 'production') {
           const logId = parseInt(msg.payload, 10);
-          const requestId = `ota-sync-${logId}-${Date.now()}`;
-
-          /**
-           * ARCHITECTURAL REFACTOR: CONNECTION SPIKE PREVENTION
-           *
-           * Previously, this listener triggered multiple internal HTTP 'fetch' requests
-           * to the application's own endpoints (google, site-controller, etc). Each
-           * 'fetch' created a new isolated request context, forcing the API to acquire
-           * a new database connection for every step. In a burst, this caused a flurry
-           * of ~10 connections in milliseconds, saturating the PG server.
-           *
-           * We now use 'syncReservationInventory' which calls the controllers and models
-           * DIRECTLY. By doing so, we can pass a single 'dbClient' (acquired once from
-           * the pool) through the entire execution chain.
-           *
-           * Benefits:
-           * 1. 10x reduction in connection overhead (1 connection vs 10 per sync).
-           * 2. Massive reduction in PostgreSQL CPU saturation.
-           * 3. Atomicity: The entire background sync sequence shares the same client.
-           */
-          syncReservationInventory(requestId, logId).catch(err => {
-            logger.error('Error in background reservation sync:', { logId, requestId, error: err.message });
-          });
+          addToOTASyncQueue(logId);
         }
       });
 
