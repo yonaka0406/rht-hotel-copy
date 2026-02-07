@@ -32,6 +32,8 @@ export function useReservationSearch() {
   const searchSuggestions = ref([])
   const savedSearches = ref([])
   const activeFilters = ref([])
+  const hotelScope = ref('current') // 'current' or 'all'
+  const dateScope = ref('future') // 'future', 'past', or 'all'
   const searchError = ref(null)
   const lastSearchTime = ref(0)
   
@@ -73,7 +75,10 @@ export function useReservationSearch() {
 
   // Computed properties
   const hasActiveSearch = computed(() => {
-    return searchQuery.value.trim().length > 0 || activeFilters.value.length > 0
+    return searchQuery.value.trim().length > 0 ||
+           activeFilters.value.length > 0 ||
+           hotelScope.value !== 'current' ||
+           dateScope.value !== 'future'
   })
 
   const searchResultsCount = computed(() => {
@@ -129,7 +134,7 @@ export function useReservationSearch() {
       .map(f => `${f.field}:${f.operator}:${JSON.stringify(f.value)}`)
       .sort()
       .join('|')
-    return `${query}::${filterKey}`
+    return `${query}::${filterKey}::${hotelScope.value}::${dateScope.value}`
   }
 
   /**
@@ -180,8 +185,8 @@ export function useReservationSearch() {
   async function executeSearch(query, filters) {
     const trimmedQuery = query.trim()
     
-    // Clear results if no query and no filters
-    if (!trimmedQuery && filters.length === 0) {
+    // Clear results if no query, no tags, and scopes are default
+    if (!trimmedQuery && filters.length === 0 && hotelScope.value === 'current' && dateScope.value === 'future') {
       searchResults.value = []
       searchError.value = null
       return
@@ -209,9 +214,18 @@ export function useReservationSearch() {
     currentSearchController = new AbortController()
 
     try {
+      const { selectedHotelId } = useHotelStore();
+
+      // Combine active filters with local scope filters
+      const allFilters = [...filters];
+      if (dateScope.value !== 'all') {
+        allFilters.push({ field: 'dateScope', value: dateScope.value });
+      }
+
       const searchParams = {
         query: trimmedQuery,
-        filters,
+        hotelId: hotelScope.value === 'current' ? selectedHotelId.value : null,
+        filters: allFilters,
         fuzzy: true,
         phoneticSearch: true,
         operators: parseSearchQuery(trimmedQuery)
@@ -489,7 +503,8 @@ export function useReservationSearch() {
 
     try {
       const { selectedHotelId } = useHotelStore();
-      const response = await apiCall(`/search/suggestions/${selectedHotelId.value}`, 'POST', {
+      const targetHotelId = hotelScope.value === 'current' ? selectedHotelId.value : 'all';
+      const response = await apiCall(`/search/suggestions/${targetHotelId}`, 'POST', {
         query: partialQuery,
         limit: searchConfig.value.maxSuggestions
       });
@@ -527,11 +542,25 @@ export function useReservationSearch() {
   }
 
   // Watch for search query changes to trigger suggestions
-  watch(searchQuery, async (newQuery) => {
+  let suggestionDebounceTimer = null
+  watch(searchQuery, (newQuery) => {
+    if (suggestionDebounceTimer) clearTimeout(suggestionDebounceTimer)
+
     if (newQuery && newQuery.length >= 2) {
-      await getSearchSuggestions(newQuery)
+      suggestionDebounceTimer = setTimeout(async () => {
+        await getSearchSuggestions(newQuery)
+      }, 300)
     } else {
       searchSuggestions.value = []
+    }
+  })
+
+  // Watch for scope changes to re-trigger search
+  watch([hotelScope, dateScope], () => {
+    console.debug('[useReservationSearch] scope changed:', { hotelScope: hotelScope.value, dateScope: dateScope.value });
+    if (hasActiveSearch.value) {
+      // Trigger search immediately on scope change for better UX
+      executeSearch(searchQuery.value, activeFilters.value)
     }
   })
 
@@ -563,6 +592,8 @@ export function useReservationSearch() {
     searchSuggestions,
     savedSearches,
     activeFilters,
+    hotelScope,
+    dateScope,
     searchError,
     searchConfig,
     

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import GlobalSearchModal from '../GlobalSearchModal.vue';
+import GlobalSearchModal from '../../Main/components/GlobalSearchModal.vue';
 import { ref } from 'vue';
 import PrimeVue from 'primevue/config';
 
@@ -13,6 +13,8 @@ vi.mock('../../../../composables/useReservationSearch', () => ({
     searchSuggestions: ref([]),
     activeFilters: ref([]),
     searchError: ref(null),
+    hotelScope: ref('current'),
+    dateScope: ref('future'),
     hasActiveSearch: ref(false),
     searchResultsCount: ref(0),
     performSearch: vi.fn(),
@@ -200,30 +202,36 @@ describe('GlobalSearchModal functionality', () => {
     const focusSpy = vi.fn();
 
     const wrapper = mount(GlobalSearchModal, {
-      props: { visible: false },
+      props: { visible: true },
       global: {
         plugins: [PrimeVue],
         stubs: {
+          // Use a functional stub to ensure the ref works correctly
           ReservationSearchBar: {
-            template: '<div />',
+            name: 'ReservationSearchBar',
+            template: '<div class="reservation-search-bar-stub" />',
             methods: {
               focusInput: focusSpy,
             },
           },
+          // Stub Dialog to easily trigger events
+          Dialog: {
+            name: 'Dialog',
+            template: '<div><slot /><slot name="header" /></div>',
+            props: ['visible']
+          }
         },
       },
     });
 
-    // Trigger the modal to show
-    await wrapper.setProps({ visible: true });
-    await wrapper.vm.$nextTick(); // Wait for DOM updates
+    // Find the Dialog stub and emit 'show'
+    const dialog = wrapper.findComponent({ name: 'Dialog' });
+    await dialog.vm.$emit('show');
 
-    // The `onDialogShow` method, which calls `focusInput`, is triggered by the Dialog component internally.
-    // We need to wait for the next tick to allow the child component to be mounted and the ref to be set.
+    // Wait for nextTick as the focus logic is wrapped in nextTick
     await wrapper.vm.$nextTick();
 
     // Now, we check if our spy has been called.
-    // This confirms that the modal's logic to focus the input on show is working.
     expect(focusSpy).toHaveBeenCalled();
   });
 });
