@@ -34,7 +34,7 @@
         </div>
       </div>
 
-      <ReservationSearchBar ref="searchBarRef" v-model="searchQuery" :suggestions="searchSuggestions"
+      <ReservationSearchBar ref="searchBarRef" v-model="searchQuery" :suggestions="[]"
         :is-searching="isSearching" :active-filters="activeFilters" :search-results-count="searchResultsCount"
         @search="performSearch" @clear="clearSearch" @suggestion-selected="onSuggestionSelected"
         @remove-filter="removeFilter" @clear-filters="clearAllFilters" @close-modal="handleCloseModal" />
@@ -59,11 +59,14 @@
               </span>
             </div>
 
-            <div class="result-middle flex justify-between items-center mb-1">
+            <div class="result-middle flex justify-between items-start mb-1">
               <div class="result-name-container flex-1 min-w-0">
-                <span class="result-name text-base font-bold truncate block" v-html="highlightMatch(reservation.client_name, searchQuery)"></span>
+                <div class="flex flex-col">
+                  <span class="result-name text-base font-bold truncate block" v-html="highlightMatch(reservation.name_kanji || reservation.client_name, searchQuery)"></span>
+                  <span v-if="reservation.name_kana" class="result-name-kana text-[10px] text-gray-500 -mt-1" v-html="highlightMatch(reservation.name_kana, searchQuery)"></span>
+                </div>
               </div>
-              <div class="result-id-container text-[11px] text-gray-500 font-mono ml-2 whitespace-nowrap">
+              <div class="result-id-container text-[11px] text-gray-500 font-mono ml-2 whitespace-nowrap mt-1">
                 #{{ reservation.ota_reservation_id || reservation.reservation_id }}
               </div>
             </div>

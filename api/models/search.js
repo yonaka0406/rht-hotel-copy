@@ -127,6 +127,8 @@ async function searchReservations(requestId, { hotelId, searchTerm, dateScope = 
       r.hotel_id,
       h.name AS hotel_name,
       c.name AS client_name,
+      c.name_kana,
+      c.name_kanji,
       c.email,
       c.phone,
       COALESCE(r.check_out - r.check_in, 0) AS number_of_nights

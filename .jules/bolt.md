@@ -40,3 +40,6 @@
 ## 2026-02-07 - [Search Query Optimization]
 **Learning:** Using a CTE to pre-filter matching clients allows leveraging GIN trigram indexes once per scan and then joining the results, which is significantly more efficient than repeating the same ILIKE conditions across multiple UNIONed queries. This reduced the number of redundant JOINs to heavy master tables.
 **Action:** Always prefer CTE-based filtering for multi-table searches that involve expensive text matching on multiple possible links (main client, secondary guests, payments).
+## 2026-02-07 - [Search Caching Anti-pattern]
+**Learning:** Forgetting to include UI-driven scopes (like 'All Hotels' or 'Date Range') in the frontend search cache key results in stale data when toggling these filters, as the system thinks it already has the results for the same query string.
+**Action:** Always include all stateful search parameters (query, filters, scopes) in the cache key generation logic.

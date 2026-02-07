@@ -75,7 +75,10 @@ export function useReservationSearch() {
 
   // Computed properties
   const hasActiveSearch = computed(() => {
-    return searchQuery.value.trim().length > 0 || activeFilters.value.length > 0
+    return searchQuery.value.trim().length > 0 ||
+           activeFilters.value.length > 0 ||
+           hotelScope.value !== 'current' ||
+           dateScope.value !== 'future'
   })
 
   const searchResultsCount = computed(() => {
@@ -131,7 +134,7 @@ export function useReservationSearch() {
       .map(f => `${f.field}:${f.operator}:${JSON.stringify(f.value)}`)
       .sort()
       .join('|')
-    return `${query}::${filterKey}`
+    return `${query}::${filterKey}::${hotelScope.value}::${dateScope.value}`
   }
 
   /**
@@ -182,8 +185,8 @@ export function useReservationSearch() {
   async function executeSearch(query, filters) {
     const trimmedQuery = query.trim()
     
-    // Clear results if no query and no filters
-    if (!trimmedQuery && filters.length === 0) {
+    // Clear results if no query, no tags, and scopes are default
+    if (!trimmedQuery && filters.length === 0 && hotelScope.value === 'current' && dateScope.value === 'future') {
       searchResults.value = []
       searchError.value = null
       return
@@ -539,9 +542,14 @@ export function useReservationSearch() {
   }
 
   // Watch for search query changes to trigger suggestions
-  watch(searchQuery, async (newQuery) => {
+  let suggestionDebounceTimer = null
+  watch(searchQuery, (newQuery) => {
+    if (suggestionDebounceTimer) clearTimeout(suggestionDebounceTimer)
+
     if (newQuery && newQuery.length >= 2) {
-      await getSearchSuggestions(newQuery)
+      suggestionDebounceTimer = setTimeout(async () => {
+        await getSearchSuggestions(newQuery)
+      }, 300)
     } else {
       searchSuggestions.value = []
     }
@@ -549,8 +557,10 @@ export function useReservationSearch() {
 
   // Watch for scope changes to re-trigger search
   watch([hotelScope, dateScope], () => {
+    console.debug('[useReservationSearch] scope changed:', { hotelScope: hotelScope.value, dateScope: dateScope.value });
     if (hasActiveSearch.value) {
-      performSearch()
+      // Trigger search immediately on scope change for better UX
+      executeSearch(searchQuery.value, activeFilters.value)
     }
   })
 

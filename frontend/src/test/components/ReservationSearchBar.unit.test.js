@@ -25,26 +25,21 @@ describe('ReservationSearchBar core logic', () => {
       emit('update:modelValue', newValue);
     });
 
-    // Handle input with debounce (copied from component)
+    // Handle input - emitted immediately (copied from component)
     const onInput = () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-
-      debounceTimer = setTimeout(() => {
-        emit('search', localQuery.value);
-      }, 300); // 300ms debounce
+      emit('search', localQuery.value);
     };
 
     // Test the logic
     localQuery.value = 'test query';
     onInput();
 
-    // Wait for debounce
-    await new Promise(resolve => setTimeout(resolve, 350));
-
-    expect(emitted['update:modelValue']).toContain('test query');
+    // Verify immediate emission of search
     expect(emitted.search).toContain('test query');
+
+    // Wait for the watch to update modelValue
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(emitted['update:modelValue']).toContain('test query');
   });
 
   it('should handle keyboard navigation in suggestions', () => {

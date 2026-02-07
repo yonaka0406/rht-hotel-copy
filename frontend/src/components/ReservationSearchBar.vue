@@ -44,9 +44,12 @@
           :aria-selected="idx === selectedSuggestionIndex"
         >
           <span class="suggestion-text">
-            <div class="suggestion-main">
-              <span class="client-name">{{ suggestion.name_kanji || suggestion.name_kana || suggestion.name || '' }}</span>
-              <span v-if="suggestion.email" class="client-email">{{ suggestion.email }}</span>
+            <div class="suggestion-main flex flex-col">
+              <div class="flex items-center gap-2">
+                <span class="client-name font-bold">{{ suggestion.name_kanji || suggestion.name || suggestion.name_kana || '' }}</span>
+                <span v-if="suggestion.email" class="client-email text-xs text-gray-500">{{ suggestion.email }}</span>
+              </div>
+              <span v-if="suggestion.name_kana && suggestion.name_kanji" class="client-name-kana text-[10px] text-gray-500 -mt-1">{{ suggestion.name_kana }}</span>
             </div>
             <div class="suggestion-details">
               <span v-if="suggestion.check_in && suggestion.check_out" class="reservation-dates">
@@ -122,7 +125,7 @@ let loadingTimer = null;
 const isComposing = ref(false);
 
 const onCompositionStart = () => { isComposing.value = true; };
-const onCompositionEnd = () => { isComposing.value = false; };
+
 watch(() => props.isSearching, (newVal) => {
   if (newVal) {
     loadingTimer = setTimeout(() => {
@@ -144,13 +147,17 @@ watch(localQuery, (newValue) => {
 
 const onInput = () => {
   if (isComposing.value) return;
-  if (debounceTimer) clearTimeout(debounceTimer);
   console.debug('[ReservationSearchBar] onInput:', localQuery.value);
-  debounceTimer = setTimeout(() => {
-    console.debug('[ReservationSearchBar] emit search:', localQuery.value);
-    emit('search', localQuery.value);
-    showSuggestions.value = localQuery.value.trim().length > 0;
-  }, 300);
+  // Emit immediately, let the consumer (composable) handle debouncing
+  emit('search', localQuery.value);
+  showSuggestions.value = localQuery.value.trim().length > 0;
+};
+
+const onCompositionEnd = () => {
+  isComposing.value = false;
+  // Trigger search when composition ends (e.g. after selecting Kanji/Katakana)
+  console.debug('[ReservationSearchBar] onCompositionEnd, triggering search:', localQuery.value);
+  emit('search', localQuery.value);
 };
 
 const onKeydown = (event) => {
