@@ -92,9 +92,6 @@
           </div>
         </div>
 
-        <div v-if="searchResults.length > 5" class="search-results-footer">
-          <Button label="すべての結果を表示" class="p-button-text" @click="showAllResults" />
-        </div>
       </div>
 
       <div v-else-if="isSearching" class="search-loading">
@@ -359,24 +356,6 @@ const selectReservation = (reservation) => {
   // Announce to screen readers
   accessibilityService.announce(
     `${reservation.client_name}の予約詳細ページに移動しました。`,
-    'assertive'
-  );
-};
-
-// Show all results in reservation list
-const showAllResults = () => {
-  // Navigate to reservation list with current search query
-  router.push({
-    name: 'ReservationList',
-    query: { search: searchQuery.value }
-  });
-
-  // Close the modal
-  closeModal();
-
-  // Announce to screen readers
-  accessibilityService.announce(
-    `予約一覧ページに移動しました。検索結果: ${searchResultsCount.value}件`,
     'assertive'
   );
 };
