@@ -150,31 +150,27 @@ Content-Type: application/json
 
 ### API Endpoints
 
-#### Availability & Inventory
-- `GET /api/booking-engine/availability/:hotel_id` - Check room availability
-- `GET /api/booking-engine/room-types/:hotel_id` - Get room types
-- `GET /api/booking-engine/amenities/:hotel_id` - Get amenities
-- `GET /api/booking-engine/hotels/:hotel_id` - Get hotel information
+#### Infrastructure & General Data
+- `GET /api/booking-engine/hotels` - List all active hotels
+- `GET /api/booking-engine/hotels/:hotel_id` - Get specific hotel details
+- `GET /api/booking-engine/room-types/:hotel_id` - Get room types for a hotel
+- `GET /api/booking-engine/plans/:hotel_id` - Get available plans for a hotel
 
-#### Booking Operations
+#### Availability & Pricing (Planned/External)
+- `GET /api/booking-engine/availability/:hotel_id` - Check room availability
+- `GET /api/booking-engine/amenities/:hotel_id` - Get amenities
+- `GET /api/booking-engine/hotels/:hotel_id/images` - Get hotel images
+
+#### Booking Operations (Booking Engine Side)
 - `POST /api/booking-engine/bookings` - Create new booking
 - `GET /api/booking-engine/bookings/:booking_id` - Get booking details
 - `PUT /api/booking-engine/bookings/:booking_id` - Update booking
 - `DELETE /api/booking-engine/bookings/:booking_id` - Cancel booking
 
-#### Authentication & Validation
-- `POST /api/booking-engine/auth/validate-token` - Validate authentication token
-- `GET /api/booking-engine/auth/user/:user_id` - Get user information
-
-#### Hotel Information
-- `GET /api/booking-engine/hotels/:hotel_id/images` - Get hotel images
-- `GET /api/booking-engine/hotels/:hotel_id/pricing` - Get pricing information
-
-#### Cache Management
-- `POST /api/booking-engine/cache/update-hotels` - Update hotel cache
-- `POST /api/booking-engine/cache/update-room-types` - Update room type cache
-- `POST /api/booking-engine/cache/refresh-availability` - Refresh availability cache
+#### Cache Management Reference
 - `GET /api/booking-engine/cache/status` - Get cache status
+- `POST /api/booking-engine/cache/refresh-availability` - Manual availability refresh
+
 
 ### Authentication & Security
 

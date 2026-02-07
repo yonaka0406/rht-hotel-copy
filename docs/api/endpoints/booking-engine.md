@@ -22,106 +22,13 @@ All requests to the Booking Engine API should be made over HTTPS. Request bodies
 https://test.wehub.work/api/booking-engine
 ```
 
-## Hotel Information Endpoints
+## Hotel and Infrastructure Endpoints
 
-### Get Individual Hotel
+### Get All Hotels
 
-**Endpoint:** `GET /hotels/{hotel_id}`
+**Endpoint:** `GET /hotels`
 
-**Description:** Retrieves information for a specific hotel.
-
-**Parameters:**
-- `hotel_id` (path): The ID of the hotel to retrieve
-
-**Response:**
-```json
-{
-  "hotel_id": 1,
-  "name": "Sample Hotel",
-  "formal_name": "Sample Hotel & Resort",
-  "facility_type": "hotel",
-  "open_date": "2024-01-01",
-  "total_rooms": 100,
-  "postal_code": "12345",
-  "address": "123 Main St",
-  "email": "info@samplehotel.com",
-  "phone_number": "+1-555-123-4567",
-  "created_at": "2024-01-01T00:00:00Z",
-  "updated_at": "2024-01-01T00:00:00Z"
-}
-```
-
-### Get Individual Hotel Room Types
-
-**Endpoint:** `GET /room-types/{hotel_id}`
-
-**Description:** Retrieves all room types for a specific hotel.
-
-**Parameters:**
-- `hotel_id` (path): The ID of the hotel
-
-**Response:**
-```json
-{
-  "hotel_id": 1,
-  "room_types": [
-    {
-      "id": 1,
-      "name": "Standard Room",
-      "description": "Comfortable standard room",
-      "hotel_id": 1,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  ]
-}
-```
-
-### Get Individual Hotel Plans
-
-**Endpoint:** `GET /plans/{hotel_id}`
-
-**Description:** Retrieves all available plans for a specific hotel.
-
-**Parameters:**
-- `hotel_id` (path): The ID of the hotel
-
-**Response:**
-```json
-{
-  "hotel_id": 1,
-  "plans": [
-    {
-      "global_plan_id": 1,
-      "hotel_plan_id": null,
-      "plan_key": "1h",
-      "name": "Standard Plan",
-      "description": "Standard accommodation plan",
-      "plan_type": "per_room",
-      "color": "#FF5733"
-    },
-    {
-      "global_plan_id": 2,
-      "hotel_plan_id": 5,
-      "plan_key": "2h5",
-      "name": "Premium Plan",
-      "description": "Premium accommodation with amenities",
-      "plan_type": "per_room",
-      "color": "#33FF57"
-    }
-  ]
-}
-```
-
-## Cache Management Endpoints
-
-### Update Hotel Cache
-
-**Endpoint:** `POST /cache/update-hotels`
-
-**Description:** Retrieves all active hotels for cache update. This endpoint returns comprehensive hotel data that the booking engine can use to update its local cache.
-
-**Request Body:** Empty (no body required)
+**Description:** Retrieves a list of all active hotels for the booking engine. This replaces the previous cache update endpoint.
 
 **Response:**
 ```json
@@ -141,23 +48,50 @@ https://test.wehub.work/api/booking-engine
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
     }
-  ],
-  "count": 1,
-  "timestamp": "2024-01-15T10:30:00Z"
+  ]
 }
 ```
 
-### Update Room Type Cache
+### Get Individual Hotel Details
 
-**Endpoint:** `POST /cache/update-room-types`
+**Endpoint:** `GET /hotels/{hotel_id}`
 
-**Description:** Retrieves all active room types for cache update. This endpoint returns comprehensive room type data that the booking engine can use to update its local cache.
+**Description:** Retrieves detailed information for a specific hotel.
 
-**Request Body:** Empty (no body required)
+**Parameters:**
+- `hotel_id` (path): The numeric ID of the hotel
 
 **Response:**
 ```json
 {
+  "hotel_id": 1,
+  "name": "Sample Hotel",
+  "formal_name": "Sample Hotel & Resort",
+  "facility_type": "hotel",
+  "open_date": "2024-01-01",
+  "total_rooms": 100,
+  "postal_code": "12345",
+  "address": "123 Main St",
+  "email": "info@samplehotel.com",
+  "phone_number": "+1-555-123-4567",
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-01T00:00:00Z"
+}
+```
+
+### Get Room Types
+
+**Endpoint:** `GET /room-types/{hotel_id}`
+
+**Description:** Retrieves all room types available for a specific hotel.
+
+**Parameters:**
+- `hotel_id` (path): The numeric ID of the hotel
+
+**Response:**
+```json
+{
+  "hotel_id": 1,
   "room_types": [
     {
       "id": 1,
@@ -167,19 +101,47 @@ https://test.wehub.work/api/booking-engine
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
     }
-  ],
-  "count": 1,
-  "timestamp": "2024-01-15T10:30:00Z"
+  ]
 }
 ```
 
-### Get Cache Status
+### Get Available Plans
 
-**Endpoint:** `GET /cache/status`
+**Endpoint:** `GET /plans/{hotel_id}`
 
-**Description:** Returns the current status of various cache types and their TTL settings.
+**Description:** Retrieves all available plans (packages) for a specific hotel using the `get_available_plans_for_hotel` logic.
+
+**Parameters:**
+- `hotel_id` (path): The numeric ID of the hotel
 
 **Response:**
+```json
+{
+  "hotel_id": 1,
+  "plans": [
+    {
+      "global_plan_id": 1,
+      "hotel_plan_id": 5,
+      "plan_key": "1h5",
+      "name": "Standard Plan",
+      "description": "Standard accommodation plan",
+      "plan_type": "accommodation/package",
+      "color": "#FF5733"
+    }
+  ]
+}
+```
+
+## Experimental / Future Endpoints
+> Note: The following endpoints are referenced in architectural documents but may not be fully implemented in the current `bookingEngineRoutes.js`.
+
+### Update Room Type Cache
+**Endpoint:** `POST /cache/update-room-types`
+Description: Legacy/Alternative endpoint for global room type sync. Currently handled via `GET /room-types/{hotel_id}`.
+
+### Get Cache Status
+**Endpoint:** `GET /cache/status`
+Response:
 ```json
 {
   "hotels": {
@@ -211,13 +173,6 @@ All endpoints may return the following error responses:
 }
 ```
 
-### 401 Unauthorized (Invalid API Key)
-```json
-{
-  "error": "Invalid API key"
-}
-```
-
 ### 404 Not Found
 ```json
 {
@@ -232,140 +187,26 @@ All endpoints may return the following error responses:
 }
 ```
 
-## Cache Update Strategy
-
-The booking engine uses a hybrid caching strategy:
-
-### Hotel & Room Type Cache (Manual Updates Only)
-- **Manual Control**: Updates only triggered by administrators or PMS system
-- **No Automatic Sync**: No background synchronization for hotel/room type data
-- **PMS Ownership**: PMS maintains full control over hotel and room type data
-- **Smart Cleanup**: Only removes cache entries not linked to active hotels/room types
-- **Admin Control**: All hotel/room type cache updates must be triggered manually
-
-### Availability Cache (Automatic + Manual)
-- **TTL-based**: 15-minute Time-To-Live for availability data
-- **Automatic Refresh**: Background service refreshes expired availability entries
-- **Manual Override**: Admin can manually trigger availability cache refresh
-- **Real-time Updates**: Immediate availability updates for critical operations
-- **Smart Cleanup**: Removes availability data older than 1 month
-
 ## Usage Examples
 
 ### cURL Examples
 
-#### Update Hotel Cache
+#### Get All Hotels
 ```bash
-curl -X POST https://test.wehub.work/api/booking-engine/cache/update-hotels \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json"
-```
-
-#### Update Room Type Cache
-```bash
-curl -X POST https://test.wehub.work/api/booking-engine/cache/update-room-types \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json"
+curl -X GET https://test.wehub.work/api/booking-engine/hotels \
+  -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 #### Get Hotel Plans
 ```bash
 curl -X GET https://test.wehub.work/api/booking-engine/plans/1 \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json"
+  -H "Authorization: Bearer YOUR_API_KEY"
 ```
-
-#### Get Cache Status
-```bash
-curl -X GET https://test.wehub.work/api/booking-engine/cache/status \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json"
-```
-
-### JavaScript/Node.js Example
-
-```javascript
-const axios = require('axios');
-
-const PMS_API_URL = 'https://test.wehub.work/api/booking-engine';
-const API_KEY = 'your_api_key_here';
-
-async function updateHotelCache() {
-  try {
-    const response = await axios.post(`${PMS_API_URL}/cache/update-hotels`, {}, {
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    console.log('Hotels updated:', response.data.count);
-    return response.data.hotels;
-  } catch (error) {
-    console.error('Error updating hotel cache:', error.response?.data || error.message);
-    throw error;
-  }
-}
-
-async function updateRoomTypeCache() {
-  try {
-    const response = await axios.post(`${PMS_API_URL}/cache/update-room-types`, {}, {
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    console.log('Room types updated:', response.data.count);
-    return response.data.room_types;
-  } catch (error) {
-    console.error('Error updating room type cache:', error.response?.data || error.message);
-    throw error;
-  }
-}
-```
-
-## Testing
-
-A test script is provided to verify the API endpoints:
-
-```bash
-# Set the API key environment variable
-export BOOKING_ENGINE_API_KEY="your_api_key_here"
-
-# Run the test script
-node test-booking-engine-cache-api.js
-```
-
-The test script will:
-- Test authentication with and without API keys
-- Test hotel cache update endpoint
-- Test room type cache update endpoint
-- Test cache status endpoint
-- Test individual hotel and room type endpoints
-- Validate response structures and data integrity
-
-## Security Considerations
-
-1. **API Key Security**: Keep the API key secure and rotate it regularly
-2. **HTTPS Only**: All API communication should use HTTPS
-3. **Rate Limiting**: Consider implementing rate limiting for production use
-4. **IP Whitelisting**: Consider restricting API access to specific IP addresses
-5. **Audit Logging**: All API interactions are logged for security and debugging
-
-## Integration Notes
-
-1. **Data Format**: All responses use consistent JSON formatting
-2. **Timestamps**: All timestamps are in ISO 8601 format with timezone information
-3. **Error Handling**: Implement proper error handling for all API calls
-4. **Retry Logic**: Consider implementing retry logic for failed requests
-5. **Cache Management**: The booking engine handles cache management based on the data received
 
 ## Related Documentation
 
 - **[Booking Engine Integration](../../integrations/booking-engine/overview.md)** - Integration strategy and architecture
 - **[API Overview](../README.md)** - General API documentation
-- **[Integration Patterns](../../architecture/integration-patterns.md)** - External system integration approaches
 
 ---
 
