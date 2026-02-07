@@ -120,12 +120,23 @@ const getSuggestions = async (req, res) => {
 };
 
 /**
- * Search for reservations (placeholder)
+ * Search for reservations
  */
 const searchReservations = async (req, res) => {
   try {
-    // For now, return an empty array
-    res.json({ results: [] });
+    const { query, hotelId, filters } = req.body;
+
+    // Extract dateScope from filters if present
+    const dateScopeFilter = filters ? filters.find(f => f.field === 'dateScope') : null;
+    const dateScope = dateScopeFilter ? dateScopeFilter.value : 'all';
+
+    const results = await SearchModel.searchReservations(req.requestId, {
+      hotelId,
+      searchTerm: query,
+      dateScope
+    });
+
+    res.json({ results });
   } catch (error) {
     console.error('Error searching reservations:', error);
     res.status(500).json({ error: 'Failed to search reservations' });

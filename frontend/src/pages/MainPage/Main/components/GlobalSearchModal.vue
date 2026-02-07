@@ -10,6 +10,30 @@
 
     <!-- Apply v-focustrap to the modal content -->
     <div class="search-container" v-focustrap>
+      <!-- Scope and Date Filters -->
+      <div class="search-filters flex flex-wrap items-center justify-between gap-4 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+        <div class="flex items-center gap-3">
+          <label for="hotel-scope-toggle" class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">全ホテル検索</label>
+          <ToggleSwitch
+            v-model="hotelScopeValue"
+            inputId="hotel-scope-toggle"
+            v-tooltip.bottom="'すべてのホテルの予約を検索します'"
+          />
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">期間:</span>
+          <SelectButton
+            v-model="dateScope"
+            :options="dateOptions"
+            optionLabel="label"
+            optionValue="value"
+            class="compact-select-button"
+            aria-label="検索期間"
+          />
+        </div>
+      </div>
+
       <ReservationSearchBar ref="searchBarRef" v-model="searchQuery" :suggestions="searchSuggestions"
         :is-searching="isSearching" :active-filters="activeFilters" :search-results-count="searchResultsCount"
         @search="performSearch" @clear="clearSearch" @suggestion-selected="onSuggestionSelected"
@@ -23,31 +47,43 @@
 
         <div class="search-results-list">
           <div v-for="(reservation, index) in searchResults" :key="reservation.reservation_id"
-            class="search-result-item" :class="{ 'selected': selectedResultIndex === index }"
+            class="search-result-item compact-result" :class="{ 'selected': selectedResultIndex === index }"
             @click="selectReservation(reservation)" @mouseenter="selectedResultIndex = index">
-            <div class="result-header">
-              <span class="result-id">{{ reservation.reservation_id }}</span>
-              <span class="result-status" :class="getStatusClass(reservation.status)">
+
+            <div class="result-top flex justify-between items-start mb-1">
+              <span class="result-hotel-name text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
+                {{ reservation.hotel_name }}
+              </span>
+              <span class="result-status-badge text-[10px] px-1.5 py-0.5 rounded font-bold uppercase" :class="getStatusClass(reservation.status)">
                 {{ translateReservationStatus(reservation.status) }}
               </span>
             </div>
 
-            <div class="result-name" v-html="highlightMatch(reservation.client_name, searchQuery)"></div>
-
-            <div class="result-details">
-              <div class="result-dates">
-                <i class="pi pi-calendar"></i>
-                {{ formatDate(reservation.check_in) }} - {{ formatDate(reservation.check_out) }}
+            <div class="result-middle flex justify-between items-center mb-1">
+              <div class="result-name-container flex-1 min-w-0">
+                <span class="result-name text-base font-bold truncate block" v-html="highlightMatch(reservation.client_name, searchQuery)"></span>
               </div>
-
-              <div class="result-contact" v-if="reservation.phone">
-                <i class="pi pi-phone"></i>
-                {{ reservation.phone }}
+              <div class="result-id-container text-[11px] text-gray-500 font-mono ml-2 whitespace-nowrap">
+                #{{ reservation.ota_reservation_id || reservation.reservation_id }}
               </div>
+            </div>
 
-              <div class="result-contact" v-if="reservation.email">
-                <i class="pi pi-envelope"></i>
-                {{ reservation.email }}
+            <div class="result-bottom flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-700 dark:text-gray-300">
+              <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded" v-tooltip.top="'チェックイン日'">
+                <i class="pi pi-calendar text-blue-500"></i>
+                <span class="font-bold">{{ formatDate(reservation.check_in) }}</span>
+              </div>
+              <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded" v-tooltip.top="'宿泊数'">
+                <i class="pi pi-moon text-amber-500"></i>
+                <span class="font-bold">{{ reservation.number_of_nights }}泊</span>
+              </div>
+              <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded" v-tooltip.top="'人数'">
+                <i class="pi pi-users text-green-500"></i>
+                <span class="font-bold">{{ reservation.number_of_people }}名</span>
+              </div>
+              <div v-if="reservation.phone" class="flex items-center gap-1.5 ml-auto" v-tooltip.top="'電話番号'">
+                <i class="pi pi-phone text-gray-400"></i>
+                <span class="font-mono" v-html="highlightMatch(reservation.phone, searchQuery)"></span>
               </div>
             </div>
           </div>
@@ -91,9 +127,9 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
-import { Dialog, Button } from 'primevue';
+import { Dialog, Button, ToggleSwitch, SelectButton } from 'primevue';
 import ReservationSearchBar from '@/components/ReservationSearchBar.vue';
 import { useReservationSearch } from '@/composables/useReservationSearch';
 import { usePhoneticSearch } from '@/composables/usePhoneticSearch';
@@ -128,8 +164,22 @@ const {
   clearSearch,
   removeFilter,
   clearAllFilters,
+  hotelScope,
+  dateScope,
   _getSearchSuggestions
 } = useReservationSearch();
+
+// Local scope management
+const hotelScopeValue = computed({
+  get: () => hotelScope.value === 'all',
+  set: (val) => hotelScope.value = val ? 'all' : 'current'
+});
+
+const dateOptions = [
+  { label: '未来', value: 'future' },
+  { label: '過去', value: 'past' },
+  { label: 'すべて', value: 'all' }
+];
 
 // Initialize phonetic search for highlighting
 const { phoneticMatch } = usePhoneticSearch();
@@ -380,6 +430,35 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.search-filters {
+  transition: all 0.2s ease;
+}
+
+.compact-result {
+  padding: 10px 16px !important;
+  border-left: 3px solid transparent;
+}
+
+.compact-result:hover,
+.compact-result.selected {
+  border-left-color: var(--p-primary-color);
+  background-color: var(--p-primary-50) !important;
+}
+
+:global(.dark) .compact-result:hover,
+:global(.dark) .compact-result.selected {
+  background-color: rgba(var(--p-primary-color-rgb), 0.1) !important;
+}
+
+.result-status-badge {
+  line-height: 1;
+}
+
+.compact-select-button :deep(.p-button) {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
 }
 
 .search-results {

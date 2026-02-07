@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import GlobalSearchModal from '../GlobalSearchModal.vue';
+import GlobalSearchModal from '../../Main/components/GlobalSearchModal.vue';
 import { ref } from 'vue';
 import PrimeVue from 'primevue/config';
 
@@ -13,6 +13,8 @@ vi.mock('../../../../composables/useReservationSearch', () => ({
     searchSuggestions: ref([]),
     activeFilters: ref([]),
     searchError: ref(null),
+    hotelScope: ref('current'),
+    dateScope: ref('future'),
     hasActiveSearch: ref(false),
     searchResultsCount: ref(0),
     performSearch: vi.fn(),

@@ -37,3 +37,6 @@
 ## 2026-02-02 - Optimizing Accounting Views with LATERAL Unpivot
 **Learning:** Using `UNION ALL` to aggregate different columns (like debit/credit amounts) from the same large table in a view causes the database to perform multiple full scans. Replacing `UNION ALL` with `CROSS JOIN LATERAL` allows the database to read each row once and "unpivot" it in memory, significantly reducing I/O and improving view query performance.
 **Action:** Prefer `CROSS JOIN LATERAL` for unpivoting data from a single table over `UNION ALL` of multiple scans.
+## 2026-02-07 - [Search Query Optimization]
+**Learning:** Using a CTE to pre-filter matching clients allows leveraging GIN trigram indexes once per scan and then joining the results, which is significantly more efficient than repeating the same ILIKE conditions across multiple UNIONed queries. This reduced the number of redundant JOINs to heavy master tables.
+**Action:** Always prefer CTE-based filtering for multi-table searches that involve expensive text matching on multiple possible links (main client, secondary guests, payments).
